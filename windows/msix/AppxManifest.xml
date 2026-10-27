@@ -19,7 +19,7 @@
     ProcessorArchitecture="x64" />
 
   <Properties>
-    <DisplayName>BSC Chaiwala</DisplayName>
+    <DisplayName>fcartel</DisplayName>
     <PublisherDisplayName>NODEDR INFOTECH LIMITED</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -39,7 +39,7 @@
   <Applications>
     <Application Id="OrderRestro" Executable="OrderRestro.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
-        DisplayName="BSC Chaiwala"
+        DisplayName="fcartel"
         Description="Offline-first restaurant POS, tables, kitchen display, and menu management."
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"

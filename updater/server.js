@@ -1,4 +1,4 @@
-// BSC Chaiwala updater — a tiny sidecar that moves the app's containers to a
+// fcartel updater — a tiny sidecar that moves the app's containers to a
 // specific published version. Needed because a container can't replace itself,
 // and because CasaOS pins every image to an exact version (no :latest), so
 // "pull the same tag again" (Watchtower) would never find anything new.

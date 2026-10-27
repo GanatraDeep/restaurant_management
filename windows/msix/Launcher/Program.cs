@@ -75,9 +75,9 @@ internal static class Program
         }
 
         MessageBox.Show(
-            $"BSC Chaiwala hit an unexpected error and needs to close.\n\n{ex.Message}\n\n" +
+            $"fcartel hit an unexpected error and needs to close.\n\n{ex.Message}\n\n" +
             $"Details were saved to:\n{AppConfig.LogDir}",
-            "BSC Chaiwala",
+            "fcartel",
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
     }

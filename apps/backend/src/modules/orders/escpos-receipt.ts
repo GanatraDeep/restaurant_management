@@ -371,7 +371,7 @@ export function buildTestSlip(
   profile: PrinterProfile = resolveProfile(),
 ): Buffer {
   const w = new EscposWriter(profile);
-  w.text('BSC Chaiwala', { align: 'center', bold: true, size: 'big' });
+  w.text('fcartel', { align: 'center', bold: true, size: 'big' });
   w.text('Printer test OK', { align: 'center' });
   w.rule();
   const ruler = '1234567890'.repeat(7).slice(0, profile.columns);

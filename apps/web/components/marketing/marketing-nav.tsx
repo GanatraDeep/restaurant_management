@@ -1,14 +1,15 @@
 "use client";
 
-import { Github, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
-import { downloadHref } from "@/lib/downloads";
+import { BRAND } from "@/lib/brand";
 
 const links = [
   { href: "#features", label: "Features" },
+  { href: "#branding", label: "Your brand" },
   { href: "#security", label: "Security" },
   { href: "#get-started", label: "Get started" },
 ];
@@ -22,7 +23,7 @@ export function MarketingNav() {
         <Link href="/" className="flex items-center gap-2.5">
           <Logo size={30} />
           <span className="text-[15px] font-semibold tracking-tight text-foreground">
-            OrderRestro
+            {BRAND.name}
           </span>
         </Link>
 
@@ -39,17 +40,10 @@ export function MarketingNav() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          <a
-            href={downloadHref("github")}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Github className="size-4" />
-            GitHub
-          </a>
-          <Button variant="ghost" size="default" render={<Link href="/login" />}>
+          <Button variant="ghost" size="default" nativeButton={false} render={<Link href="/login" />}>
             Sign in
           </Button>
-          <Button variant="default" size="default" render={<Link href="/signup" />}>
+          <Button variant="default" size="default" nativeButton={false} render={<Link href="/signup" />}>
             Get started free
           </Button>
         </div>
@@ -79,10 +73,10 @@ export function MarketingNav() {
               </a>
             ))}
             <div className="mt-2 flex flex-col gap-2">
-              <Button variant="outline" render={<Link href="/login" />}>
+              <Button variant="outline" nativeButton={false} render={<Link href="/login" />}>
                 Sign in
               </Button>
-              <Button variant="default" render={<Link href="/signup" />}>
+              <Button variant="default" nativeButton={false} render={<Link href="/signup" />}>
                 Get started free
               </Button>
             </div>

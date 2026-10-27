@@ -32,6 +32,20 @@ export class SettingsService {
     return { restaurant, branch };
   }
 
+  // Just the restaurant's public-facing branding — safe for every signed-in
+  // staff member (the app shell header), unlike get() which also returns
+  // payment/tax/printer config and is gated on settings.manage.
+  async getBranding(restaurantId: string) {
+    const restaurant = await this.prisma.restaurant.findUnique({
+      where: { id: restaurantId },
+      select: { name: true, logoUrl: true },
+    });
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+    return restaurant;
+  }
+
   async updateRestaurant(
     restaurantId: string,
     userId: string,

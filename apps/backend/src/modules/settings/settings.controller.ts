@@ -46,6 +46,13 @@ export class SettingsController {
     return this.settingsService.get(user.restaurantId, branchId);
   }
 
+  // Any signed-in user — drives the restaurant name/logo in the app shell.
+  @Auth()
+  @Get('branding')
+  getBranding(@CurrentUser() user: SessionUser) {
+    return this.settingsService.getBranding(user.restaurantId);
+  }
+
   @Auth('settings.manage')
   @Patch('restaurant')
   @UsePipes(new ZodValidationPipe(restaurantSettingsSchema))

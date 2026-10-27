@@ -1,7 +1,7 @@
 {
-  "name": "BSC Chaiwala",
-  "short_name": "OrderRestro",
-  "description": "Offline-first restaurant management system — POS, tables, kitchen display, menu, inventory.",
+  "name": "fcartel",
+  "short_name": "fcartel",
+  "description": "fcartel — restaurant management under your own brand: POS, tables, kitchen display, menu, inventory.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -2,37 +2,19 @@
 
 import { MotionConfig } from "motion/react";
 import { AuthRedirectGate } from "@/components/marketing/auth-redirect-gate";
-import { ClaimedLanding } from "@/components/marketing/claimed-landing";
+import { BrandingSection } from "@/components/marketing/branding-section";
 import { Features } from "@/components/marketing/features";
+import { GetStartedSection } from "@/components/marketing/get-started-section";
 import { Hero } from "@/components/marketing/hero";
-import { InstallSection } from "@/components/marketing/install-section";
 import { MarketingFooter } from "@/components/marketing/marketing-footer";
 import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ProductShowcase } from "@/components/marketing/product-showcase";
 import { SecuritySection } from "@/components/marketing/security-section";
-import { useSetupStatus } from "@/hooks/use-setup-status";
 
+// fcartel's public landing page. Every visitor gets it (any number of
+// restaurants can sign up); an already-signed-in visitor is sent straight
+// to their own branded dashboard by AuthRedirectGate.
 export default function MarketingHomePage() {
-  const { data, isLoading } = useSetupStatus();
-
-  // Until we know: render nothing rather than flash the full sales pitch
-  // (or the minimal claimed view) and then swap it a moment later.
-  if (isLoading) {
-    return null;
-  }
-
-  // This instance already has a restaurant registered — the public root is
-  // now a live business's front door, not an unclaimed install's sales
-  // page. Show only what a returning visitor actually needs.
-  if (data?.isSetup) {
-    return (
-      <div className="flex min-h-full flex-col">
-        <AuthRedirectGate />
-        <ClaimedLanding />
-      </div>
-    );
-  }
-
   return (
     // reducedMotion="user" makes every Motion animation on this page defer
     // to the OS prefers-reduced-motion setting automatically (transforms
@@ -46,8 +28,9 @@ export default function MarketingHomePage() {
           <Hero />
           <ProductShowcase />
           <Features />
+          <BrandingSection />
           <SecuritySection />
-          <InstallSection />
+          <GetStartedSection />
         </main>
         <MarketingFooter />
       </div>
