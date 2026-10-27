@@ -45,7 +45,7 @@ export default function KdsPage() {
   const pendingOrders = incoming.data ?? [];
 
   return (
-    <div className="flex min-h-[calc(100dvh-10rem)] flex-col gap-4 lg:h-[calc(100dvh-8rem)]">
+    <div className="flex min-h-[calc(100dvh-10rem)] flex-col gap-4 xl:h-[calc(100dvh-8rem)]">
       <div>
         <h1 className="text-2xl font-semibold sm:text-[32px] tracking-tight text-foreground">
           Kitchen Display
@@ -118,7 +118,7 @@ export default function KdsPage() {
           retrying={tickets.isFetching}
         />
       ) : (
-        <div className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-hidden xl:grid-cols-4">
+        <div className="flex min-h-0 flex-1 snap-x snap-mandatory gap-3 overflow-x-auto sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 xl:overflow-hidden xl:grid-cols-4">
           {COLUMNS.map((col) => (
             <div key={col.status} className="flex w-[85%] shrink-0 snap-center flex-col gap-3 overflow-hidden rounded-2xl bg-secondary/40 p-3 sm:w-auto sm:shrink">
               <div className="flex items-center justify-between px-1">

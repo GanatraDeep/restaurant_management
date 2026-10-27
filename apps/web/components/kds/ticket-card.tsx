@@ -165,10 +165,10 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {nextStatus && (
           <Button
-            className="h-12 flex-1 text-base"
+            className="h-12 min-w-[6.5rem] flex-1 text-base"
             disabled={updateStatus.isPending}
             onClick={() =>
               updateStatus.mutate(
