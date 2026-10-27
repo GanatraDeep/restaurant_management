@@ -22,7 +22,7 @@ cd nodedr-restaurant-pos
 ./install.sh
 ```
 
-Open `http://<that machine's IP>:1995` from any till or tablet on the same network. On Windows use `quickstart.ps1`. On **CasaOS / ZimaOS**, install from the compose manifest in [`casaos/`](./casaos/README.md); pre-built amd64 and arm64 images are published, so nothing is compiled.
+Open `http://<that machine's IP>:1995` from any till or tablet on the same network. On Windows use `quickstart.ps1`.
 
 > Using it over HTTPS (a tunnel or reverse proxy)? Set `COOKIE_SECURE=true` in `.env`, or login will appear to succeed and then fail with "Unauthorized".
 

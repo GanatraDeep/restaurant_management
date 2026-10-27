@@ -16,7 +16,6 @@ dine-in, takeaway, delivery and kitchen operations.
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](apps/web/tsconfig.json)
 [![NestJS](https://img.shields.io/badge/backend-NestJS-E0234E?logo=nestjs&logoColor=white)](apps/backend)
 [![Next.js](https://img.shields.io/badge/frontend-Next.js-000000?logo=next.js&logoColor=white)](apps/web)
-[![CasaOS / ZimaOS](https://img.shields.io/badge/CasaOS%20%2F%20ZimaOS-one--click%20app-1F6FEB)](casaos/README.md)
 [![Status](https://img.shields.io/badge/status-active%20development-orange.svg)](./ROADMAP.md)
 
 Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
@@ -101,12 +100,6 @@ nothing about it is tied to a specific machine or network:
 
 Whichever way you reach it, it's the same three containers, same data, same
 login — there's no separate "cloud" mode to configure.
-
-- **CasaOS / ZimaOS.** Pre-built, multi-arch (amd64/arm64) images are
-  published to GHCR and there's a ready-to-install app manifest — no build
-  step, no `git clone` needed. Install directly from a compose URL today;
-  see [`casaos/README.md`](casaos/README.md). Official app store submission
-  pending.
 
 ### Windows desktop client
 
@@ -245,8 +238,7 @@ management tools with **56 screenshots of the app**.
 ## FAQ
 
 **Can I run it on my own server?**
-Yes — F Cartel installs with `docker compose up`, or as a one-click app on
-CasaOS / ZimaOS.
+Yes — F Cartel installs with `docker compose up`.
 
 **Does it support UPI payments and GST billing?**
 Yes. Add your UPI id under *Settings → Restaurant*; checkout then shows a
@@ -424,7 +416,6 @@ pnpm dev
 apps/backend    NestJS API (REST /api/v1, Swagger at /api/docs, Socket.IO)
 apps/web        Next.js — back-office, POS, KDS, public QR menu view
 packages/types  Shared Zod schemas / TS types used by both apps
-casaos/         CasaOS/ZimaOS app store manifest + assets — see casaos/README.md
 docs/           Screenshots and supplementary docs
 ```
 
@@ -436,7 +427,6 @@ docs/           Screenshots and supplementary docs
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Tech-stack decisions and the reasoning behind each one |
 | [`ROADMAP.md`](./ROADMAP.md) | Phased build plan / living TODO — checkboxes are the real status |
 | [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) | Visual language, tokens, type scale, component inventory, per-surface UX notes |
-| [`casaos/README.md`](./casaos/README.md) | CasaOS/ZimaOS one-click install, image publishing, official app store submission steps |
 | [`windows/msix/README.md`](./windows/msix/README.md) | Windows MSIX desktop client — what it is/isn't, build/validate instructions, capabilities, what's CI-verified vs. not tested on real hardware |
 | [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) | WCAG 2.1 AA target, what's implemented, testing methodology, known gaps |
 | [`COMPLIANCE-INDIA.md`](./COMPLIANCE-INDIA.md) | How the architecture relates to the DPDP Act 2023, IT Rules, GST invoicing, and CCPA dark-patterns guidelines |
@@ -515,4 +505,4 @@ Maintainer: [Raktim Ranjit](https://www.raktimranjit.com/)
 self-hosted POS, UPI QR payment POS, GST billing software for restaurants,
 kitchen display system, KDS, restaurant inventory management, restaurant
 payroll and attendance, café POS, cloud kitchen software, QR table ordering,
-offline-first POS, NestJS, Next.js, PostgreSQL, Prisma, CasaOS, ZimaOS.</sub>
+offline-first POS, NestJS, Next.js, PostgreSQL, Prisma.</sub>

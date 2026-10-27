@@ -10,13 +10,11 @@ import { AppModule } from './app.module';
 import { uploadsDir } from './common/upload/image-upload.config';
 
 // Known example/placeholder secrets that appear verbatim in this repo's own
-// .env.example, docker-compose.yml, and the CasaOS/ZimaOS app-store
-// manifest (casaos/docker-compose.yml) — that manifest hardcodes a literal
-// default value (CasaOS app-store installers pre-fill it and many
-// non-technical self-hosters click through without changing it) rather
-// than failing loudly the way `${JWT_SECRET:?...}` does in the main
-// docker-compose.yml. This is a defense-in-depth backstop that applies to
-// every deployment path, not just CasaOS: refuse to issue/verify sessions
+// .env.example and docker-compose.yml, or in app-store style installers that
+// pre-fill a literal default which operators click through without changing
+// (rather than failing loudly the way `${JWT_SECRET:?...}` does in
+// docker-compose.yml). This is a defense-in-depth backstop that applies to
+// every deployment path: refuse to issue/verify sessions
 // signed with a known-public or too-short secret instead of silently
 // running with one an attacker can read directly from the public repo.
 const KNOWN_PLACEHOLDER_JWT_SECRETS = new Set([
