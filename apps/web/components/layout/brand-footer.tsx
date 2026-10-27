@@ -18,7 +18,7 @@ export function BrandFooter() {
         rel="noopener noreferrer"
         className="text-left text-xs font-medium leading-tight text-sidebar-foreground/70 hover:text-sidebar-foreground hover:underline"
       >
-        Nodedr OrderRestro
+        BSC Chaiwala
       </a>
     </div>
   );

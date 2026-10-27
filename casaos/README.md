@@ -1,4 +1,4 @@
-# Nodedr OrderRestro on CasaOS / ZimaOS
+# BSC Chaiwala on CasaOS / ZimaOS
 
 This directory holds the app store manifest and assets that let Nodedr
 OrderRestro install as a one-click app on [CasaOS](https://casaos.io) and

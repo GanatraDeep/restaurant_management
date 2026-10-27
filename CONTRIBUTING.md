@@ -1,4 +1,4 @@
-# Contributing to Nodedr OrderRestro
+# Contributing to BSC Chaiwala
 
 First off — thank you for considering a contribution. This is a young,
 fast-moving project (Phases 0-3 of a 20-module scope are done; see

@@ -20,7 +20,7 @@ internal sealed class FirstRunChoiceForm : Form
 
     public FirstRunChoiceForm()
     {
-        Text = "Welcome to Nodedr OrderRestro";
+        Text = "Welcome to BSC Chaiwala";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
         MaximizeBox = false;
