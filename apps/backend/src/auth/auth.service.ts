@@ -16,6 +16,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwoFactorService } from './two-factor.service';
+import { isSuperAdminUser } from '../common/super-admin';
 
 @Injectable()
 export class AuthService {
@@ -30,6 +31,8 @@ export class AuthService {
     restaurantId: string;
     name: string;
     roleId: string;
+    email?: string | null;
+    isSuperAdmin?: boolean;
     role: { name: string; permissions: { permission: { key: string } }[] };
   }): SessionUser {
     return {
@@ -39,6 +42,7 @@ export class AuthService {
       roleId: user.roleId,
       roleName: user.role.name,
       permissions: user.role.permissions.map((rp) => rp.permission.key),
+      isSuperAdmin: isSuperAdminUser(user),
     };
   }
 

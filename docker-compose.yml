@@ -41,6 +41,11 @@ services:
       CORS_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:1995}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
       UPLOADS_DIR: "/data/uploads"
+      # F Cartel platform billing (Admin console at /admin). See .env.example.
+      SUPER_ADMIN_EMAILS: "${SUPER_ADMIN_EMAILS:-}"
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:-}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:-}"
       # Spain VERI*FACTU (Settings > VERI*FACTU). The producer identifier is a legal fact only the software
       # producer can supply; leave it unset and the branch reports exactly what is missing. See docs/verifactu.md.
       VERIFACTU_PRODUCER_ID: "${VERIFACTU_PRODUCER_ID:-}"

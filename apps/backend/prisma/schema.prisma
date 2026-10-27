@@ -68,11 +68,13 @@ model Restaurant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branches           Branch[]
-  roles              Role[]
-  users              User[]
-  integrationApiKeys IntegrationApiKey[]
-  webhookEndpoints   WebhookEndpoint[]
+  branches             Branch[]
+  roles                Role[]
+  users                User[]
+  integrationApiKeys   IntegrationApiKey[]
+  webhookEndpoints     WebhookEndpoint[]
+  subscription         RestaurantSubscription?
+  subscriptionPayments SubscriptionPayment[]
 
   @@map("restaurants")
 }
@@ -245,6 +247,10 @@ model User {
   twoFactorEnabled        Boolean  @default(false)
   twoFactorRecoveryHashes String[] @default([]) // bcrypt hashes of unused one-time recovery codes
   twoFactorLastStep       Int? // last accepted TOTP step: a code works once
+  // Platform operator (F Cartel super admin): manages subscription plans,
+  // trials, and every restaurant's subscription. Also granted to any email
+  // listed in the SUPER_ADMIN_EMAILS env var (see jwt.strategy.ts).
+  isSuperAdmin            Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2298,4 +2304,106 @@ model SyncChange {
 
   @@index([tbl, pkKey], map: "sync_changes_row_idx")
   @@map("sync_changes")
+}
+
+// ─── Platform billing (F Cartel subscriptions) ──────────────────────────────
+// Plans are managed by a super admin; each restaurant has at most one
+// subscription row. Payments go through Razorpay Orders (one payment buys
+// one billing period); see modules/billing.
+
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionPaymentStatus {
+  CREATED
+  PAID
+  FAILED
+}
+
+model SubscriptionPlan {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  // Price per billing period in the smallest currency unit (paise for INR),
+  // which is what Razorpay expects.
+  priceMinor  Int
+  currency    String          @default("INR")
+  interval    BillingInterval @default(MONTHLY)
+  // Free trial a restaurant can start on this plan once (0 = no trial).
+  trialDays   Int             @default(0)
+  features    String[]        @default([])
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions RestaurantSubscription[]
+  payments      SubscriptionPayment[]
+
+  @@map("subscription_plans")
+}
+
+model RestaurantSubscription {
+  id               String             @id @default(cuid())
+  restaurantId     String             @unique
+  restaurant       Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  planId           String?
+  plan             SubscriptionPlan?  @relation(fields: [planId], references: [id], onDelete: SetNull)
+  status           SubscriptionStatus @default(TRIALING)
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+  // A restaurant gets one self-serve trial; a super admin can still grant more.
+  trialUsed        Boolean            @default(false)
+  // Super-admin note (e.g. "comped for launch partner").
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("restaurant_subscriptions")
+}
+
+model SubscriptionPayment {
+  id                String                    @id @default(cuid())
+  restaurantId      String
+  restaurant        Restaurant                @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  planId            String?
+  plan              SubscriptionPlan?         @relation(fields: [planId], references: [id], onDelete: SetNull)
+  razorpayOrderId   String                    @unique
+  razorpayPaymentId String?
+  amountMinor       Int
+  currency          String
+  status            SubscriptionPaymentStatus @default(CREATED)
+  periodStart       DateTime?
+  periodEnd         DateTime?
+  paidAt            DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([restaurantId, createdAt])
+  @@map("subscription_payments")
+}
+
+// Singleton (id = "default") platform-wide switches a super admin controls.
+model PlatformSettings {
+  id                  String  @id @default("default")
+  // Off by default so existing self-hosted installs keep working unchanged;
+  // when on, a restaurant needs an active trial or paid period to use the app.
+  requireSubscription Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
 }

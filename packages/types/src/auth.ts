@@ -30,6 +30,8 @@ export const sessionUserSchema = z.object({
   roleId: z.string(),
   roleName: z.string(),
   permissions: z.array(z.string()),
+  // Platform operator (F Cartel super admin) — see /admin.
+  isSuperAdmin: z.boolean().optional(),
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 

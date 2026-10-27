@@ -95,7 +95,10 @@ function resolveJwtSecret(): string {
 
 async function bootstrap() {
   process.env.JWT_SECRET = resolveJwtSecret();
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: the Razorpay webhook verifies an HMAC over the exact bytes sent.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   app.use(
     helmet({
