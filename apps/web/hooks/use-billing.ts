@@ -160,7 +160,7 @@ export function useCheckout() {
           name: "F Cartel",
           description: `${result.planName} plan — ${result.restaurantName}`,
           prefill: { name: result.prefill.name, email: result.prefill.email ?? undefined },
-          theme: { color: "#9f1239" },
+          theme: { color: "#d13644" },
           handler: (resp: RazorpayHandlerResponse) => resolve(resp),
           modal: { ondismiss: () => resolve(null) },
         });
