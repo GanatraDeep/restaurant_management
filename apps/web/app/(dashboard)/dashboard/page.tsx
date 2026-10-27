@@ -32,12 +32,12 @@ function StatCard({
   accent?: "success" | "warning";
 }) {
   return (
-    <Card className="flex flex-col gap-3 p-6">
-      <div className="flex items-center justify-between">
-        <span className="text-[13px] font-medium text-muted-foreground">{label}</span>
+    <Card className="flex h-full flex-col gap-2 p-4 sm:gap-3 sm:p-6">
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-xs font-medium text-muted-foreground sm:text-[13px]">{label}</span>
         <div
           className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-xl",
+            "flex size-8 shrink-0 items-center justify-center rounded-xl sm:size-9",
             accent === "success" && "bg-success/10 text-success",
             accent === "warning" && "bg-warning/10 text-warning",
             !accent && "bg-primary/10 text-primary",
@@ -46,7 +46,7 @@ function StatCard({
           <Icon className="h-[18px] w-[18px]" />
         </div>
       </div>
-      <span className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">
+      <span className="truncate text-2xl font-semibold tabular-nums tracking-tight text-foreground sm:text-3xl">
         {value}
       </span>
     </Card>
@@ -92,20 +92,20 @@ export default function DashboardPage() {
       <QuickActions />
 
       {isLoading || !data ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-[104px] rounded-2xl" />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
           <StatCard
             label="Today's Revenue"
             value={formatCurrency(data.todayRevenue)}
             icon={Wallet}
             accent="success"
           />
-          <Link href="/orders" className="block rounded-xl transition hover:opacity-90" title="Manage orders">
+          <Link href="/orders" className="block h-full rounded-xl transition hover:opacity-90" title="Manage orders">
             <StatCard label="Today's Orders" value={String(data.todayOrders)} icon={ReceiptText} />
           </Link>
           <StatCard

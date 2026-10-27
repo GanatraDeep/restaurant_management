@@ -336,8 +336,7 @@ containers, not just "it compiles."
       needs one), direct accounting-software and delivery-platform connectors,
       weighing scale, label printers, barcode scanner, GraphQL API.
 - [ ] Not built: SQLite deployment variant (the schema relies on Postgres
-      arrays/enums/decimals), Windows/Linux native installers beyond the
-      existing MSIX workflow.
+      arrays/enums/decimals), Windows/Linux native installers.
 
 ## Explicitly deferred / not guessed
 

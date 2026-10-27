@@ -66,7 +66,7 @@ export function TrendChart({
                 tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
                 axisLine={false}
                 tickLine={false}
-                width={48}
+                width={64}
                 tickFormatter={(v: number) => valueFormatter(v)}
               />
               <Tooltip

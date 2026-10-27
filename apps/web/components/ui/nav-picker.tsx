@@ -25,6 +25,7 @@ export function ResponsiveTabs({
   onChange,
   desktopListClassName,
   mobileOnly = false,
+  collapseBelow = "lg",
   className,
 }: {
   /** Names the control ("Floor", "Category") — button caption and sheet title. */
@@ -35,8 +36,11 @@ export function ResponsiveTabs({
   desktopListClassName?: string;
   /** Only render the phone dropdown (the page has its own desktop navigation). */
   mobileOnly?: boolean;
+  /** Width below which the compact picker replaces the tabs (default lg). */
+  collapseBelow?: "lg" | "xl";
   className?: string;
 }) {
+  const wide = collapseBelow === "xl";
   const [open, setOpen] = useState(false);
   const activeRef = useRef<HTMLButtonElement>(null);
   const current = items.find((i) => i.id === value) ?? items[0];
@@ -49,7 +53,7 @@ export function ResponsiveTabs({
   return (
     <div className={className}>
       {!mobileOnly && (
-      <div className="hidden lg:block">
+      <div className={wide ? "hidden xl:block" : "hidden lg:block"}>
         <Tabs value={value} onValueChange={onChange}>
           <TabsList className={desktopListClassName}>
             {items.map((item) => (
@@ -67,7 +71,10 @@ export function ResponsiveTabs({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-        className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-border bg-card px-4 text-left shadow-sm transition-colors active:bg-secondary lg:hidden"
+        className={cn(
+          "flex min-h-12 w-full items-center gap-3 rounded-xl border border-border bg-card px-4 text-left shadow-sm transition-colors active:bg-secondary",
+          wide ? "xl:hidden" : "lg:hidden",
+        )}
       >
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
@@ -80,7 +87,7 @@ export function ResponsiveTabs({
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="max-h-[80dvh] rounded-t-2xl p-0 lg:hidden">
+        <SheetContent side="bottom" className={cn("max-h-[80dvh] rounded-t-2xl p-0", wide ? "xl:hidden" : "lg:hidden")}>
           <SheetHeader className="px-4 pt-4">
             <SheetTitle>{label}</SheetTitle>
           </SheetHeader>

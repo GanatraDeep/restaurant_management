@@ -17,7 +17,17 @@ export class PublicMenuService {
   private async resolveTable(qrToken: string) {
     const table = await this.prisma.table.findUnique({
       where: { qrToken },
-      include: { floor: { include: { branch: true } } },
+      include: {
+        floor: {
+          include: {
+            branch: {
+              include: {
+                restaurant: { select: { name: true, logoUrl: true } },
+              },
+            },
+          },
+        },
+      },
     });
     if (!table) throw new NotFoundException('This QR code is not recognized');
     return table;
@@ -28,6 +38,9 @@ export class PublicMenuService {
     const branch = table.floor.branch;
     const categories = await this.menuCategoriesForBranch(branch.id);
     return {
+      // The restaurant's own branding leads the guest page.
+      restaurantName: branch.restaurant.name,
+      logoUrl: branch.restaurant.logoUrl ?? null,
       branchName: branch.name,
       tableName: table.name ?? `Table ${table.number}`,
       categories,

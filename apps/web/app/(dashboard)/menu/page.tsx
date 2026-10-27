@@ -75,7 +75,7 @@ export default function MenuPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[260px_1fr]">
         <Card className="flex flex-col gap-3 p-4">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -92,7 +92,7 @@ export default function MenuPage() {
           ) : (
             <>
             {/* Phones: one swipeable row of big tap-friendly chips. */}
-            <div className="flex flex-col gap-3 lg:hidden">
+            <div className="flex flex-col gap-3 xl:hidden">
               <ResponsiveTabs
                 mobileOnly
                 label="Category"
@@ -123,7 +123,7 @@ export default function MenuPage() {
                 </div>
               )}
             </div>
-            <div className="hidden flex-col gap-1 lg:flex">
+            <div className="hidden flex-col gap-1 xl:flex">
               <button
                 onClick={() => setSelectedCategoryId(undefined)}
                 className={cn(

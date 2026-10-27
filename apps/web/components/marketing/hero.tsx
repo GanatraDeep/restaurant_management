@@ -48,7 +48,7 @@ export function Hero() {
           transition={{ duration: 0.4, delay: 0.35, ease: [0.22, 1, 0.36, 1] }}
           className="mt-6 max-w-2xl text-balance text-lg text-muted-foreground sm:text-xl"
         >
-          fcartel runs your POS, kitchen display, tables, reservations,
+          F Cartel runs your POS, kitchen display, tables, reservations,
           inventory, and CRM in one place — and puts your restaurant&rsquo;s
           name and logo on every screen your team works in. Sign up, upload
           your logo, and start taking orders in minutes.

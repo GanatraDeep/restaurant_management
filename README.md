@@ -1,24 +1,21 @@
 <div align="center">
 
-<img src="apps/web/public/brand-lockup.png" alt="fcartel" width="520">
+<img src="apps/web/public/brand-lockup.png" alt="F Cartel" width="520">
 
 <img src="docs/orderrestro-cover.jpg" alt="Illustrative evening scene in an independent restaurant" width="100%">
 
-**Open-source, self-hosted restaurant POS & management system** — billing
+**Restaurant POS & management system** — billing
 with **UPI QR payments**, tables, kitchen display (KDS), reservations,
 inventory, **staff attendance & payroll**, accounting, reports, CRM/loyalty
-and multi-branch control. Offline-first, runs on your own server, no
-subscription. Not a retail POS bolted onto a restaurant; purpose-built for
+and multi-branch control. Offline-first and branded as your restaurant.
+Not a retail POS bolted onto a restaurant; purpose-built for
 dine-in, takeaway, delivery and kitchen operations.
 
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](package.json)
 [![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?logo=pnpm&logoColor=white)](pnpm-workspace.yaml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](apps/web/tsconfig.json)
 [![NestJS](https://img.shields.io/badge/backend-NestJS-E0234E?logo=nestjs&logoColor=white)](apps/backend)
 [![Next.js](https://img.shields.io/badge/frontend-Next.js-000000?logo=next.js&logoColor=white)](apps/web)
-[![CasaOS / ZimaOS](https://img.shields.io/badge/CasaOS%20%2F%20ZimaOS-one--click%20app-1F6FEB)](casaos/README.md)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 [![Status](https://img.shields.io/badge/status-active%20development-orange.svg)](./ROADMAP.md)
 
 Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
@@ -26,7 +23,7 @@ Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
 **[Try OrderRestro](https://orderrestro.nodedr.com/)** · **[Case study](https://www.raktimranjit.com/projects/orderrestro)** · **[Maintainer: Raktim Ranjit](https://www.raktimranjit.com/)**
 
 <p align="center">
-  <img src="docs/assets/hero-animated.svg" alt="fcartel: animated overview with an illustrative sample screen" width="100%">
+  <img src="docs/assets/hero-animated.svg" alt="F Cartel: animated overview with an illustrative sample screen" width="100%">
 </p>
 
 
@@ -45,7 +42,7 @@ Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
 
 ## What this is
 
-**fcartel** is a purpose-built, offline-first Restaurant
+**F Cartel** is a purpose-built, offline-first Restaurant
 Management System for restaurants, cafés, coffee shops, bakeries, fast
 food, fine dining, bars, food courts, cloud kitchens, and multi-branch
 chains. The whole stack — Postgres, API, and web app — runs on one local
@@ -103,31 +100,6 @@ nothing about it is tied to a specific machine or network:
 
 Whichever way you reach it, it's the same three containers, same data, same
 login — there's no separate "cloud" mode to configure.
-
-- **CasaOS / ZimaOS.** Pre-built, multi-arch (amd64/arm64) images are
-  published to GHCR and there's a ready-to-install app manifest — no build
-  step, no `git clone` needed. Install directly from a compose URL today;
-  see [`casaos/README.md`](casaos/README.md). Official app store submission
-  pending.
-
-### Windows desktop client
-
-However you host the server above, tills that are Windows machines don't
-have to use a browser tab: `windows/msix/` packages a thin native client
-(WinForms + WebView2, not Electron — no bundled Chromium, no server, no
-Docker) with a Start Menu entry that points at your server's address and
-otherwise just shows the same web UI. See
-[`windows/msix/README.md`](windows/msix/README.md) for what it is/isn't,
-build instructions, and the full capability list.
-
-Status: the build, package, install, and Start Menu registration are all
-machine-verified on every push via GitHub Actions (`windows-msix.yml`,
-real `windows-latest` runner) — not just "it compiled." What that CI run
-does **not** cover: a physical Windows machine (Start Menu tile look,
-taskbar icon, DPI scaling, upgrade-in-place), a real thermal printer, or
-Microsoft Store certification (WACK) — see `windows/msix/README.md` and
-[`SECURITY-AUDIT-REPORT.md`](./SECURITY-AUDIT-REPORT.md) for the full
-verified-vs-not-tested breakdown before relying on it in production.
 
 ## Features
 
@@ -187,8 +159,8 @@ ordering page and staff sidebar.
   money goes straight to your UPI id. See the [tutorial](./TUTORIAL.md#upi-qr-payments-and-the-customer-display).
 - **Runs without the internet** — one Docker Compose stack on a local
   server; billing, KDS and printing survive a dead WAN link.
-- **Your data, your server** — AGPL-3.0, no per-terminal licence, no
-  vendor lock-in. Backup and restore from the app.
+- **Your data, your control** — no per-terminal licence, no vendor
+  lock-in. Backup and restore from the app.
 - **Whole-restaurant scope** — POS, kitchen, inventory, payroll, accounting
   and reporting in one app instead of five subscriptions.
 - **India-ready** — GST (inclusive or exclusive), UPI, ₹ formatting, plus
@@ -246,9 +218,8 @@ management tools with **56 screenshots of the app**.
 
 ## FAQ
 
-**Is there a free, open-source restaurant POS I can self-host?**
-Yes — OrderRestro is AGPL-3.0 and installs with `docker compose up`, or as
-a one-click app on CasaOS / ZimaOS.
+**Can I run it on my own server?**
+Yes — F Cartel installs with `docker compose up`.
 
 **Does it support UPI payments and GST billing?**
 Yes. Add your UPI id under *Settings → Restaurant*; checkout then shows a
@@ -344,7 +315,7 @@ already bundled, which is all this project requires.
 ### One-click install
 
 ```bash
-git clone https://github.com/Raktim94/nodedr-restaurant-pos.git && cd nodedr-restaurant-pos && ./install.sh
+git clone https://github.com/GanatraDeep/restaurant_management.git && cd restaurant_management && ./install.sh
 ```
 
 [`install.sh`](install.sh) generates a `.env` with random secrets (only if
@@ -365,8 +336,8 @@ If you'd rather run each step yourself (e.g. to set your own secrets instead
 of generated ones):
 
 ```bash
-git clone https://github.com/Raktim94/nodedr-restaurant-pos.git
-cd nodedr-restaurant-pos
+git clone https://github.com/GanatraDeep/restaurant_management.git
+cd restaurant_management
 cp .env.example .env        # edit JWT_SECRET / POSTGRES_PASSWORD for anything beyond local dev
 docker compose up -d --build
 docker exec nodedr-restaurant-backend npx ts-node prisma/seed.ts   # optional: demo data + login; upsert-based, safe to re-run
@@ -426,7 +397,6 @@ pnpm dev
 apps/backend    NestJS API (REST /api/v1, Swagger at /api/docs, Socket.IO)
 apps/web        Next.js — back-office, POS, KDS, public QR menu view
 packages/types  Shared Zod schemas / TS types used by both apps
-casaos/         CasaOS/ZimaOS app store manifest + assets — see casaos/README.md
 docs/           Screenshots and supplementary docs
 ```
 
@@ -438,12 +408,10 @@ docs/           Screenshots and supplementary docs
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Tech-stack decisions and the reasoning behind each one |
 | [`ROADMAP.md`](./ROADMAP.md) | Phased build plan / living TODO — checkboxes are the real status |
 | [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) | Visual language, tokens, type scale, component inventory, per-surface UX notes |
-| [`casaos/README.md`](./casaos/README.md) | CasaOS/ZimaOS one-click install, image publishing, official app store submission steps |
-| [`windows/msix/README.md`](./windows/msix/README.md) | Windows MSIX desktop client — what it is/isn't, build/validate instructions, capabilities, what's CI-verified vs. not tested on real hardware |
 | [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) | WCAG 2.1 AA target, what's implemented, testing methodology, known gaps |
 | [`COMPLIANCE-INDIA.md`](./COMPLIANCE-INDIA.md) | How the architecture relates to the DPDP Act 2023, IT Rules, GST invoicing, and CCPA dark-patterns guidelines |
 | [`docs/verifactu.md`](./docs/verifactu.md) | Spain VERI*FACTU: chained invoice records, QR on the 80 mm receipt and AEAT reporting. Implemented, not certified; what is and is not verified |
-| [`SECURITY-AUDIT-REPORT.md`](./SECURITY-AUDIT-REPORT.md) | Full Critical/High/Medium/Low security audit findings + fixes, and Windows/MSIX Store-readiness status (what's verified vs. not tested) |
+| [`SECURITY-AUDIT-REPORT.md`](./SECURITY-AUDIT-REPORT.md) | Full Critical/High/Medium/Low security audit findings + fixes (what's verified vs. not tested) |
 | [`docs/KIOSK-AND-KDS.md`](./docs/KIOSK-AND-KDS.md) | Customer self-service kiosk and kitchen-display (KDS) tablet setup: URL/launch, Android notes, printer/scanner status, tests |
 | [`docs/integrations-api.md`](./docs/integrations-api.md) | MCP server (for AI clients) and the public integration REST API (for an external website's backend) — auth, endpoints, examples |
 
@@ -494,21 +462,14 @@ This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
 ## License
 
 Copyright © 2026 [Nodedr Infotech Private Limited](https://www.nodedr.com/)
-and Raktim Ranjit. Licensed under the
-[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0). In short:
-you're free to self-host, use, and modify this software for your
-restaurant or business. If you modify it and run that modified version
-as a network service for others, you must make your modified source
-available to those users under the same license — this keeps
-improvements to a self-hosted business tool in the open rather than
-disappearing into a closed commercial fork.
+and Raktim Ranjit. See [`LICENSE`](./LICENSE) for the terms.
 
 See [`MAINTAINERS.md`](./MAINTAINERS.md) for project maintainers.
 
 ---
 
 <div align="center">
-<img src="apps/web/public/logo.png" alt="fcartel" width="72">
+<img src="apps/web/public/logo.png" alt="F Cartel" width="72">
 </div>
 
 
@@ -520,8 +481,8 @@ Maintainer: [Raktim Ranjit](https://www.raktimranjit.com/)
 
 ---
 
-<sub>Keywords: restaurant POS, open source restaurant management software,
+<sub>Keywords: restaurant POS, restaurant management software,
 self-hosted POS, UPI QR payment POS, GST billing software for restaurants,
 kitchen display system, KDS, restaurant inventory management, restaurant
 payroll and attendance, café POS, cloud kitchen software, QR table ordering,
-offline-first POS, NestJS, Next.js, PostgreSQL, Prisma, CasaOS, ZimaOS.</sub>
+offline-first POS, NestJS, Next.js, PostgreSQL, Prisma.</sub>

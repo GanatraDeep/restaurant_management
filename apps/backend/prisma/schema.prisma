@@ -1,4 +1,4 @@
-// fcartel — Phase 0/1 core schema.
+// F Cartel — Phase 0/1 core schema.
 // See ARCHITECTURE.md for why PostgreSQL is the primary target and how
 // multi-branch/single-location both map onto the same schema (a branch is
 // just a Branch row, not a different deployment mode).
@@ -45,7 +45,7 @@ model Restaurant {
   name      String
   legalName String?
   // The restaurant's own branding, shown in the app shell (sidebar header,
-  // login screen) in place of the fcartel product mark — this is
+  // login screen) in place of the F Cartel product mark — this is
   // white-label self-hosted software, so the operator's brand should lead;
   // the product name stays as a small credit line instead (see BrandFooter).
   logoUrl   String?
@@ -68,36 +68,39 @@ model Restaurant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  branches           Branch[]
-  roles              Role[]
-  users              User[]
-  integrationApiKeys IntegrationApiKey[]
-  webhookEndpoints   WebhookEndpoint[]
+  branches             Branch[]
+  roles                Role[]
+  users                User[]
+  integrationApiKeys   IntegrationApiKey[]
+  webhookEndpoints     WebhookEndpoint[]
+  subscription         RestaurantSubscription?
+  subscriptionPayments SubscriptionPayment[]
 
   @@map("restaurants")
 }
 
 model Branch {
-  id                String             @id @default(cuid())
-  restaurantId      String
-  restaurant        Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  attendance        Attendance[]
-  deliveryZones     DeliveryZone[]
-  shifts            Shift[]
-  leaveRequests     LeaveRequest[]
-  payrollRuns       PayrollRun[]
-  expenses          Expense[]
-  budgets           Budget[]
-  bankTransactions  BankTransaction[]
-  reportSchedules   ReportSchedule[]
-  cashClosings      CashClosing[]
-  coupons           Coupon[]
-  promotions        Promotion[]
-  campaigns         Campaign[]
-  equipment         Equipment[]
-  documents         Document[]
-  verifactuSettings VerifactuSettings?
-  verifactuRecords  VerifactuRecord[]
+  id                    String                 @id @default(cuid())
+  restaurantId          String
+  restaurant            Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  attendance            Attendance[]
+  deliveryZones         DeliveryZone[]
+  shifts                Shift[]
+  leaveRequests         LeaveRequest[]
+  payrollRuns           PayrollRun[]
+  expenses              Expense[]
+  budgets               Budget[]
+  bankTransactions      BankTransaction[]
+  reportSchedules       ReportSchedule[]
+  cashClosings          CashClosing[]
+  coupons               Coupon[]
+  promotions            Promotion[]
+  campaigns             Campaign[]
+  equipment             Equipment[]
+  documents             Document[]
+  verifactuSettings     VerifactuSettings?
+  verifactuRecords      VerifactuRecord[]
+  aggregatorConnections AggregatorConnection[]
 
   name      String
   address   String?
@@ -245,6 +248,10 @@ model User {
   twoFactorEnabled        Boolean  @default(false)
   twoFactorRecoveryHashes String[] @default([]) // bcrypt hashes of unused one-time recovery codes
   twoFactorLastStep       Int? // last accepted TOTP step: a code works once
+  // Platform operator (F Cartel super admin): manages subscription plans,
+  // trials, and every restaurant's subscription. Also granted to any email
+  // listed in the SUPER_ADMIN_EMAILS env var (see jwt.strategy.ts).
+  isSuperAdmin            Boolean  @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1089,11 +1096,12 @@ model MenuItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  modifierGroups  MenuItemModifierGroup[]
-  orderItems      OrderItem[]
-  comboComponents ComboComponent[]        @relation("ComboParent")
-  usedInCombos    ComboComponent[]        @relation("ComboChild")
-  recipeLines     RecipeIngredient[]
+  modifierGroups     MenuItemModifierGroup[]
+  orderItems         OrderItem[]
+  comboComponents    ComboComponent[]        @relation("ComboParent")
+  usedInCombos       ComboComponent[]        @relation("ComboChild")
+  recipeLines        RecipeIngredient[]
+  aggregatorMappings AggregatorItemMapping[]
 
   @@index([branchId, categoryId])
   @@map("menu_items")
@@ -1359,6 +1367,11 @@ model Order {
   // Marketing (Phase 7): what discount source was applied at checkout.
   couponCode    String?
   promotionName String?
+
+  // Set on orders that came in from a food-delivery marketplace (Zomato /
+  // Swiggy); channel stays ONLINE. See AggregatorOrder for their order id.
+  aggregator      AggregatorProvider?
+  aggregatorOrder AggregatorOrder?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -2298,4 +2311,192 @@ model SyncChange {
 
   @@index([tbl, pkKey], map: "sync_changes_row_idx")
   @@map("sync_changes")
+}
+
+// ─── Platform billing (F Cartel subscriptions) ──────────────────────────────
+// Plans are managed by a super admin; each restaurant has at most one
+// subscription row. Payments go through Razorpay Orders (one payment buys
+// one billing period); see modules/billing.
+
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubscriptionPaymentStatus {
+  CREATED
+  PAID
+  FAILED
+}
+
+model SubscriptionPlan {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  // Price per billing period in the smallest currency unit (paise for INR),
+  // which is what Razorpay expects.
+  priceMinor  Int
+  currency    String          @default("INR")
+  interval    BillingInterval @default(MONTHLY)
+  // Free trial a restaurant can start on this plan once (0 = no trial).
+  trialDays   Int             @default(0)
+  features    String[]        @default([])
+  isActive    Boolean         @default(true)
+  sortOrder   Int             @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions RestaurantSubscription[]
+  payments      SubscriptionPayment[]
+
+  @@map("subscription_plans")
+}
+
+model RestaurantSubscription {
+  id               String             @id @default(cuid())
+  restaurantId     String             @unique
+  restaurant       Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  planId           String?
+  plan             SubscriptionPlan?  @relation(fields: [planId], references: [id], onDelete: SetNull)
+  status           SubscriptionStatus @default(TRIALING)
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime?
+  // A restaurant gets one self-serve trial; a super admin can still grant more.
+  trialUsed        Boolean            @default(false)
+  // Super-admin note (e.g. "comped for launch partner").
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("restaurant_subscriptions")
+}
+
+model SubscriptionPayment {
+  id                String                    @id @default(cuid())
+  restaurantId      String
+  restaurant        Restaurant                @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  planId            String?
+  plan              SubscriptionPlan?         @relation(fields: [planId], references: [id], onDelete: SetNull)
+  razorpayOrderId   String                    @unique
+  razorpayPaymentId String?
+  amountMinor       Int
+  currency          String
+  status            SubscriptionPaymentStatus @default(CREATED)
+  periodStart       DateTime?
+  periodEnd         DateTime?
+  paidAt            DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([restaurantId, createdAt])
+  @@map("subscription_payments")
+}
+
+// Singleton (id = "default") platform-wide switches a super admin controls.
+model PlatformSettings {
+  id                  String  @id @default("default")
+  // Off by default so existing self-hosted installs keep working unchanged;
+  // when on, a restaurant needs an active trial or paid period to use the app.
+  requireSubscription Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_settings")
+}
+
+// ─── Zomato / Swiggy (food-delivery marketplaces) ───────────────────────────
+// One connection per branch per marketplace. Orders arrive on a signed
+// inbound endpoint (modules/aggregators) and become regular ONLINE orders;
+// accept / reject / ready / handed-over updates are pushed back to the
+// connection's status callback URL.
+
+enum AggregatorProvider {
+  ZOMATO
+  SWIGGY
+}
+
+enum AggregatorOrderState {
+  RECEIVED // created as an F Cartel order
+  FAILED // could not be created (unmapped items, closed outlet, ...) — retryable
+}
+
+model AggregatorConnection {
+  id                String             @id @default(cuid())
+  branchId          String
+  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  provider          AggregatorProvider
+  isEnabled         Boolean            @default(false)
+  // The marketplace's id for this outlet (Zomato res_id / Swiggy rest_id).
+  outletId          String?
+  // Skip the accept/reject step for marketplace orders.
+  autoAccept        Boolean            @default(false)
+  // AES-GCM sealed (auth/totp.ts sealSecret). Inbound requests must be signed
+  // with this secret; shown once when generated.
+  webhookSecret     String
+  // Where order status updates are POSTed (the marketplace's / integration
+  // partner's endpoint), and the sealed API key sent with them.
+  statusCallbackUrl String?
+  apiKey            String?
+
+  lastOrderAt DateTime?
+  lastError   String?
+  lastErrorAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itemMappings AggregatorItemMapping[]
+  orders       AggregatorOrder[]
+
+  @@unique([branchId, provider])
+  @@map("aggregator_connections")
+}
+
+// The marketplace's item id → our menu item. Unmapped items fall back to an
+// exact (case-insensitive) name match on the branch menu.
+model AggregatorItemMapping {
+  id             String               @id @default(cuid())
+  connectionId   String
+  connection     AggregatorConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalItemId String
+  menuItemId     String
+  menuItem       MenuItem             @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([connectionId, externalItemId])
+  @@map("aggregator_item_mappings")
+}
+
+model AggregatorOrder {
+  id              String               @id @default(cuid())
+  connectionId    String
+  connection      AggregatorConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalOrderId String
+  orderId         String?              @unique
+  order           Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  state           AggregatorOrderState
+  error           String?
+  payload         Json
+  // Last status pushed back to the marketplace and whether that worked.
+  lastStatusSent  String?
+  lastSyncError   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([connectionId, externalOrderId])
+  @@index([connectionId, createdAt])
+  @@map("aggregator_orders")
 }

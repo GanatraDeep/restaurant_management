@@ -1,5 +1,7 @@
 const API_BASE = "/api/v1";
 
+export const SUBSCRIPTION_REQUIRED_EVENT = "fcartel:subscription-required";
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -27,6 +29,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({ message: res.statusText }));
+    // The restaurant's subscription lapsed mid-session: let SubscriptionGate
+    // re-check and show the plan picker instead of a page full of errors.
+    if (res.status === 402 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(SUBSCRIPTION_REQUIRED_EVENT));
+    }
     throw new ApiError(body.message ?? "Request failed", res.status, body.issues, body.code);
   }
 

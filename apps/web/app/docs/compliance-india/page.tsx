@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
+import { DocList, DocPage, DocSection, SupportLink } from "@/components/marketing/doc-page";
 
 export const metadata: Metadata = {
-  title: "India compliance notes — fcartel",
-  description: "How fcartel's architecture relates to Indian data-protection, IT, and consumer-protection law.",
+  title: "India compliance notes — F Cartel",
+  description: "How F Cartel's architecture relates to Indian data-protection, IT, and consumer-protection law.",
 };
 
 export default function ComplianceIndiaPage() {
@@ -11,7 +11,7 @@ export default function ComplianceIndiaPage() {
     <DocPage title="India compliance notes" updated="15 August 2026">
       <DocSection heading="This is not legal advice">
         <p>
-          This page explains how fcartel is built with reference to
+          This page explains how F Cartel is built with reference to
           Indian law, so a restaurant operator deploying it can have an
           informed conversation with their own advisor — it is not a legal
           opinion, a certification, or a substitute for review by a
@@ -24,17 +24,15 @@ export default function ComplianceIndiaPage() {
 
       <DocSection heading="Who is the &ldquo;data fiduciary&rdquo;?">
         <p>
-          fcartel is self-hosted software, not a cloud service Nodedr
-          Infotech operates on your behalf. When a restaurant deploys
-          fcartel on its own server, <strong className="text-foreground">
-          that restaurant is the Data Fiduciary</strong> under the Digital
-          Personal Data Protection Act, 2023 (DPDP Act) for the customer and
-          staff personal data it collects through the app — the same way a
-          restaurant using a paper register or a locally-run spreadsheet
-          would be. Nodedr Infotech does not receive, store, or process that
-          data on its own infrastructure in a self-hosted deployment.
+          The restaurant that collects customer and staff personal data
+          through F Cartel is the <strong className="text-foreground">Data
+          Fiduciary</strong> under the Digital Personal Data Protection Act,
+          2023 (DPDP Act) for that data — the same way a restaurant using a
+          paper register or a spreadsheet would be. When F Cartel is run on
+          the restaurant&rsquo;s own server, that data never leaves the
+          restaurant&rsquo;s infrastructure.
         </p>
-        <p>This has a practical upside: because the entire stack (Postgres, API, and web app) runs on hardware the restaurant controls, data residency and cross-border transfer questions under the DPDP Act are largely avoided by construction — the data simply never leaves the deploying operator&rsquo;s own server unless they choose to move it.</p>
+        <p>On a restaurant-run server the entire stack (database, API, and web app) sits on hardware the restaurant controls, so data residency and cross-border transfer questions under the DPDP Act are largely avoided by construction — the data never leaves that server unless the restaurant chooses to move it.</p>
       </DocSection>
 
       <DocSection heading="DPDP Act, 2023 — what the software supports">
@@ -43,7 +41,7 @@ export default function ComplianceIndiaPage() {
           rights to access, correct, and erase their personal data, and
           requires Data Fiduciaries to collect only what&rsquo;s needed for
           a stated purpose, retain it no longer than necessary, and provide
-          a grievance-redressal channel. fcartel&rsquo;s data model and
+          a grievance-redressal channel. F Cartel&rsquo;s data model and
           controls that a deploying restaurant can use to meet these:
         </p>
         <DocList
@@ -51,11 +49,11 @@ export default function ComplianceIndiaPage() {
             "Customer records (name, phone, order/visit history, loyalty points) are editable and deletable by any staff member with the customers.manage permission — supporting correction and erasure requests.",
             "Only the data fields actually used by POS/CRM/loyalty features are collected — no speculative profile fields.",
             "Role-based access control restricts who on staff can view customer contact details and order history, supporting a purpose-limitation and least-privilege posture.",
-            "Every table/order/session is scoped to the restaurant that created it — verified during a security audit that one restaurant's staff cannot query another restaurant's customer data, relevant if you run fcartel for multiple outlets on shared infrastructure.",
+            "Every table/order/session is scoped to the restaurant that created it — verified during a security audit that one restaurant's staff cannot query another restaurant's customer data, relevant if you run F Cartel for multiple outlets on shared infrastructure.",
           ]}
         />
         <p>
-          What fcartel does <em>not</em> provide out of the box: a
+          What F Cartel does <em>not</em> provide out of the box: a
           built-in consent-capture flow, an automated data-retention/deletion
           schedule, or a hosted grievance-officer contact form — these are
           organizational obligations the deploying restaurant (as Data
@@ -97,14 +95,14 @@ export default function ComplianceIndiaPage() {
 
       <DocSection heading="GST invoicing (CGST Rules, Rule 46)">
         <p>
-          Receipts generated by fcartel display the branch&rsquo;s
+          Receipts generated by F Cartel display the branch&rsquo;s
           GSTIN (when configured in Settings), an itemized CGST/SGST
           breakup, and a per-order invoice/order number. Whether your
           specific invoice numbering and layout fully satisfies Rule 46 of
           the CGST Rules, 2017 for your registration and turnover bracket
           (e.g. sequential numbering per financial year, HSN/SAC code
           requirements at your turnover level) is something to confirm with
-          your chartered accountant before relying on fcartel receipts
+          your chartered accountant before relying on F Cartel receipts
           as your sole tax-invoice record — this software generates a
           receipt in the right shape, it does not itself certify GST
           compliance for your specific registration.
@@ -127,14 +125,7 @@ export default function ComplianceIndiaPage() {
       <DocSection heading="Questions">
         <p>
           For questions about this software&rsquo;s architecture or
-          security posture, open an issue on{" "}
-          <a
-            href="https://github.com/Raktim94/nodedr-restaurant-pos/issues"
-            className="text-primary underline underline-offset-4"
-          >
-            GitHub
-          </a>
-          . For questions about your own restaurant&rsquo;s legal
+          security posture, contact <SupportLink />. For questions about your own restaurant&rsquo;s legal
           obligations as a Data Fiduciary or GST-registered business, please
           consult a qualified lawyer or chartered accountant — this page
           cannot answer those for your specific situation.

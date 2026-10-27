@@ -1,5 +1,6 @@
 "use client";
 
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { SessionUser } from "@nodedr-restaurant/types";
@@ -45,6 +46,21 @@ export function SidebarNav({
             </Link>
           );
         },
+      )}
+      {user?.isSuperAdmin && (
+        <Link
+          href="/admin"
+          onClick={onNavigate}
+          className={cn(
+            "mt-2 flex items-center gap-3 rounded-xl border border-dashed border-sidebar-border px-3 py-2.5 text-sm font-medium transition-colors",
+            pathname?.startsWith("/admin")
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+          )}
+        >
+          <ShieldCheck className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+          Admin console
+        </Link>
       )}
     </nav>
   );

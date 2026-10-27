@@ -25,7 +25,7 @@ before calling anything done.
 --success:          #22C55E
 --warning:          #F59E0B
 --danger:           #EF4444
---primary:          #9F1239   /* wine/burgundy — see rationale below */
+--primary:          #D13644   /* F Cartel coral, deepened for AA — see below */
 --primary-foreground: #FFFFFF
 ```
 
@@ -41,20 +41,16 @@ Dark mode (own token set, not `background * 0.1` math):
 --success:           #34D399
 --warning:           #FBBF24
 --danger:            #F87171
---primary:           #FB7185   /* brighter rose for dark-bg contrast */
---primary-foreground: #1F0A0F
+--primary:           #FA6C76   /* the logo coral itself */
+--primary-foreground: #14161B   /* near-black ink, as in the logo */
 ```
 
-**Primary accent decision (the one deliberate risk):** wine/burgundy
-instead of the expected SaaS indigo/blurple (Stripe, Linear) or restaurant
-cliché tomato-red. It's a considered nod to hospitality (wine lists, velvet
-banquettes, fine dining) that stays distinct from the danger-red already in
-the palette, and reads as premium rather than generic-dashboard-default —
-finalized directly rather than looped back for a color-swatch vote, since
-this is an internal operator tool, not a client-facing brand identity where
-that stakes-based ask-first call would apply. Revisit only if a real
-restaurant-brand pass (logo, physical signage) later demands matching an
-existing brand color instead.
+**Primary accent:** the F Cartel logo's coral (#FA6C76). It is too light
+to carry white text or to be used as text on the light page (2.8:1), so
+light mode uses a deepened coral, #D13644 (4.9:1 with white, 4.6:1 on the
+page background — WCAG AA). Dark mode uses the logo coral itself with
+near-black text on filled buttons (6.4:1), echoing the logo's coral on
+near-black.
 
 ## Typography
 

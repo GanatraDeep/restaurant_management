@@ -27,6 +27,7 @@ import {
   imageUploadOptions,
 } from '../../common/upload/image-upload.config';
 import { SettingsService } from './settings.service';
+import { SkipSubscription } from '../billing/skip-subscription.decorator';
 
 @ApiTags('settings')
 @Controller('v1/settings')
@@ -48,6 +49,7 @@ export class SettingsController {
 
   // Any signed-in user — drives the restaurant name/logo in the app shell.
   @Auth()
+  @SkipSubscription()
   @Get('branding')
   getBranding(@CurrentUser() user: SessionUser) {
     return this.settingsService.getBranding(user.restaurantId);

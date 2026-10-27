@@ -24,11 +24,12 @@ const TABS: SettingsTab[] = [
   { label: "Roles", href: "/settings/roles", permission: "roles.manage" },
   { label: "Audit Log", href: "/settings/audit-log", permission: "audit_log.view" },
   { label: "Backup", href: "/settings/backup", permission: "backup.manage" },
-  { label: "Updates", href: "/settings/updates", permission: "system.update" },
   { label: "Server Sync", href: "/settings/sync", permission: "settings.manage" },
   { label: "API Keys", href: "/settings/api-keys" },
   { label: "Security", href: "/settings/security" },
   { label: "Webhooks", href: "/settings/webhooks", permission: "settings.manage" },
+  { label: "Zomato & Swiggy", href: "/settings/aggregators", permission: "settings.manage" },
+  { label: "Billing", href: "/settings/billing", permission: "settings.manage" },
   { label: "VERI*FACTU", href: "/settings/verifactu", permission: "settings.manage", country: "ES" },
 ];
 
@@ -47,7 +48,7 @@ export function SettingsTabs() {
   );
 
   return (
-    <nav className="flex gap-1 border-b border-border">
+    <nav className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] sm:mx-0 sm:px-0 lg:flex-wrap lg:overflow-visible">
       {visibleTabs.map((tab) => {
         const isActive =
           tab.href === "/settings" ? pathname === "/settings" : pathname?.startsWith(tab.href);
@@ -56,7 +57,7 @@ export function SettingsTabs() {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "flex items-center gap-2 border-b-2 px-3 pb-3 text-sm font-medium transition-colors",
+              "flex shrink-0 items-center gap-2 border-b-2 px-3 pb-3 text-sm font-medium whitespace-nowrap transition-colors",
               isActive
                 ? "border-primary text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",

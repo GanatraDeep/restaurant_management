@@ -7,6 +7,7 @@ import { StatusNote, useNoteToast } from "@/components/ui/status-note";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContactDetailsDialog } from "@/components/contact-details-dialog";
+import { AggregatorBadge } from "@/components/orders/channel-badges";
 import { ReasonDialog } from "@/components/orders/reason-dialog";
 import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import {
@@ -119,6 +120,7 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
             {ticket.order.channel === "ONLINE" && (
               <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-label="Online order" />
             )}
+            <AggregatorBadge aggregator={ticket.order.aggregator} />
           </p>
           <p className="text-xs text-muted-foreground">
             {ticket.order.table ? `Table ${ticket.order.table.number}` : ticket.order.type}
@@ -163,10 +165,10 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
         ))}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {nextStatus && (
           <Button
-            className="h-12 flex-1 text-base"
+            className="h-12 min-w-[6.5rem] flex-1 text-base"
             disabled={updateStatus.isPending}
             onClick={() =>
               updateStatus.mutate(

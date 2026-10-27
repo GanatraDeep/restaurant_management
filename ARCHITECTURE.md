@@ -146,7 +146,7 @@ represent, so the API keeps them apart and enforces each on the server.
 ## Monorepo layout
 
 ```
-nodedr-restaurant-pos/
+restaurant_management/
 ├── apps/
 │   ├── backend/        # NestJS API — REST (versioned /api/v1), Swagger, Socket.IO gateways
 │   └── web/             # Next.js — back-office, POS, KDS, public QR-ordering site (route groups)

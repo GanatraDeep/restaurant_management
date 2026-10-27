@@ -131,6 +131,7 @@ export interface OrderDetail {
   type: string;
   status: string;
   channel: OrderChannel;
+  aggregator?: "ZOMATO" | "SWIGGY" | null;
   acceptance: AcceptanceStatus;
   tableId: string | null;
   guestName: string | null;
@@ -193,6 +194,7 @@ export interface ManagedOrder {
   type: string;
   status: string;
   channel: OrderChannel;
+  aggregator?: "ZOMATO" | "SWIGGY" | null;
   acceptance: AcceptanceStatus;
   guestName: string | null;
   totalAmount: string;

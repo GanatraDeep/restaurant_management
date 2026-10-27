@@ -11,18 +11,18 @@ Get from zero to your first UPI-paid order in about ten minutes, then set up sta
 You need a machine that stays on in the restaurant (a mini PC, an old laptop, a NAS or a VPS) with Docker. The database is created for you on first start.
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Raktim94/nodedr-restaurant-pos/master/scripts/quickstart.sh | bash
+curl -fsSL https://raw.githubusercontent.com/GanatraDeep/restaurant_management/master/scripts/quickstart.sh | bash
 ```
 
 Or from a clone:
 
 ```bash
-git clone https://github.com/Raktim94/nodedr-restaurant-pos.git
-cd nodedr-restaurant-pos
+git clone https://github.com/GanatraDeep/restaurant_management.git
+cd restaurant_management
 ./install.sh
 ```
 
-Open `http://<that machine's IP>:1995` from any till or tablet on the same network. On Windows use `quickstart.ps1`. On **CasaOS / ZimaOS**, install from the compose manifest in [`casaos/`](./casaos/README.md); pre-built amd64 and arm64 images are published, so nothing is compiled.
+Open `http://<that machine's IP>:1995` from any till or tablet on the same network. On Windows use `quickstart.ps1`.
 
 > Using it over HTTPS (a tunnel or reverse proxy)? Set `COOKIE_SECURE=true` in `.env`, or login will appear to succeed and then fail with "Unauthorized".
 
@@ -241,7 +241,6 @@ Reports go out at 06:00 branch time: daily covers yesterday, weekly goes on Mond
 | **Settings → Backup** | Schedule and restore backups. Test a restore before you need one. |
 | **Settings → Security** | Two-factor sign-in and recovery codes. |
 | **Settings → API keys, Webhooks** | Let other systems talk to OrderRestro. |
-| **Settings → Updates** | Check for a new version. |
 
 <table>
 <tr>
@@ -266,8 +265,6 @@ Reports go out at 06:00 branch time: daily covers yesterday, weekly goes on Mond
 </tr>
 </table>
 
-![Updates](docs/screenshots/tutorial/settings-updates.png)
-
 ## 12. Connect other systems
 
 OrderRestro has a REST API (`/api/v1`, docs at `/api/docs`), API keys, webhooks and an MCP server. See [docs/integrations-api.md](docs/integrations-api.md).
@@ -287,7 +284,7 @@ OrderRestro has a REST API (`/api/v1`, docs at `/api/docs`), API keys, webhooks 
 
 Everything lives in your Postgres volume. Use **Settings → Backup** for scheduled backups, and test a restore before you need one.
 
-Questions or bugs: [open an issue](https://github.com/Raktim94/nodedr-restaurant-pos/issues).
+Questions or bugs: contact F Cartel support.
 
 ---
 

@@ -35,7 +35,8 @@ export function ProductGrid({
       {categories && categories.length > 0 && (
         <ResponsiveTabs
           mobileOnly
-          className="lg:hidden"
+          collapseBelow="xl"
+          className="xl:hidden"
           label="Category"
           value={activeCategoryId ?? "all"}
           onChange={(id) => setActiveCategoryId(id === "all" ? undefined : id)}
@@ -44,11 +45,11 @@ export function ProductGrid({
         />
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row lg:gap-5">
+      <div className="flex min-h-0 flex-1 flex-col xl:flex-row xl:gap-5">
       {categories && categories.length > 0 && (
         <nav
           aria-label="Category"
-          className="hidden w-52 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border pr-3 lg:flex xl:w-60"
+          className="hidden w-44 shrink-0 flex-col gap-1 overflow-y-auto border-r border-border pr-3 xl:flex 2xl:w-56"
         >
           {[{ id: undefined as string | undefined, name: "All", count: undefined as number | undefined }, ...categories.map((c) => ({ id: c.id as string | undefined, name: c.name, count: c._count.items as number | undefined }))].map((c) => {
             const active = c.id === activeCategoryId;
@@ -80,7 +81,7 @@ export function ProductGrid({
       {isError && !items ? (
         <QueryError error={error} what="the menu" onRetry={() => void refetch()} retrying={isFetching} />
       ) : (
-      <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-y-auto pb-4 sm:grid-cols-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
+      <div className="grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-y-auto pb-4 sm:grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] lg:gap-4">
         {isLoading &&
           Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
         {filtered?.map((item) => (

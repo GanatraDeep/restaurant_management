@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, type AggregatorProvider } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import {
   canTransitionKot,
@@ -44,6 +44,10 @@ import {
 } from './settlement';
 import type { TaxMode } from '@nodedr-restaurant/types';
 import { VerifactuService } from '../verifactu/verifactu.service';
+import {
+  AggregatorStatusService,
+  KOT_TO_AGGREGATOR_STATUS,
+} from '../aggregators/aggregator-status.service';
 
 const KOT_FORWARD_STATUSES = [
   'ACCEPTED',
@@ -66,6 +70,7 @@ export class OrdersService {
     private readonly marketing: MarketingService,
     private readonly webhooks: WebhooksService,
     private readonly verifactu: VerifactuService,
+    private readonly aggregatorStatus: AggregatorStatusService,
   ) {}
 
   async listOpen(branchId: string, tableId?: string) {
@@ -165,6 +170,9 @@ export class OrdersService {
       channel?: 'STAFF' | 'ONLINE';
       requireAcceptance?: boolean;
       clientRequestId?: string;
+      // Zomato / Swiggy order (see modules/aggregators). The marketplace
+      // lists its own menu, so the website-visibility check is skipped.
+      aggregator?: AggregatorProvider;
     } = {},
   ) {
     const channel = options.channel ?? 'STAFF';
@@ -179,7 +187,7 @@ export class OrdersService {
       acceptance = branch?.autoConfirmOrders ? 'ACCEPTED' : 'PENDING';
     }
     const menuItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
-    if (channel === 'ONLINE')
+    if (channel === 'ONLINE' && !options.aggregator)
       await this.assertOrderableOnWebsite(branchId, menuItemIds);
     const menuItems = await this.prisma.menuItem.findMany({
       where: { id: { in: menuItemIds }, branchId },
@@ -325,6 +333,7 @@ export class OrdersService {
           guestName: dto.guestName,
           notes: dto.notes,
           clientRequestId: options.clientRequestId,
+          aggregator: options.aggregator,
           createdById: userId,
           subtotal: totals.subtotal,
           taxAmount: totals.taxAmount,
@@ -636,6 +645,7 @@ export class OrdersService {
       entityId: orderId,
       metadata: { orderNumber: order.orderNumber, type: order.type },
     });
+    void this.aggregatorStatus.push(orderId, 'ACCEPTED');
     try {
       await this.notifications.notifyByPermission(branchId, 'kds.manage', {
         type: 'order.new',
@@ -923,6 +933,12 @@ export class OrdersService {
       orderNumber: order.orderNumber,
       type: order.type,
     });
+    void this.aggregatorStatus.push(
+      orderId,
+      options.declineIncoming || options.source === 'ONLINE_DECLINED'
+        ? 'REJECTED'
+        : 'CANCELLED',
+    );
 
     return this.getOrder(branchId, orderId);
   }
@@ -2311,6 +2327,10 @@ export class OrdersService {
     this.realtime.emitToBranch(branchId, 'order.updated', {
       id: kot.order.id,
     });
+    const marketplaceStatus = KOT_TO_AGGREGATOR_STATUS[target];
+    if (marketplaceStatus) {
+      void this.aggregatorStatus.push(kot.order.id, marketplaceStatus);
+    }
     await this.audit.record({
       userId,
       action: 'kot.status_changed',

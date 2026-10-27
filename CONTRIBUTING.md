@@ -1,4 +1,4 @@
-# Contributing to fcartel
+# Contributing to F Cartel
 
 First off — thank you for considering a contribution. This is a young,
 fast-moving project (Phases 0-3 of a 20-module scope are done; see
@@ -71,8 +71,8 @@ Docker for it.
 ### Option A — full stack via Docker
 
 ```bash
-git clone https://github.com/Raktim94/nodedr-restaurant-pos.git
-cd nodedr-restaurant-pos
+git clone https://github.com/GanatraDeep/restaurant_management.git
+cd restaurant_management
 cp .env.example .env                 # edit JWT_SECRET / POSTGRES_PASSWORD for anything beyond local dev
 docker compose up -d --build
 docker exec nodedr-restaurant-backend npx ts-node prisma/seed.ts   # first run only — demo data + login
@@ -246,7 +246,7 @@ PR.
 
 ## Questions & discussion
 
-Use [GitHub Discussions](https://github.com/Raktim94/nodedr-restaurant-pos/discussions)
+Use [GitHub Discussions](https://github.com/GanatraDeep/restaurant_management/discussions)
 for "how do I…" / "why does X work this way" / general chat. Use Issues
 for concrete bugs and feature requests. Keep architecture debates in
 Discussions or a tagged issue rather than scattered across PR comments,

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { SubscriptionGate } from "@/components/billing/subscription-gate";
 import { AppShell } from "@/components/layout/app-shell";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { BranchProvider, useBranch } from "@/hooks/use-branch";
@@ -63,6 +64,7 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
     <BranchProvider>
       <RealtimeBridge />
       <AppShell user={data.user}>{children}</AppShell>
+      <SubscriptionGate user={data.user} />
     </BranchProvider>
   );
 }
