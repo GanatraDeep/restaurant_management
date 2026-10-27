@@ -24,7 +24,6 @@ const TABS: SettingsTab[] = [
   { label: "Roles", href: "/settings/roles", permission: "roles.manage" },
   { label: "Audit Log", href: "/settings/audit-log", permission: "audit_log.view" },
   { label: "Backup", href: "/settings/backup", permission: "backup.manage" },
-  { label: "Updates", href: "/settings/updates", permission: "system.update" },
   { label: "Server Sync", href: "/settings/sync", permission: "settings.manage" },
   { label: "API Keys", href: "/settings/api-keys" },
   { label: "Security", href: "/settings/security" },

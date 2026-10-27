@@ -27,10 +27,8 @@ services:
       dockerfile: apps/backend/Dockerfile
       args:
         APP_VERSION: "${APP_VERSION:-dev}"
-    # Same name CI publishes. `up --build` tags the local build with it, and
-    # the in-app "Update now" button (see the `updater` service below) pulls
-    # the published image of a newer version under it.
-    image: ghcr.io/raktim94/nodedr-restaurant-pos-backend:${APP_VERSION:-dev}
+    # Local tag for the image `up --build` builds from this repo.
+    image: fcartel-backend:${APP_VERSION:-dev}
     container_name: nodedr-restaurant-backend
     restart: unless-stopped
     environment:
@@ -52,11 +50,6 @@ services:
       VERIFACTU_PRODUCER_NAME: "${VERIFACTU_PRODUCER_NAME:-}"
       VERIFACTU_PRODUCER_COUNTRY: "${VERIFACTU_PRODUCER_COUNTRY:-}"
       VERIFACTU_SYSTEM_ID: "${VERIFACTU_SYSTEM_ID:-}"
-      # In-app updates (Settings > Updates): the backend asks the `updater`
-      # container below to pull the latest published images. Unset these two
-      # and the Update button simply says this install can't update itself.
-      UPDATER_URL: "http://updater:8080"
-      UPDATER_TOKEN: "${UPDATER_TOKEN:-nodedr-restaurant-updater}"
       # Optional: S3 backup config can also be set from Settings > Backup
       # (persisted to the `backup_config` DB row, which takes priority over
       # these). Uncomment for a headless/CasaOS-style deployment that
@@ -111,7 +104,7 @@ services:
         # Next bakes rewrite destinations at BUILD time — this must be a
         # build ARG, not a runtime env (see apps/web/Dockerfile comment).
         BACKEND_URL: "http://backend:4000"
-    image: ghcr.io/raktim94/nodedr-restaurant-pos-web:${APP_VERSION:-dev}
+    image: fcartel-web:${APP_VERSION:-dev}
     container_name: nodedr-restaurant-web
     restart: unless-stopped
     ports:
@@ -119,25 +112,6 @@ services:
     depends_on:
       - backend
 
-  # One-click updates. A tiny sidecar (see updater/server.js) that does
-  # NOTHING on its own — no polling, no auto-update. When an admin presses
-  # Settings > Updates > "Update now", the backend tells it which published
-  # version to move to; it pulls that exact version of the backend and web
-  # images and recreates those two containers with the same settings (data
-  # volumes untouched, rolled back if it fails). It needs the Docker socket,
-  # which is why it is its own container on the internal network (no
-  # published port) instead of privilege handed to the app backend.
-  updater:
-    build:
-      context: ./updater
-    image: ghcr.io/raktim94/nodedr-restaurant-pos-updater:latest
-    container_name: nodedr-restaurant-updater
-    restart: unless-stopped
-    environment:
-      UPDATER_TOKEN: "${UPDATER_TOKEN:-nodedr-restaurant-updater}"
-      TARGET_CONTAINERS: "nodedr-restaurant-backend,nodedr-restaurant-web"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
 
 volumes:
   pg_data:

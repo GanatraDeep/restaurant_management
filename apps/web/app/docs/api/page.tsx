@@ -107,18 +107,6 @@ GET  /locations/:branchId/reservations/:id   (scope: reservations:read)`}</Code>
         />
       </DocSection>
 
-      <DocSection heading="Full reference">
-        <p>
-          For the complete endpoint reference, error codes, and rate limits, see{" "}
-          <a
-            href="https://github.com/Raktim94/nodedr-restaurant-pos/blob/main/docs/integrations-api.md"
-            className="text-primary underline underline-offset-4"
-          >
-            docs/integrations-api.md
-          </a>{" "}
-          in the repository.
-        </p>
-      </DocSection>
     </DocPage>
   );
 }

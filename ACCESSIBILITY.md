@@ -32,4 +32,4 @@ We have not yet performed a full manual audit with users who rely on assistive t
 
 ## Reporting a problem
 
-If you encounter an accessibility barrier anywhere in this product, please [open an issue on GitHub](https://github.com/Raktim94/nodedr-restaurant-pos/issues) with as much detail as you can (page, assistive technology used, what you expected vs. what happened). This is an open-source project — accessibility fixes are treated as real bugs, not feature requests.
+If you encounter an accessibility barrier anywhere in this product, please contact F Cartel support with as much detail as you can (page, assistive technology used, what you expected vs. what happened). Accessibility fixes are treated as real bugs, not feature requests.

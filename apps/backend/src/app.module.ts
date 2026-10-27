@@ -41,7 +41,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { BackupModule } from './backup/backup.module';
 import { IntegrationsModule } from './integrations/integrations.module';
 import { McpModule } from './mcp/mcp.module';
-import { SystemModule } from './system/system.module';
 import { VerifactuModule } from './modules/verifactu/verifactu.module';
 import { BillingModule } from './modules/billing/billing.module';
 import { AggregatorStatusModule } from './modules/aggregators/aggregator-status.module';
@@ -91,7 +90,6 @@ import { AggregatorsModule } from './modules/aggregators/aggregators.module';
     BackupModule,
     IntegrationsModule,
     McpModule,
-    SystemModule,
   ],
   controllers: [AppController],
   providers: [

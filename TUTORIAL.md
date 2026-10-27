@@ -241,7 +241,6 @@ Reports go out at 06:00 branch time: daily covers yesterday, weekly goes on Mond
 | **Settings → Backup** | Schedule and restore backups. Test a restore before you need one. |
 | **Settings → Security** | Two-factor sign-in and recovery codes. |
 | **Settings → API keys, Webhooks** | Let other systems talk to OrderRestro. |
-| **Settings → Updates** | Check for a new version. |
 
 <table>
 <tr>
@@ -265,8 +264,6 @@ Reports go out at 06:00 branch time: daily covers yesterday, weekly goes on Mond
 <td><img src="docs/screenshots/tutorial/settings-webhooks.png" alt="Webhooks"></td>
 </tr>
 </table>
-
-![Updates](docs/screenshots/tutorial/settings-updates.png)
 
 ## 12. Connect other systems
 

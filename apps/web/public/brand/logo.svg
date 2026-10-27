@@ -1,14 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="F Cartel">
-  <defs>
-    <linearGradient id="fc-bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#e11d48"/>
-      <stop offset="1" stop-color="#881337"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="116" fill="url(#fc-bg)"/>
-  <g fill="none" stroke="#ffffff" stroke-width="62" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M226 396V206c0-58 34-90 88-90c18 0 34 3 48 9"/>
-    <path d="M160 242h148"/>
+  <rect width="512" height="512" rx="112" fill="#14161b"/>
+  <g transform="translate(256 256) scale(0.84) translate(-299 -269)">
+    <g transform="translate(70 0) skewX(-14)">
+      <!-- stem + top bar sweeping right -->
+      <path fill="#fa6c76" d="M140 452 L140 198 C140 128 188 88 264 88 L456 88 C446 150 404 182 342 182 L228 182 L228 452 Z"/>
+      <!-- arm reaching right, holding the tray -->
+      <path fill="#fa6c76" d="M226 262 L330 262 C352 262 366 252 376 240 L440 240 L440 257 L392 257 C384 282 364 302 330 306 L274 306 L274 296 Z"/>
+      <!-- cream cuff over the stem, outlined dark -->
+      <path fill="#f1ece0" stroke="#14161b" stroke-width="10" stroke-linejoin="round" d="M180 254 L264 240 L278 298 L278 394 L180 408 Z"/>
+      <!-- trouser shadow -->
+      <path fill="#3b404a" d="M282 312 L314 312 L314 374 L282 374 Z"/>
+      <!-- napkin / crown on the tray -->
+      <path fill="#f1ece0" d="M354 236 L354 196 L364 206 L374 192 L384 206 L396 192 L404 206 L414 196 L412 236 Z"/>
+    </g>
   </g>
-  <circle cx="352" cy="372" r="34" fill="#fde68a"/>
 </svg>

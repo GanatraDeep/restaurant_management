@@ -5,7 +5,6 @@ import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import { useLowStockIngredients } from "@/hooks/use-inventory";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useBackups } from "@/hooks/use-backups";
-import { useUpdateCheck } from "@/hooks/use-updates";
 
 // Which sidebar sections and Settings tabs have something that needs the
 // user's attention. Everything here reuses queries the app already runs
@@ -29,12 +28,10 @@ export function useNavBadges(): NavBadges {
   const { data: me } = useCurrentUser();
   const user = me?.user;
 
-  const canUpdate = hasPermission(user, "system.update");
   const canBackup = hasPermission(user, "backup.manage");
   const canInventory = hasPermission(user, "inventory.manage");
 
   const { data: notifications } = useNotifications();
-  const { data: update } = useUpdateCheck(canUpdate);
   const { data: backups } = useBackups(canBackup);
   const { data: lowStock } = useLowStockIngredients(canInventory ? branchId : null);
 
@@ -53,10 +50,6 @@ export function useNavBadges(): NavBadges {
 
   if (canInventory && (lowStock?.length ?? 0) > 0) nav["/inventory"] = true;
 
-  if (canUpdate && update?.updateAvailable) {
-    nav["/settings"] = true;
-    settingsTabs["/settings/updates"] = true;
-  }
 
   // The newest backup failing is worth a nudge even if the notification was read.
   if (canBackup && backups?.[0]?.status === "FAILED") {

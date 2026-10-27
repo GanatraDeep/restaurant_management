@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
 import { BRAND } from "@/lib/brand";
-import { downloadHref } from "@/lib/downloads";
 
 const columns = [
   {
@@ -72,13 +71,7 @@ export function MarketingFooter() {
           <p className="text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} {BRAND.name}. Made in India.
           </p>
-          {/* AGPL-3.0 §13: users interacting over a network must be offered the source. */}
-          <p className="text-xs text-muted-foreground">
-            Based on the open-source OrderRestro project &middot; AGPL-3.0 &middot;{" "}
-            <a href={downloadHref("github")} className="hover:text-foreground hover:underline">
-              Source code
-            </a>
-          </p>
+
         </div>
       </div>
     </footer>

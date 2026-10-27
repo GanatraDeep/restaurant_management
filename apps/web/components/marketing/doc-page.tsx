@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/layout/logo";
+import { BRAND } from "@/lib/brand";
 
 export function DocPage({
   title,
@@ -52,5 +53,16 @@ export function DocList({ items }: { items: ReactNode[] }) {
         <li key={i}>{it}</li>
       ))}
     </ul>
+  );
+}
+
+/** "F Cartel support", linked when NEXT_PUBLIC_SUPPORT_URL is set. */
+export function SupportLink() {
+  return BRAND.supportUrl ? (
+    <a href={BRAND.supportUrl} className="text-primary underline underline-offset-4">
+      {BRAND.name} support
+    </a>
+  ) : (
+    <strong className="text-foreground">{BRAND.name} support</strong>
   );
 }

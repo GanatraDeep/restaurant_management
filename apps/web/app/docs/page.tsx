@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DocPage, DocSection } from "@/components/marketing/doc-page";
-import { downloadHref } from "@/lib/downloads";
 
 export const metadata: Metadata = {
   title: "Documentation — F Cartel",
-  description: "API & MCP, accessibility, and India compliance docs for a self-hosted F Cartel instance.",
+  description: "API & MCP, Zomato & Swiggy, accessibility, and India compliance docs for F Cartel.",
 };
 
 const docs = [
@@ -49,20 +48,6 @@ export default function DocsIndexPage() {
         </div>
       </DocSection>
 
-      <DocSection heading="Full setup & architecture docs">
-        <p>
-          Installation, environment variables, and the full architecture reference live in the{" "}
-          <a
-            href={downloadHref("github")}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline underline-offset-4"
-          >
-            GitHub repository
-          </a>
-          &rsquo;s README and docs folder.
-        </p>
-      </DocSection>
     </DocPage>
   );
 }

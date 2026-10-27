@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
+import { DocList, DocPage, DocSection, SupportLink } from "@/components/marketing/doc-page";
 
 export const metadata: Metadata = {
   title: "India compliance notes — F Cartel",
@@ -24,17 +24,15 @@ export default function ComplianceIndiaPage() {
 
       <DocSection heading="Who is the &ldquo;data fiduciary&rdquo;?">
         <p>
-          F Cartel is self-hosted software, not a cloud service Nodedr
-          Infotech operates on your behalf. When a restaurant deploys
-          F Cartel on its own server, <strong className="text-foreground">
-          that restaurant is the Data Fiduciary</strong> under the Digital
-          Personal Data Protection Act, 2023 (DPDP Act) for the customer and
-          staff personal data it collects through the app — the same way a
-          restaurant using a paper register or a locally-run spreadsheet
-          would be. Nodedr Infotech does not receive, store, or process that
-          data on its own infrastructure in a self-hosted deployment.
+          The restaurant that collects customer and staff personal data
+          through F Cartel is the <strong className="text-foreground">Data
+          Fiduciary</strong> under the Digital Personal Data Protection Act,
+          2023 (DPDP Act) for that data — the same way a restaurant using a
+          paper register or a spreadsheet would be. When F Cartel is run on
+          the restaurant&rsquo;s own server, that data never leaves the
+          restaurant&rsquo;s infrastructure.
         </p>
-        <p>This has a practical upside: because the entire stack (Postgres, API, and web app) runs on hardware the restaurant controls, data residency and cross-border transfer questions under the DPDP Act are largely avoided by construction — the data simply never leaves the deploying operator&rsquo;s own server unless they choose to move it.</p>
+        <p>On a restaurant-run server the entire stack (database, API, and web app) sits on hardware the restaurant controls, so data residency and cross-border transfer questions under the DPDP Act are largely avoided by construction — the data never leaves that server unless the restaurant chooses to move it.</p>
       </DocSection>
 
       <DocSection heading="DPDP Act, 2023 — what the software supports">
@@ -127,14 +125,7 @@ export default function ComplianceIndiaPage() {
       <DocSection heading="Questions">
         <p>
           For questions about this software&rsquo;s architecture or
-          security posture, open an issue on{" "}
-          <a
-            href="https://github.com/Raktim94/nodedr-restaurant-pos/issues"
-            className="text-primary underline underline-offset-4"
-          >
-            GitHub
-          </a>
-          . For questions about your own restaurant&rsquo;s legal
+          security posture, contact <SupportLink />. For questions about your own restaurant&rsquo;s legal
           obligations as a Data Fiduciary or GST-registered business, please
           consult a qualified lawyer or chartered accountant — this page
           cannot answer those for your specific situation.

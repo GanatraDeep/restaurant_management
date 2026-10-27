@@ -4,21 +4,19 @@
 
 <img src="docs/orderrestro-cover.jpg" alt="Illustrative evening scene in an independent restaurant" width="100%">
 
-**Open-source, self-hosted restaurant POS & management system** — billing
+**Restaurant POS & management system** — billing
 with **UPI QR payments**, tables, kitchen display (KDS), reservations,
 inventory, **staff attendance & payroll**, accounting, reports, CRM/loyalty
-and multi-branch control. Offline-first, runs on your own server, no
-subscription. Not a retail POS bolted onto a restaurant; purpose-built for
+and multi-branch control. Offline-first and branded as your restaurant.
+Not a retail POS bolted onto a restaurant; purpose-built for
 dine-in, takeaway, delivery and kitchen operations.
 
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-339933?logo=node.js&logoColor=white)](package.json)
 [![pnpm](https://img.shields.io/badge/pnpm-workspaces-F69220?logo=pnpm&logoColor=white)](pnpm-workspace.yaml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)](apps/web/tsconfig.json)
 [![NestJS](https://img.shields.io/badge/backend-NestJS-E0234E?logo=nestjs&logoColor=white)](apps/backend)
 [![Next.js](https://img.shields.io/badge/frontend-Next.js-000000?logo=next.js&logoColor=white)](apps/web)
 [![CasaOS / ZimaOS](https://img.shields.io/badge/CasaOS%20%2F%20ZimaOS-one--click%20app-1F6FEB)](casaos/README.md)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 [![Status](https://img.shields.io/badge/status-active%20development-orange.svg)](./ROADMAP.md)
 
 Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
@@ -187,8 +185,8 @@ ordering page and staff sidebar.
   money goes straight to your UPI id. See the [tutorial](./TUTORIAL.md#upi-qr-payments-and-the-customer-display).
 - **Runs without the internet** — one Docker Compose stack on a local
   server; billing, KDS and printing survive a dead WAN link.
-- **Your data, your server** — AGPL-3.0, no per-terminal licence, no
-  vendor lock-in. Backup and restore from the app.
+- **Your data, your control** — no per-terminal licence, no vendor
+  lock-in. Backup and restore from the app.
 - **Whole-restaurant scope** — POS, kitchen, inventory, payroll, accounting
   and reporting in one app instead of five subscriptions.
 - **India-ready** — GST (inclusive or exclusive), UPI, ₹ formatting, plus
@@ -246,9 +244,9 @@ management tools with **56 screenshots of the app**.
 
 ## FAQ
 
-**Is there a free, open-source restaurant POS I can self-host?**
-Yes — OrderRestro is AGPL-3.0 and installs with `docker compose up`, or as
-a one-click app on CasaOS / ZimaOS.
+**Can I run it on my own server?**
+Yes — F Cartel installs with `docker compose up`, or as a one-click app on
+CasaOS / ZimaOS.
 
 **Does it support UPI payments and GST billing?**
 Yes. Add your UPI id under *Settings → Restaurant*; checkout then shows a
@@ -494,14 +492,7 @@ This project follows the [Contributor Covenant](./CODE_OF_CONDUCT.md).
 ## License
 
 Copyright © 2026 [Nodedr Infotech Private Limited](https://www.nodedr.com/)
-and Raktim Ranjit. Licensed under the
-[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0). In short:
-you're free to self-host, use, and modify this software for your
-restaurant or business. If you modify it and run that modified version
-as a network service for others, you must make your modified source
-available to those users under the same license — this keeps
-improvements to a self-hosted business tool in the open rather than
-disappearing into a closed commercial fork.
+and Raktim Ranjit. See [`LICENSE`](./LICENSE) for the terms.
 
 See [`MAINTAINERS.md`](./MAINTAINERS.md) for project maintainers.
 
@@ -520,7 +511,7 @@ Maintainer: [Raktim Ranjit](https://www.raktimranjit.com/)
 
 ---
 
-<sub>Keywords: restaurant POS, open source restaurant management software,
+<sub>Keywords: restaurant POS, restaurant management software,
 self-hosted POS, UPI QR payment POS, GST billing software for restaurants,
 kitchen display system, KDS, restaurant inventory management, restaurant
 payroll and attendance, café POS, cloud kitchen software, QR table ordering,

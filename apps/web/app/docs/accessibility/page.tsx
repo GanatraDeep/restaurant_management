@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
+import { DocList, DocPage, DocSection, SupportLink } from "@/components/marketing/doc-page";
 
 export const metadata: Metadata = {
   title: "Accessibility statement — F Cartel",
@@ -90,17 +90,9 @@ export default function AccessibilityPage() {
       <DocSection heading="Reporting a problem">
         <p>
           If you encounter an accessibility barrier anywhere in this product,
-          please open an issue on{" "}
-          <a
-            href="https://github.com/Raktim94/nodedr-restaurant-pos/issues"
-            className="text-primary underline underline-offset-4"
-          >
-            GitHub
-          </a>{" "}
-          with as much detail as you can (page, assistive technology used,
-          what you expected vs. what happened). This is an open-source
-          project — accessibility fixes are treated as real bugs, not
-          feature requests.
+          please contact <SupportLink /> with as much detail as you can (page, assistive technology used,
+          what you expected vs. what happened). Accessibility fixes are
+          treated as real bugs, not feature requests.
         </p>
       </DocSection>
     </DocPage>
