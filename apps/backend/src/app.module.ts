@@ -44,6 +44,8 @@ import { McpModule } from './mcp/mcp.module';
 import { SystemModule } from './system/system.module';
 import { VerifactuModule } from './modules/verifactu/verifactu.module';
 import { BillingModule } from './modules/billing/billing.module';
+import { AggregatorStatusModule } from './modules/aggregators/aggregator-status.module';
+import { AggregatorsModule } from './modules/aggregators/aggregators.module';
 
 @Module({
   imports: [
@@ -52,6 +54,8 @@ import { BillingModule } from './modules/billing/billing.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     PrismaModule,
     BillingModule,
+    AggregatorStatusModule,
+    AggregatorsModule,
     RealtimeModule,
     AuthModule,
     MenuModule,

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { StatusNote, useNoteToast } from "@/components/ui/status-note";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ChannelBadge, TypeBadge } from "@/components/orders/channel-badges";
+import { AggregatorBadge, ChannelBadge, TypeBadge } from "@/components/orders/channel-badges";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CancelOrderDialog, useCanCancelOrders } from "@/components/orders/cancel-order-dialog";
@@ -70,6 +70,7 @@ export function OrderDetailDialog({
           <DialogTitle className="flex items-center gap-2">
             {order ? `Order #${order.orderNumber}` : "Order details"}
             {order && <ChannelBadge channel={order.channel} />}
+            {order && <AggregatorBadge aggregator={order.aggregator} />}
           </DialogTitle>
         </DialogHeader>
         <StatusNote note={note} onClear={clearNote} />

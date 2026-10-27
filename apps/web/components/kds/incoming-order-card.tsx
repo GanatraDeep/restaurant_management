@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusNote, useNoteToast } from "@/components/ui/status-note";
+import { AggregatorBadge } from "@/components/orders/channel-badges";
 import { ReasonDialog } from "@/components/orders/reason-dialog";
 import { useAcceptIncoming, useDeclineIncoming, type IncomingOrder } from "@/hooks/use-kds";
 import { ApiError } from "@/lib/api";
@@ -43,6 +44,7 @@ export function IncomingOrderCard({ order, branchId }: { order: IncomingOrder; b
           <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
             #{order.orderNumber}
             {order.channel === "ONLINE" && <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-label="Online order" />}
+            <AggregatorBadge aggregator={order.aggregator} />
           </p>
           <p className="text-xs text-muted-foreground">
             {order.table ? `Table ${order.table.number}` : order.type.replace("_", " ")}

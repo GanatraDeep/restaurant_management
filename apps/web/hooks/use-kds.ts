@@ -19,6 +19,7 @@ export interface KotTicket {
     orderNumber: string;
     type: string;
     channel: "STAFF" | "ONLINE";
+    aggregator?: "ZOMATO" | "SWIGGY" | null;
     notes: string | null;
     table: { number: string; name: string | null } | null;
     guestName: string | null;
@@ -89,6 +90,7 @@ export interface IncomingOrder {
   orderNumber: string;
   type: string;
   channel: "STAFF" | "ONLINE";
+  aggregator?: "ZOMATO" | "SWIGGY" | null;
   guestName: string | null;
   notes: string | null;
   createdAt: string;

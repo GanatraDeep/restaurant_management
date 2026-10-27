@@ -1,6 +1,4 @@
 import { randomBytes } from 'node:crypto';
-import http from 'node:http';
-import https from 'node:https';
 import {
   BadRequestException,
   Injectable,
@@ -12,11 +10,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import type { Prisma } from '@prisma/client';
 import { openSecret, sealSecret } from '../../auth/totp';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  netOptionsFromEnv,
-  resolveWebhookTarget,
-  type ResolvedTarget,
-} from './net-guard';
+import { netOptionsFromEnv, resolveWebhookTarget } from './net-guard';
+import { postToTarget } from './http-post';
 import { BACKOFF_MS, MAX_ATTEMPTS, signPayload } from './signing';
 
 export const WEBHOOK_EVENTS = [
@@ -297,7 +292,7 @@ export class WebhooksService {
         d.endpoint.url,
         netOptionsFromEnv(),
       );
-      statusCode = await this.post(target, body, {
+      statusCode = await postToTarget(target, body, TIMEOUT_MS, {
         'X-OrderRestro-Event': d.event,
         'X-OrderRestro-Delivery': d.id,
         'X-OrderRestro-Signature': signPayload(
@@ -335,45 +330,6 @@ export class WebhooksService {
           Date.now() + (BACKOFF_MS[d.attempts - 1] ?? BACKOFF_MS.at(-1)!),
         ),
       },
-    });
-  }
-
-  private post(
-    target: ResolvedTarget,
-    body: string,
-    headers: Record<string, string>,
-  ): Promise<number> {
-    const { url, address, family } = target;
-    const client = url.protocol === 'https:' ? https : http;
-    return new Promise((resolve, reject) => {
-      const req = client.request(
-        {
-          protocol: url.protocol,
-          hostname: url.hostname,
-          port: url.port || undefined,
-          path: `${url.pathname}${url.search}`,
-          method: 'POST',
-          timeout: TIMEOUT_MS,
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(body),
-            'User-Agent': 'OrderRestro-Webhooks/1',
-            ...headers,
-          },
-          // Connect to the address we already vetted; TLS still validates
-          // the certificate against the real hostname.
-          lookup: (_host, _opts, cb) => cb(null, address, family),
-        },
-        (res) => {
-          res.resume(); // we never read the response body
-          resolve(res.statusCode ?? 0);
-        },
-      );
-      req.on('timeout', () =>
-        req.destroy(new Error('Timed out after 8 seconds')),
-      );
-      req.on('error', reject);
-      req.end(body);
     });
   }
 }

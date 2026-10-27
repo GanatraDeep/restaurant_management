@@ -4,7 +4,7 @@ import { Clock, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { ScanOrderInput } from "@/components/orders/scan-order-input";
 import { DeleteOrdersDialog } from "@/components/orders/delete-orders-dialog";
-import { ChannelBadge, TypeBadge } from "@/components/orders/channel-badges";
+import { AggregatorBadge, ChannelBadge, TypeBadge } from "@/components/orders/channel-badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -250,6 +250,7 @@ function OrderRow({
           <span className="text-sm font-semibold text-foreground">#{order.orderNumber}</span>
           <span className="text-sm text-foreground">{name}</span>
           <ChannelBadge channel={order.channel} />
+          <AggregatorBadge aggregator={order.aggregator} />
           <TypeBadge type={order.type} />
           {order.acceptance === "PENDING" && (
             <Badge className="font-normal">Needs action</Badge>

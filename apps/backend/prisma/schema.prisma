@@ -80,26 +80,27 @@ model Restaurant {
 }
 
 model Branch {
-  id                String             @id @default(cuid())
-  restaurantId      String
-  restaurant        Restaurant         @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
-  attendance        Attendance[]
-  deliveryZones     DeliveryZone[]
-  shifts            Shift[]
-  leaveRequests     LeaveRequest[]
-  payrollRuns       PayrollRun[]
-  expenses          Expense[]
-  budgets           Budget[]
-  bankTransactions  BankTransaction[]
-  reportSchedules   ReportSchedule[]
-  cashClosings      CashClosing[]
-  coupons           Coupon[]
-  promotions        Promotion[]
-  campaigns         Campaign[]
-  equipment         Equipment[]
-  documents         Document[]
-  verifactuSettings VerifactuSettings?
-  verifactuRecords  VerifactuRecord[]
+  id                    String                 @id @default(cuid())
+  restaurantId          String
+  restaurant            Restaurant             @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  attendance            Attendance[]
+  deliveryZones         DeliveryZone[]
+  shifts                Shift[]
+  leaveRequests         LeaveRequest[]
+  payrollRuns           PayrollRun[]
+  expenses              Expense[]
+  budgets               Budget[]
+  bankTransactions      BankTransaction[]
+  reportSchedules       ReportSchedule[]
+  cashClosings          CashClosing[]
+  coupons               Coupon[]
+  promotions            Promotion[]
+  campaigns             Campaign[]
+  equipment             Equipment[]
+  documents             Document[]
+  verifactuSettings     VerifactuSettings?
+  verifactuRecords      VerifactuRecord[]
+  aggregatorConnections AggregatorConnection[]
 
   name      String
   address   String?
@@ -1095,11 +1096,12 @@ model MenuItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  modifierGroups  MenuItemModifierGroup[]
-  orderItems      OrderItem[]
-  comboComponents ComboComponent[]        @relation("ComboParent")
-  usedInCombos    ComboComponent[]        @relation("ComboChild")
-  recipeLines     RecipeIngredient[]
+  modifierGroups     MenuItemModifierGroup[]
+  orderItems         OrderItem[]
+  comboComponents    ComboComponent[]        @relation("ComboParent")
+  usedInCombos       ComboComponent[]        @relation("ComboChild")
+  recipeLines        RecipeIngredient[]
+  aggregatorMappings AggregatorItemMapping[]
 
   @@index([branchId, categoryId])
   @@map("menu_items")
@@ -1365,6 +1367,11 @@ model Order {
   // Marketing (Phase 7): what discount source was applied at checkout.
   couponCode    String?
   promotionName String?
+
+  // Set on orders that came in from a food-delivery marketplace (Zomato /
+  // Swiggy); channel stays ONLINE. See AggregatorOrder for their order id.
+  aggregator      AggregatorProvider?
+  aggregatorOrder AggregatorOrder?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -2406,4 +2413,90 @@ model PlatformSettings {
   updatedAt DateTime @updatedAt
 
   @@map("platform_settings")
+}
+
+// ─── Zomato / Swiggy (food-delivery marketplaces) ───────────────────────────
+// One connection per branch per marketplace. Orders arrive on a signed
+// inbound endpoint (modules/aggregators) and become regular ONLINE orders;
+// accept / reject / ready / handed-over updates are pushed back to the
+// connection's status callback URL.
+
+enum AggregatorProvider {
+  ZOMATO
+  SWIGGY
+}
+
+enum AggregatorOrderState {
+  RECEIVED // created as an F Cartel order
+  FAILED // could not be created (unmapped items, closed outlet, ...) — retryable
+}
+
+model AggregatorConnection {
+  id                String             @id @default(cuid())
+  branchId          String
+  branch            Branch             @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  provider          AggregatorProvider
+  isEnabled         Boolean            @default(false)
+  // The marketplace's id for this outlet (Zomato res_id / Swiggy rest_id).
+  outletId          String?
+  // Skip the accept/reject step for marketplace orders.
+  autoAccept        Boolean            @default(false)
+  // AES-GCM sealed (auth/totp.ts sealSecret). Inbound requests must be signed
+  // with this secret; shown once when generated.
+  webhookSecret     String
+  // Where order status updates are POSTed (the marketplace's / integration
+  // partner's endpoint), and the sealed API key sent with them.
+  statusCallbackUrl String?
+  apiKey            String?
+
+  lastOrderAt DateTime?
+  lastError   String?
+  lastErrorAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  itemMappings AggregatorItemMapping[]
+  orders       AggregatorOrder[]
+
+  @@unique([branchId, provider])
+  @@map("aggregator_connections")
+}
+
+// The marketplace's item id → our menu item. Unmapped items fall back to an
+// exact (case-insensitive) name match on the branch menu.
+model AggregatorItemMapping {
+  id             String               @id @default(cuid())
+  connectionId   String
+  connection     AggregatorConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalItemId String
+  menuItemId     String
+  menuItem       MenuItem             @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([connectionId, externalItemId])
+  @@map("aggregator_item_mappings")
+}
+
+model AggregatorOrder {
+  id              String               @id @default(cuid())
+  connectionId    String
+  connection      AggregatorConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalOrderId String
+  orderId         String?              @unique
+  order           Order?               @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  state           AggregatorOrderState
+  error           String?
+  payload         Json
+  // Last status pushed back to the marketplace and whether that worked.
+  lastStatusSent  String?
+  lastSyncError   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([connectionId, externalOrderId])
+  @@index([connectionId, createdAt])
+  @@map("aggregator_orders")
 }

@@ -15,6 +15,11 @@ const docs = [
     description: "Connect an AI client via MCP, or use F Cartel as a backend for your own website.",
   },
   {
+    href: "/docs/aggregators",
+    title: "Zomato & Swiggy",
+    description: "Receive marketplace orders and send status updates back.",
+  },
+  {
     href: "/docs/accessibility",
     title: "Accessibility",
     description: "How F Cartel is built to work with keyboards, screen readers, and reduced motion.",
