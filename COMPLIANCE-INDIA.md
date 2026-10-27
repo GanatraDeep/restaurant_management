@@ -47,4 +47,4 @@ The Central Consumer Protection Authority's 2023 guidelines on misleading advert
 
 ## Questions
 
-For questions about this software's architecture or security posture, [open an issue on GitHub](https://github.com/Raktim94/nodedr-restaurant-pos/issues). For questions about your own restaurant's legal obligations as a Data Fiduciary or GST-registered business, please consult a qualified lawyer or chartered accountant — this document cannot answer those for your specific situation.
+For questions about this software's architecture or security posture, contact F Cartel support. For questions about your own restaurant's legal obligations as a Data Fiduciary or GST-registered business, please consult a qualified lawyer or chartered accountant — this document cannot answer those for your specific situation.

@@ -6,13 +6,13 @@
 # WSL2 — Windows' own free, built-in Linux subsystem — to run a real,
 # open-source Docker Engine + Docker CLI (installed the exact same way this
 # project's Linux quickstart.sh already installs it), then runs that same
-# quickstart.sh inside WSL2 to install and start OrderRestro. It also
+# quickstart.sh inside WSL2 to install and start F Cartel. It also
 # installs the native Windows Docker CLI (winget: Docker.DockerCLI) so
 # `docker` exists as a plain PowerShell command too, alongside the one
 # running inside WSL2.
 #
 # Usage (run in PowerShell):
-#   irm https://raw.githubusercontent.com/Raktim94/nodedr-restaurant-pos/master/scripts/quickstart.ps1 | iex
+#   irm https://raw.githubusercontent.com/GanatraDeep/restaurant_management/master/scripts/quickstart.ps1 | iex
 #
 # Safe to re-run: every step only acts if the previous one didn't already
 # succeed, and an existing checkout inside WSL2 is updated in place rather
@@ -28,8 +28,8 @@ $ErrorActionPreference = "Stop"
 Set-Location $HOME
 
 $distroName = "Ubuntu"
-$repoDir = "nodedr-restaurant-pos"
-$linuxQuickstartUrl = "https://raw.githubusercontent.com/Raktim94/nodedr-restaurant-pos/master/scripts/quickstart.sh"
+$repoDir = "restaurant_management"
+$linuxQuickstartUrl = "https://raw.githubusercontent.com/GanatraDeep/restaurant_management/master/scripts/quickstart.sh"
 
 # winget writes new PATH entries to the Machine/User registry values, but
 # this already-running PowerShell process keeps its own stale copy of
@@ -81,7 +81,7 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
         winget install -e --id Docker.DockerCLI --accept-source-agreements --accept-package-agreements
         Update-SessionPath
     } else {
-        Write-Host "winget isn't available, so the native Windows 'docker' command will be skipped — OrderRestro will still install and run fully inside WSL2." -ForegroundColor Yellow
+        Write-Host "winget isn't available, so the native Windows 'docker' command will be skipped — F Cartel will still install and run fully inside WSL2." -ForegroundColor Yellow
     }
 }
 

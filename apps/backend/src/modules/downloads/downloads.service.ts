@@ -8,11 +8,11 @@ import { PrismaService } from '../../prisma/prisma.service';
 // hardening report's "unsafe URL handling / open redirects" check, which
 // this is deliberately built to keep passing.
 const DOWNLOAD_CHANNELS: Record<string, string> = {
-  github: 'https://github.com/Raktim94/nodedr-restaurant-pos',
+  github: 'https://github.com/GanatraDeep/restaurant_management',
   'install-script':
-    'https://raw.githubusercontent.com/Raktim94/nodedr-restaurant-pos/master/install.sh',
-  docker: 'https://github.com/Raktim94/nodedr-restaurant-pos#one-click-install',
-  casaos: 'https://github.com/IceWhaleTech/CasaOS-AppStore',
+    'https://raw.githubusercontent.com/GanatraDeep/restaurant_management/master/install.sh',
+  docker:
+    'https://github.com/GanatraDeep/restaurant_management#one-click-install',
 };
 
 export type DownloadChannel = keyof typeof DOWNLOAD_CHANNELS;

@@ -101,25 +101,6 @@ nothing about it is tied to a specific machine or network:
 Whichever way you reach it, it's the same three containers, same data, same
 login — there's no separate "cloud" mode to configure.
 
-### Windows desktop client
-
-However you host the server above, tills that are Windows machines don't
-have to use a browser tab: `windows/msix/` packages a thin native client
-(WinForms + WebView2, not Electron — no bundled Chromium, no server, no
-Docker) with a Start Menu entry that points at your server's address and
-otherwise just shows the same web UI. See
-[`windows/msix/README.md`](windows/msix/README.md) for what it is/isn't,
-build instructions, and the full capability list.
-
-Status: the build, package, install, and Start Menu registration are all
-machine-verified on every push via GitHub Actions (`windows-msix.yml`,
-real `windows-latest` runner) — not just "it compiled." What that CI run
-does **not** cover: a physical Windows machine (Start Menu tile look,
-taskbar icon, DPI scaling, upgrade-in-place), a real thermal printer, or
-Microsoft Store certification (WACK) — see `windows/msix/README.md` and
-[`SECURITY-AUDIT-REPORT.md`](./SECURITY-AUDIT-REPORT.md) for the full
-verified-vs-not-tested breakdown before relying on it in production.
-
 ## Features
 
 Full field-level detail for every module lives in [`ROADMAP.md`](./ROADMAP.md).
@@ -334,7 +315,7 @@ already bundled, which is all this project requires.
 ### One-click install
 
 ```bash
-git clone https://github.com/Raktim94/nodedr-restaurant-pos.git && cd nodedr-restaurant-pos && ./install.sh
+git clone https://github.com/GanatraDeep/restaurant_management.git && cd restaurant_management && ./install.sh
 ```
 
 [`install.sh`](install.sh) generates a `.env` with random secrets (only if
@@ -355,8 +336,8 @@ If you'd rather run each step yourself (e.g. to set your own secrets instead
 of generated ones):
 
 ```bash
-git clone https://github.com/Raktim94/nodedr-restaurant-pos.git
-cd nodedr-restaurant-pos
+git clone https://github.com/GanatraDeep/restaurant_management.git
+cd restaurant_management
 cp .env.example .env        # edit JWT_SECRET / POSTGRES_PASSWORD for anything beyond local dev
 docker compose up -d --build
 docker exec nodedr-restaurant-backend npx ts-node prisma/seed.ts   # optional: demo data + login; upsert-based, safe to re-run
@@ -427,11 +408,10 @@ docs/           Screenshots and supplementary docs
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Tech-stack decisions and the reasoning behind each one |
 | [`ROADMAP.md`](./ROADMAP.md) | Phased build plan / living TODO — checkboxes are the real status |
 | [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) | Visual language, tokens, type scale, component inventory, per-surface UX notes |
-| [`windows/msix/README.md`](./windows/msix/README.md) | Windows MSIX desktop client — what it is/isn't, build/validate instructions, capabilities, what's CI-verified vs. not tested on real hardware |
 | [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) | WCAG 2.1 AA target, what's implemented, testing methodology, known gaps |
 | [`COMPLIANCE-INDIA.md`](./COMPLIANCE-INDIA.md) | How the architecture relates to the DPDP Act 2023, IT Rules, GST invoicing, and CCPA dark-patterns guidelines |
 | [`docs/verifactu.md`](./docs/verifactu.md) | Spain VERI*FACTU: chained invoice records, QR on the 80 mm receipt and AEAT reporting. Implemented, not certified; what is and is not verified |
-| [`SECURITY-AUDIT-REPORT.md`](./SECURITY-AUDIT-REPORT.md) | Full Critical/High/Medium/Low security audit findings + fixes, and Windows/MSIX Store-readiness status (what's verified vs. not tested) |
+| [`SECURITY-AUDIT-REPORT.md`](./SECURITY-AUDIT-REPORT.md) | Full Critical/High/Medium/Low security audit findings + fixes (what's verified vs. not tested) |
 | [`docs/KIOSK-AND-KDS.md`](./docs/KIOSK-AND-KDS.md) | Customer self-service kiosk and kitchen-display (KDS) tablet setup: URL/launch, Android notes, printer/scanner status, tests |
 | [`docs/integrations-api.md`](./docs/integrations-api.md) | MCP server (for AI clients) and the public integration REST API (for an external website's backend) — auth, endpoints, examples |
 
