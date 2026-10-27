@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BSC Chaiwala",
-  description: "Offline-first restaurant management system",
+  title: "fcartel — restaurant management under your own brand",
+  description:
+    "POS, kitchen display, tables, reservations, inventory, and CRM — with your restaurant's name and logo front and center.",
   manifest: "/manifest.json",
   icons: {
     icon: [{ url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" }],

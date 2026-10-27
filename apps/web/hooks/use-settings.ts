@@ -57,11 +57,24 @@ export function useSettings(branchId: string | null) {
   });
 }
 
+// The restaurant's name + logo, readable by every signed-in staff member
+// (GET /settings itself needs settings.manage) — used by the app shell.
+export function useRestaurantBranding() {
+  return useQuery({
+    queryKey: ["settings", "branding"],
+    queryFn: () => api.get<{ name: string; logoUrl: string | null }>("/settings/branding"),
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useUpdateRestaurantSettings(branchId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (dto: RestaurantSettingsDto) => api.patch("/settings/restaurant", dto),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", branchId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings", branchId] });
+      queryClient.invalidateQueries({ queryKey: ["settings", "branding"] });
+    },
   });
 }
 

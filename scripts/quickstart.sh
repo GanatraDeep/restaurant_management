@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# BSC Chaiwala quickstart — macOS & Linux.
+# fcartel quickstart — macOS & Linux.
 #
 # Checks whether Docker is installed and running; installs it if not
 # (Docker Desktop via Homebrew on macOS, Docker Engine via the official
@@ -130,5 +130,5 @@ else
 fi
 
 cd "$REPO_DIR"
-echo "==> Installing and starting BSC Chaiwala..."
+echo "==> Installing and starting fcartel..."
 $SUDO ./install.sh

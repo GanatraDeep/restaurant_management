@@ -132,7 +132,7 @@ uninstaller's cleanup step: **File → "Remove All Local Data & Uninstall…"**
 (also in the tray menu for embedded-mode installs). This stops the embedded
 server (Postgres/backend/web) if running, deletes `AppConfig.ConfigDir`
 entirely after a confirmation prompt, then opens Windows Settings →
-Apps so the user can click Uninstall on "BSC Chaiwala" to remove the
+Apps so the user can click Uninstall on "fcartel" to remove the
 package itself. Doing both steps — this menu action, then the actual
 package uninstall — leaves no residue on disk.
 

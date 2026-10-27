@@ -30,6 +30,9 @@ export function useRegister() {
   return useMutation({
     mutationFn: (dto: RegisterDto) => api.post<{ user: SessionUser }>("/auth/register", dto),
     onSuccess: (data) => {
+      // Same as login: nothing cached before belongs to this new restaurant
+      // (e.g. a previous session's settings/branding in this tab).
+      queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== "auth" });
       queryClient.setQueryData(["auth", "me"], data);
     },
   });

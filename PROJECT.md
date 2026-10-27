@@ -1,4 +1,4 @@
-# BSC Chaiwala — Master Project Document
+# fcartel — Master Project Document
 
 > Start here. This file is the source of truth for scope, status, and decisions.
 > Companion docs: [`ARCHITECTURE.md`](./ARCHITECTURE.md) (tech stack + why),
@@ -7,7 +7,7 @@
 
 ## What this is
 
-**BSC Chaiwala** is a purpose-built, offline-first Restaurant Management
+**fcartel** is a purpose-built, offline-first Restaurant Management
 System — not a retail POS reused for restaurants. Target venues: restaurants,
 cafés, coffee shops, bakeries, fast food, fine dining, bars, food courts,
 cloud kitchens, and multi-branch chains.

@@ -6,8 +6,8 @@ import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { EntityDialogHost } from "@/components/layout/entity-dialog-host";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { useBranch } from "@/hooks/use-branch";
-import { useSettings } from "@/hooks/use-settings";
+import { useRestaurantBranding } from "@/hooks/use-settings";
+import { BRAND } from "@/lib/brand";
 import { BrandFooter } from "./brand-footer";
 import { BranchSwitcher } from "./branch-switcher";
 import { LanguageSwitcher } from "./language-switcher";
@@ -16,28 +16,22 @@ import { MobileBottomNav } from "./mobile-bottom-nav";
 import { SidebarNav } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
 
-// The restaurant's own logo + name lead the sidebar header — this is
-// white-label self-hosted software, so the operator's branding takes the
-// prime spot an operator actually looks at. The BSC Chaiwala product
-// mark moves to a small credit line at the bottom (BrandFooter) instead of
-// competing with it up here. Falls back to the product mark only until the
-// restaurant sets its own logo/name under Settings.
+// The restaurant's own logo + name lead the sidebar header — fcartel is
+// white-label, so the operator's branding takes the prime spot an operator
+// actually looks at. The fcartel mark moves to a small "Powered by" credit
+// at the bottom (BrandFooter) instead of competing with it up here. A
+// restaurant that hasn't uploaded a logo yet gets a monogram of its name
+// rather than the fcartel mark; the product mark only shows while settings
+// are still loading.
 function RestaurantBrand() {
-  const { branchId } = useBranch();
-  const { data } = useSettings(branchId);
-  const restaurant = data?.restaurant;
+  const { data: restaurant } = useRestaurantBranding();
 
-  if (restaurant?.logoUrl) {
+  if (!restaurant) {
     return (
       <>
-        {/* eslint-disable-next-line @next/next/no-img-element -- uploaded asset served from the backend, not a Next-optimizable remote source */}
-        <img
-          src={restaurant.logoUrl}
-          alt={restaurant.name}
-          className="h-8 w-8 shrink-0 rounded-lg object-contain"
-        />
+        <Logo />
         <span className="truncate text-sm font-semibold tracking-tight text-sidebar-foreground">
-          {restaurant.name}
+          {BRAND.name}
         </span>
       </>
     );
@@ -45,9 +39,23 @@ function RestaurantBrand() {
 
   return (
     <>
-      <Logo />
+      {restaurant.logoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element -- uploaded asset served from the backend, not a Next-optimizable remote source
+        <img
+          src={restaurant.logoUrl}
+          alt={restaurant.name}
+          className="h-8 w-8 shrink-0 rounded-lg object-contain"
+        />
+      ) : (
+        <div
+          aria-hidden
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary"
+        >
+          {restaurant.name.trim().charAt(0).toUpperCase()}
+        </div>
+      )}
       <span className="truncate text-sm font-semibold tracking-tight text-sidebar-foreground">
-        {restaurant?.name ?? "BSC Chaiwala"}
+        {restaurant.name}
       </span>
     </>
   );
