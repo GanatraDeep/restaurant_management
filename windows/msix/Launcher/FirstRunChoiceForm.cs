@@ -20,7 +20,7 @@ internal sealed class FirstRunChoiceForm : Form
 
     public FirstRunChoiceForm()
     {
-        Text = "Welcome to fcartel";
+        Text = "Welcome to F Cartel";
         FormBorderStyle = FormBorderStyle.FixedDialog;
         StartPosition = FormStartPosition.CenterScreen;
         MaximizeBox = false;

@@ -75,9 +75,9 @@ internal static class Program
         }
 
         MessageBox.Show(
-            $"fcartel hit an unexpected error and needs to close.\n\n{ex.Message}\n\n" +
+            $"F Cartel hit an unexpected error and needs to close.\n\n{ex.Message}\n\n" +
             $"Details were saved to:\n{AppConfig.LogDir}",
-            "fcartel",
+            "F Cartel",
             MessageBoxButtons.OK,
             MessageBoxIcon.Error);
     }

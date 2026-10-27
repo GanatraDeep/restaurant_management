@@ -19,7 +19,7 @@ internal sealed class TrayIcon : IDisposable
     public TrayIcon(Icon appIcon)
     {
         var menu = new ContextMenuStrip();
-        var open = new ToolStripMenuItem("Open fcartel");
+        var open = new ToolStripMenuItem("Open F Cartel");
         open.Click += (_, _) => OpenRequested?.Invoke();
         var viewLogs = new ToolStripMenuItem("View server logs");
         viewLogs.Click += (_, _) =>
@@ -41,7 +41,7 @@ internal sealed class TrayIcon : IDisposable
         _icon = new NotifyIcon
         {
             Icon = appIcon,
-            Text = "fcartel — server running",
+            Text = "F Cartel — server running",
             Visible = true,
             ContextMenuStrip = menu,
         };
@@ -56,9 +56,9 @@ internal sealed class TrayIcon : IDisposable
         _icon.ShowBalloonTip(10000);
     }
 
-    public void SetStatus(string text) => _icon.Text = $"fcartel — {text}".Length > 63
-        ? $"fcartel — {text}"[..63]
-        : $"fcartel — {text}"; // NotifyIcon.Text has a 63-char OS limit
+    public void SetStatus(string text) => _icon.Text = $"F Cartel — {text}".Length > 63
+        ? $"F Cartel — {text}"[..63]
+        : $"F Cartel — {text}"; // NotifyIcon.Text has a 63-char OS limit
 
     public void Dispose()
     {

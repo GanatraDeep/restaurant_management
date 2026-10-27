@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# fcartel quickstart — macOS & Linux.
+# F Cartel quickstart — macOS & Linux.
 #
 # Checks whether Docker is installed and running; installs it if not
 # (Docker Desktop via Homebrew on macOS, Docker Engine via the official
@@ -130,5 +130,5 @@ else
 fi
 
 cd "$REPO_DIR"
-echo "==> Installing and starting fcartel..."
+echo "==> Installing and starting F Cartel..."
 $SUDO ./install.sh

@@ -4,25 +4,25 @@ import { DocPage, DocSection } from "@/components/marketing/doc-page";
 import { downloadHref } from "@/lib/downloads";
 
 export const metadata: Metadata = {
-  title: "Documentation — fcartel",
-  description: "API & MCP, accessibility, and India compliance docs for a self-hosted fcartel instance.",
+  title: "Documentation — F Cartel",
+  description: "API & MCP, accessibility, and India compliance docs for a self-hosted F Cartel instance.",
 };
 
 const docs = [
   {
     href: "/docs/api",
     title: "API & MCP",
-    description: "Connect an AI client via MCP, or use fcartel as a backend for your own website.",
+    description: "Connect an AI client via MCP, or use F Cartel as a backend for your own website.",
   },
   {
     href: "/docs/accessibility",
     title: "Accessibility",
-    description: "How fcartel is built to work with keyboards, screen readers, and reduced motion.",
+    description: "How F Cartel is built to work with keyboards, screen readers, and reduced motion.",
   },
   {
     href: "/docs/compliance-india",
     title: "India compliance",
-    description: "GST, receipts, and data-residency notes for running fcartel in India.",
+    description: "GST, receipts, and data-residency notes for running F Cartel in India.",
   },
 ];
 

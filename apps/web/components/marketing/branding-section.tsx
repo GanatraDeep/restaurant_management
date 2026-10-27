@@ -15,7 +15,7 @@ const steps = [
   {
     icon: LayoutDashboard,
     title: "Your brand leads every screen",
-    description: "Your logo and name sit at the top of the dashboard, POS, and login — fcartel stays a small credit line.",
+    description: "Your logo and name sit at the top of the dashboard, POS, and login — F Cartel stays a small credit line.",
   },
   {
     icon: Receipt,
@@ -52,7 +52,7 @@ function BrandedSidebarMock() {
         ))}
       </div>
       <div className="border-t border-sidebar-border px-5 py-3 text-xs text-sidebar-foreground/60">
-        Powered by <span className="font-semibold">fcartel</span>
+        Powered by <span className="font-semibold">F Cartel</span>
       </div>
     </div>
   );
@@ -69,7 +69,7 @@ export function BrandingSection() {
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
               Your staff should see your restaurant when they clock in, not a
-              software vendor. fcartel is white-label from the first screen.
+              software vendor. F Cartel is white-label from the first screen.
             </p>
           </Reveal>
           <RevealGroup className="mt-10 grid gap-6 sm:grid-cols-2">

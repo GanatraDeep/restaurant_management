@@ -11,7 +11,7 @@ import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { ProductShowcase } from "@/components/marketing/product-showcase";
 import { SecuritySection } from "@/components/marketing/security-section";
 
-// fcartel's public landing page. Every visitor gets it (any number of
+// F Cartel's public landing page. Every visitor gets it (any number of
 // restaurants can sign up); an already-signed-in visitor is sent straight
 // to their own branded dashboard by AuthRedirectGate.
 export default function MarketingHomePage() {

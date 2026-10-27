@@ -123,8 +123,8 @@ async function bootstrap() {
     process.env.ENABLE_SWAGGER === 'true'
   ) {
     const config = new DocumentBuilder()
-      .setTitle('fcartel API')
-      .setDescription('REST API for the fcartel management system')
+      .setTitle('F Cartel API')
+      .setDescription('REST API for the F Cartel management system')
       .setVersion('1.0')
       .addCookieAuth('nodedr_session')
       .build();
@@ -135,7 +135,7 @@ async function bootstrap() {
   const port = process.env.PORT ?? 4000;
   await app.listen(port);
   console.log(
-    `fcartel API listening on :${port} (docs at /api/docs)`,
+    `F Cartel API listening on :${port} (docs at /api/docs)`,
   );
 }
 void bootstrap();

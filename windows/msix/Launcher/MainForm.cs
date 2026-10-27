@@ -24,7 +24,7 @@ internal sealed class MainForm : Form
 
     public MainForm(EventWaitHandle activateEvent)
     {
-        Text = "fcartel";
+        Text = "F Cartel";
         StartPosition = FormStartPosition.CenterScreen;
         Size = new Size(1360, 860);
         MinimumSize = new Size(900, 600);
@@ -178,7 +178,7 @@ internal sealed class MainForm : Form
             ShowFatalError(
                 "The Microsoft Edge WebView2 Runtime is required but isn't installed on this PC.\n\n" +
                 "Install it from https://go.microsoft.com/fwlink/p/?LinkId=2124703 (Evergreen " +
-                "Bootstrapper), then reopen fcartel.");
+                "Bootstrapper), then reopen F Cartel.");
             return;
         }
         catch (Exception ex)
@@ -237,8 +237,8 @@ internal sealed class MainForm : Form
         };
         _supervisor.Faulted += message =>
         {
-            if (InvokeRequired) { BeginInvoke((Action)(() => _tray?.ShowBalloon("fcartel", message))); return; }
-            _tray?.ShowBalloon("fcartel", message);
+            if (InvokeRequired) { BeginInvoke((Action)(() => _tray?.ShowBalloon("F Cartel", message))); return; }
+            _tray?.ShowBalloon("F Cartel", message);
         };
 
         ShowStatus("Starting server…");
@@ -388,9 +388,9 @@ internal sealed class MainForm : Form
         {
             MessageBox.Show(
                 this,
-                "Local data removed. Windows Settings will now open — find \"fcartel\" " +
+                "Local data removed. Windows Settings will now open — find \"F Cartel\" " +
                 "and click Uninstall to finish removing the app.",
-                "fcartel",
+                "F Cartel",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
         }
@@ -401,7 +401,7 @@ internal sealed class MainForm : Form
                 $"The server was stopped, but some files could not be deleted automatically:\n\n{deleteError}\n\n" +
                 $"You can safely delete this folder by hand once OrderRestro is closed: {dataDir}\n\n" +
                 "Windows Settings will now open so you can uninstall the app.",
-                "fcartel",
+                "F Cartel",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
@@ -430,7 +430,7 @@ internal sealed class MainForm : Form
             e.Cancel = true;
             Hide();
             _tray?.ShowBalloon(
-                "fcartel",
+                "F Cartel",
                 "Still running in the background so other devices stay connected. Use the tray icon to reopen or fully stop it.",
                 ToolTipIcon.Info);
         }

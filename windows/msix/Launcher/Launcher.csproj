@@ -55,7 +55,7 @@
     <SelfContained>true</SelfContained>
 
     <Version>1.0.4.0</Version>
-    <Product>fcartel</Product>
+    <Product>F Cartel</Product>
     <Company>Nodedr Infotech Private Limited</Company>
     <Copyright>Copyright © Nodedr Infotech Private Limited</Copyright>
   </PropertyGroup>

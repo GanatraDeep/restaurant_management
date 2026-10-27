@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "fcartel — restaurant management under your own brand",
+  title: "F Cartel — restaurant management under your own brand",
   description:
     "POS, kitchen display, tables, reservations, inventory, and CRM — with your restaurant's name and logo front and center.",
   manifest: "/manifest.json",

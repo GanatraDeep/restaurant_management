@@ -16,12 +16,12 @@ import { MobileBottomNav } from "./mobile-bottom-nav";
 import { SidebarNav } from "./sidebar-nav";
 import { UserMenu } from "./user-menu";
 
-// The restaurant's own logo + name lead the sidebar header — fcartel is
+// The restaurant's own logo + name lead the sidebar header — F Cartel is
 // white-label, so the operator's branding takes the prime spot an operator
-// actually looks at. The fcartel mark moves to a small "Powered by" credit
+// actually looks at. The F Cartel mark moves to a small "Powered by" credit
 // at the bottom (BrandFooter) instead of competing with it up here. A
 // restaurant that hasn't uploaded a logo yet gets a monogram of its name
-// rather than the fcartel mark; the product mark only shows while settings
+// rather than the F Cartel mark; the product mark only shows while settings
 // are still loading.
 function RestaurantBrand() {
   const { data: restaurant } = useRestaurantBranding();

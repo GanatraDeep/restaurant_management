@@ -1,7 +1,7 @@
 {
-  "name": "fcartel",
-  "short_name": "fcartel",
-  "description": "fcartel — restaurant management under your own brand: POS, tables, kitchen display, menu, inventory.",
+  "name": "F Cartel",
+  "short_name": "F Cartel",
+  "description": "F Cartel — restaurant management under your own brand: POS, tables, kitchen display, menu, inventory.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
