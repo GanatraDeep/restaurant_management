@@ -70,9 +70,36 @@ interface PublicMenuCategory {
 }
 
 interface PublicMenuResponse {
+  restaurantName: string;
+  logoUrl: string | null;
   branchName: string;
   tableName: string;
   categories: PublicMenuCategory[];
+}
+
+// The restaurant's logo (or a monogram of its name) above the name, so
+// guests see whose menu they're ordering from.
+function RestaurantMark({ data, size }: { data: PublicMenuResponse | undefined; size: "lg" | "sm" }) {
+  const box = size === "lg" ? "h-16 w-16 text-2xl" : "h-12 w-12 text-lg";
+  if (!data) return <UtensilsCrossed className="h-8 w-8 text-primary" />;
+  return data.logoUrl ? (
+    // eslint-disable-next-line @next/next/no-img-element -- uploaded asset served from the backend
+    <img src={data.logoUrl} alt={data.restaurantName} className={`${box} mx-auto rounded-xl object-contain`} />
+  ) : (
+    <div
+      aria-hidden
+      className={`${box} mx-auto flex items-center justify-center rounded-xl bg-primary/10 font-semibold text-primary`}
+    >
+      {data.restaurantName.trim().charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function subtitle(data: PublicMenuResponse | undefined) {
+  if (!data) return "";
+  return data.branchName && data.branchName !== data.restaurantName
+    ? `${data.branchName} · ${data.tableName}`
+    : data.tableName;
 }
 
 export default function PublicMenuPage({
@@ -208,7 +235,7 @@ export default function PublicMenuPage({
           {t("order.thankYouName", { name: guestName })}
         </p>
         <p className="text-sm text-muted-foreground">
-          {t("order.thanksMessage", { branch: data?.branchName ?? t("order.theKitchen") })}
+          {t("order.thanksMessage", { branch: data?.restaurantName ?? data?.branchName ?? t("order.theKitchen") })}
         </p>
         <p className="text-xs text-muted-foreground">
           {t("order.orderNumberSent", { number: placed.orderNumber })}
@@ -226,15 +253,20 @@ export default function PublicMenuPage({
         <div className="absolute right-4 top-4">
           <LanguageSwitcher compact />
         </div>
-        <UtensilsCrossed className="h-8 w-8 text-primary" />
         {isLoading ? (
-          <Skeleton className="h-7 w-40" />
+          <>
+            <Skeleton className="h-16 w-16 rounded-xl" />
+            <Skeleton className="h-7 w-40" />
+          </>
         ) : (
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              {data?.branchName}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">{data?.tableName}</p>
+          <div className="flex flex-col items-center gap-3">
+            <RestaurantMark data={data} size="lg" />
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                {data?.restaurantName ?? data?.branchName}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">{subtitle(data)}</p>
+            </div>
           </div>
         )}
         <form
@@ -272,12 +304,15 @@ export default function PublicMenuPage({
         {isLoading ? (
           <Skeleton className="mx-auto h-7 w-40" />
         ) : (
-          <>
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-              {data?.branchName}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">{data?.tableName}</p>
-          </>
+          <div className="flex flex-col items-center gap-2">
+            <RestaurantMark data={data} size="sm" />
+            <div className="px-10">
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                {data?.restaurantName ?? data?.branchName}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">{subtitle(data)}</p>
+            </div>
+          </div>
         )}
       </header>
 
