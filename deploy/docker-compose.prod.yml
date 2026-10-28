@@ -1,0 +1,111 @@
+# F Cartel — production stack for a shared VPS (see deploy/README.md).
+#
+# Built so it can't get in the way of other sites on the same server:
+#  - Its own Compose project ("fcartel"): own network, own volumes, and every
+#    container is named fcartel-*.
+#  - Nothing listens on a public port. The web app is published on 127.0.0.1
+#    only; the server's existing nginx proxies fcartel.divtech.cloud to it.
+#  - Pre-built images from GitHub Container Registry: nothing is compiled on
+#    the VPS. Memory caps and log rotation on every container.
+#
+# Run from this folder:  docker compose -f docker-compose.prod.yml up -d
+name: fcartel
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: fcartel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fcartel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: fcartel
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fcartel"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: ${POSTGRES_MEM_LIMIT:-512m}
+    logging: *logging
+
+  backend:
+    image: ${FCARTEL_IMAGE_PREFIX:-ghcr.io/ganatradeep}/fcartel-backend:${FCARTEL_VERSION:?set FCARTEL_VERSION in .env}
+    container_name: fcartel-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgresql://fcartel:${POSTGRES_PASSWORD}@postgres:5432/fcartel"
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRES_IN: "12h"
+      PORT: "4000"
+      CORS_ORIGIN: "https://${FCARTEL_DOMAIN:?set FCARTEL_DOMAIN in .env}"
+      COOKIE_SECURE: "true"
+      UPLOADS_DIR: "/data/uploads"
+      SUPER_ADMIN_EMAILS: "${SUPER_ADMIN_EMAILS:-}"
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:-}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:-}"
+      # Admin → Releases: CI announces new versions with this secret, and the
+      # backend asks the updater below to deploy the one a super admin approves.
+      RELEASE_WEBHOOK_SECRET: "${RELEASE_WEBHOOK_SECRET:-}"
+      UPDATER_URL: "http://fcartel-updater:8080"
+      UPDATER_TOKEN: "${UPDATER_TOKEN:?set UPDATER_TOKEN in .env}"
+      SMTP_URL: "${SMTP_URL:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "4000"
+    volumes:
+      - uploads_data:/data/uploads
+    mem_limit: ${BACKEND_MEM_LIMIT:-768m}
+    logging: *logging
+
+  web:
+    image: ${FCARTEL_IMAGE_PREFIX:-ghcr.io/ganatradeep}/fcartel-web:${FCARTEL_VERSION}
+    container_name: fcartel-web
+    restart: unless-stopped
+    # Loopback only: reachable from this server's nginx, not from the internet.
+    ports:
+      - "127.0.0.1:${FCARTEL_PORT:-3095}:3000"
+    depends_on:
+      - backend
+    mem_limit: ${WEB_MEM_LIMIT:-512m}
+    logging: *logging
+
+  # Swaps fcartel-backend / fcartel-web to the version a super admin deploys
+  # from Admin → Releases (see deploy/updater/server.js). Does nothing on its
+  # own, has no published port, and only ever touches the two containers below.
+  updater:
+    build: ./updater
+    image: fcartel-updater:local
+    # Always built locally from ./updater — never looked up in a registry.
+    pull_policy: build
+    container_name: fcartel-updater
+    restart: unless-stopped
+    environment:
+      UPDATER_TOKEN: "${UPDATER_TOKEN}"
+      TARGET_CONTAINERS: "fcartel-backend,fcartel-web"
+      HEALTH_URLS: "fcartel-backend=http://fcartel-backend:4000/api/health,fcartel-web=http://fcartel-web:3000/"
+      ENV_FILE: "/deploy/.env"
+      ENV_VERSION_KEY: "FCARTEL_VERSION"
+      REGISTRY_SERVER: "${REGISTRY_SERVER:-ghcr.io}"
+      REGISTRY_USERNAME: "${REGISTRY_USERNAME:-}"
+      REGISTRY_TOKEN: "${REGISTRY_TOKEN:-}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./.env:/deploy/.env
+    mem_limit: 128m
+    logging: *logging
+
+volumes:
+  pg_data:
+  uploads_data:

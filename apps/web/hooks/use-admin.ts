@@ -130,3 +130,55 @@ export function useAdminUpdateSubscription() {
 export function useAdminPayments() {
   return useQuery({ queryKey: ["admin", "payments"], queryFn: () => api.get<AdminPayment[]>("/admin/payments") });
 }
+
+// ─── Releases (approve-before-deploy) ───────────────────────────────────────
+
+export interface AppRelease {
+  id: string;
+  tag: string;
+  commitSha: string | null;
+  message: string | null;
+  author: string | null;
+  url: string | null;
+  status: "AVAILABLE" | "DEPLOYING" | "DEPLOYED" | "FAILED" | "SKIPPED";
+  error: string | null;
+  decidedAt: string | null;
+  deployedAt: string | null;
+  createdAt: string;
+}
+
+export interface ReleasesOverview {
+  currentVersion: string;
+  updaterConfigured: boolean;
+  updaterReachable: boolean;
+  updater: { state: string; version: string | null; step: string | null; error: string | null } | null;
+  releases: AppRelease[];
+}
+
+export function useReleases() {
+  return useQuery({
+    queryKey: ["admin", "releases"],
+    queryFn: () => api.get<ReleasesOverview>("/admin/releases"),
+    // Poll fast while a deploy runs (the backend restarts underneath it, so a
+    // few failed polls in a row are expected), slowly otherwise.
+    refetchInterval: (q) => {
+      const d = q.state.data;
+      const deploying = d?.releases.some((r) => r.status === "DEPLOYING");
+      return deploying || q.state.status === "error" ? 3000 : 30_000;
+    },
+    retry: false,
+  });
+}
+
+export function useReleaseActions() {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["admin", "releases"] });
+  return {
+    deploy: useMutation({ mutationFn: (id: string) => api.post(`/admin/releases/${id}/deploy`), onSettled: done }),
+    skip: useMutation({ mutationFn: (id: string) => api.post(`/admin/releases/${id}/skip`), onSettled: done }),
+    add: useMutation({
+      mutationFn: (dto: { tag: string; message?: string }) => api.post("/admin/releases", dto),
+      onSuccess: done,
+    }),
+  };
+}

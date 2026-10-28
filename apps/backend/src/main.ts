@@ -106,6 +106,14 @@ async function bootstrap() {
       crossOriginResourcePolicy: { policy: 'cross-origin' },
     }),
   );
+  // Every request reaches the API through the web container's /api proxy
+  // (and, in production, nginx before that), so without this req.ip is the
+  // proxy's address and ALL clients share one rate-limit bucket: the 6th
+  // login attempt in a minute anywhere gets "Too many requests". Trust
+  // X-Forwarded-For only from loopback/private-network hops; Express then
+  // takes the right-most public address, which nginx appends itself, so a
+  // client can't spoof it.
+  app.set('trust proxy', 'loopback, linklocal, uniquelocal');
   app.use(cookieParser());
   app.enableCors({
     origin: process.env.CORS_ORIGIN ?? 'http://localhost:1995',

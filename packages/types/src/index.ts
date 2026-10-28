@@ -23,3 +23,4 @@ export * from "./marketing";
 export * from "./order-lifecycle";
 export * from "./billing";
 export * from "./aggregators";
+export * from "./releases";
