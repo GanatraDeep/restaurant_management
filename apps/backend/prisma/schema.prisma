@@ -75,6 +75,7 @@ model Restaurant {
   webhookEndpoints     WebhookEndpoint[]
   subscription         RestaurantSubscription?
   subscriptionPayments SubscriptionPayment[]
+  planRequests         PlanRequest[]
 
   @@map("restaurants")
 }
@@ -2357,6 +2358,7 @@ model SubscriptionPlan {
 
   subscriptions RestaurantSubscription[]
   payments      SubscriptionPayment[]
+  requests      PlanRequest[]
 
   @@map("subscription_plans")
 }
@@ -2532,4 +2534,30 @@ model AppRelease {
 
   @@index([createdAt])
   @@map("app_releases")
+}
+
+// "Contact us to subscribe": while online payment isn't set up, a restaurant
+// asks for a paid plan here and a super admin activates it by hand after
+// being paid directly. At most one OPEN request per restaurant.
+enum PlanRequestStatus {
+  OPEN
+  DONE
+}
+
+model PlanRequest {
+  id            String            @id @default(cuid())
+  restaurantId  String
+  restaurant    Restaurant        @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  planId        String?
+  plan          SubscriptionPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  requestedById String?
+  message       String?
+  status        PlanRequestStatus @default(OPEN)
+  resolvedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([restaurantId, status])
+  @@map("plan_requests")
 }

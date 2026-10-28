@@ -22,6 +22,7 @@ export interface AdminOverview {
   cancelled: number;
   revenueMinor: number;
   activePlans: number;
+  planRequests: number;
 }
 
 export interface AdminPlatformSettings {
@@ -42,6 +43,8 @@ export interface AdminRestaurant {
   createdAt: string;
   branches: number;
   owner: { name: string; email: string | null } | null;
+  // Open "contact us to subscribe" request, if any.
+  planRequest: { planId: string | null; planName: string | null; message: string | null; createdAt: string } | null;
   subscription: {
     status: SubscriptionStatus | "NONE";
     plan: { id: string; name: string } | null;

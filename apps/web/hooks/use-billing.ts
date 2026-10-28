@@ -26,7 +26,10 @@ export interface BillingStatus {
   currentPeriodEnd: string | null;
   accessEndsAt: string | null;
   trialUsed: boolean;
+  // null = online payment isn't set up on this server: paid plans are
+  // requested from F Cartel and activated by a super admin instead.
   razorpayKeyId: string | null;
+  planRequest: { id: string; planId: string | null; planName: string | null; createdAt: string } | null;
 }
 
 export interface SubscriptionPaymentRow {
@@ -87,6 +90,14 @@ function useOnBillingChanged() {
     // Anything that failed with 402 while access was off can load now.
     queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "billing" && q.state.status === "error" });
   };
+}
+
+export function useRequestPlan() {
+  const changed = useOnBillingChanged();
+  return useMutation({
+    mutationFn: (dto: { planId: string; message?: string }) => api.post<BillingStatus>("/billing/plan-request", dto),
+    onSuccess: (status) => changed(status),
+  });
 }
 
 export function useStartTrial() {

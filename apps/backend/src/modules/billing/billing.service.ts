@@ -13,6 +13,8 @@ import type {
   VerifyRazorpayPaymentDto,
 } from '@nodedr-restaurant/types';
 import type { Prisma } from '@prisma/client';
+import { notifySuperAdmins } from '../../common/notify-super-admins';
+import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   accessEndsAt,
@@ -42,7 +44,10 @@ export class BillingService {
   >();
   private requireCache: { value: boolean; at: number } | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // ─── Access gate ─────────────────────────────────────────────────────────
 
@@ -90,12 +95,13 @@ export class BillingService {
 
   async status(restaurantId: string) {
     const now = new Date();
-    const [required, sub] = await Promise.all([
+    const [required, sub, request] = await Promise.all([
       this.requireSubscription(),
       this.prisma.restaurantSubscription.findUnique({
         where: { restaurantId },
         include: { plan: true },
       }),
+      this.openRequest(restaurantId),
     ]);
     const ends = accessEndsAt(sub, now);
     return {
@@ -108,7 +114,83 @@ export class BillingService {
       accessEndsAt: ends ?? null,
       trialUsed: sub?.trialUsed ?? false,
       razorpayKeyId: razorpayConfig()?.keyId ?? null,
+      planRequest: request
+        ? {
+            id: request.id,
+            planId: request.planId,
+            planName: request.plan?.name ?? null,
+            createdAt: request.createdAt,
+          }
+        : null,
     };
+  }
+
+  private openRequest(restaurantId: string) {
+    return this.prisma.planRequest.findFirst({
+      where: { restaurantId, status: 'OPEN' },
+      include: { plan: { select: { name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /** The restaurant got a plan another way (trial, payment, admin) — close its request. */
+  private async resolveRequests(restaurantId: string) {
+    await this.prisma.planRequest.updateMany({
+      where: { restaurantId, status: 'OPEN' },
+      data: { status: 'DONE', resolvedAt: new Date() },
+    });
+  }
+
+  /**
+   * "Contact us to subscribe": records which paid plan the restaurant wants
+   * and alerts super admins, who activate it by hand once paid directly.
+   * Re-requesting replaces the open request rather than piling up.
+   */
+  async requestPlan(
+    restaurantId: string,
+    userId: string,
+    dto: { planId: string; message?: string },
+  ) {
+    const plan = await this.activePlan(dto.planId);
+    const existing = await this.openRequest(restaurantId);
+    const data = {
+      planId: plan.id,
+      requestedById: userId,
+      message: dto.message || null,
+    };
+    if (existing) {
+      await this.prisma.planRequest.update({
+        where: { id: existing.id },
+        data,
+      });
+    } else {
+      await this.prisma.planRequest.create({ data: { restaurantId, ...data } });
+    }
+    const [restaurant, owner] = await Promise.all([
+      this.prisma.restaurant.findUniqueOrThrow({
+        where: { id: restaurantId },
+        select: { name: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, email: true, phone: true },
+      }),
+    ]);
+    const price =
+      plan.priceMinor === 0
+        ? 'free'
+        : `₹${(plan.priceMinor / 100).toLocaleString('en-IN')}/${plan.interval.toLowerCase()}`;
+    const who = [owner?.name, owner?.email, owner?.phone]
+      .filter(Boolean)
+      .join(' · ');
+    await notifySuperAdmins(this.prisma, this.notifications, {
+      type: 'billing.plan_requested',
+      title: `${restaurant.name} wants the ${plan.name} plan`,
+      body: `${price}${who ? ` — ${who}` : ''}${dto.message ? ` — “${dto.message}”` : ''}. Activate it in Admin → Restaurants once paid.`,
+    }).catch((err) =>
+      this.logger.warn(`plan request notification failed: ${String(err)}`),
+    );
+    return this.status(restaurantId);
   }
 
   listPayments(restaurantId: string) {
@@ -156,6 +238,7 @@ export class BillingService {
       create: { restaurantId, ...data },
       update: data,
     });
+    await this.resolveRequests(restaurantId);
     this.invalidate(restaurantId);
     return this.status(restaurantId);
   }
@@ -178,6 +261,7 @@ export class BillingService {
         create: { restaurantId, ...data },
         update: data,
       });
+      await this.resolveRequests(restaurantId);
       this.invalidate(restaurantId);
       return {
         kind: 'activated' as const,
@@ -294,7 +378,10 @@ export class BillingService {
       });
       return payment.restaurantId;
     });
-    if (restaurantId) this.invalidate(restaurantId);
+    if (restaurantId) {
+      await this.resolveRequests(restaurantId);
+      this.invalidate(restaurantId);
+    }
   }
 
   async handleWebhook(
@@ -359,17 +446,20 @@ export class BillingService {
 
   async overview() {
     const now = new Date();
-    const [restaurants, subs, revenue, plans] = await Promise.all([
-      this.prisma.restaurant.count(),
-      this.prisma.restaurantSubscription.findMany({
-        select: { status: true, trialEndsAt: true, currentPeriodEnd: true },
-      }),
-      this.prisma.subscriptionPayment.aggregate({
-        where: { status: 'PAID' },
-        _sum: { amountMinor: true },
-      }),
-      this.prisma.subscriptionPlan.count({ where: { isActive: true } }),
-    ]);
+    const [restaurants, subs, revenue, plans, planRequests] = await Promise.all(
+      [
+        this.prisma.restaurant.count(),
+        this.prisma.restaurantSubscription.findMany({
+          select: { status: true, trialEndsAt: true, currentPeriodEnd: true },
+        }),
+        this.prisma.subscriptionPayment.aggregate({
+          where: { status: 'PAID' },
+          _sum: { amountMinor: true },
+        }),
+        this.prisma.subscriptionPlan.count({ where: { isActive: true } }),
+        this.prisma.planRequest.count({ where: { status: 'OPEN' } }),
+      ],
+    );
     const counts = { TRIALING: 0, ACTIVE: 0, EXPIRED: 0, CANCELLED: 0 };
     for (const s of subs) {
       const st = effectiveStatus(s, now);
@@ -384,6 +474,7 @@ export class BillingService {
       cancelled: counts.CANCELLED,
       revenueMinor: revenue._sum.amountMinor ?? 0,
       activePlans: plans,
+      planRequests,
     };
   }
 
@@ -458,6 +549,17 @@ export class BillingService {
         subscription: {
           include: { plan: { select: { id: true, name: true } } },
         },
+        planRequests: {
+          where: { status: 'OPEN' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            planId: true,
+            message: true,
+            createdAt: true,
+            plan: { select: { name: true } },
+          },
+        },
       },
     });
     return rows.map((r) => ({
@@ -467,6 +569,14 @@ export class BillingService {
       createdAt: r.createdAt,
       branches: r._count.branches,
       owner: r.users[0] ?? null,
+      planRequest: r.planRequests[0]
+        ? {
+            planId: r.planRequests[0].planId,
+            planName: r.planRequests[0].plan?.name ?? null,
+            message: r.planRequests[0].message,
+            createdAt: r.planRequests[0].createdAt,
+          }
+        : null,
       subscription: r.subscription
         ? {
             status: effectiveStatus(r.subscription, now),
@@ -554,6 +664,13 @@ export class BillingService {
       create: { restaurantId, status: 'CANCELLED', ...data },
       update: data,
     });
+    if (
+      dto.action === 'grant_trial' ||
+      dto.action === 'extend' ||
+      dto.action === 'activate'
+    ) {
+      await this.resolveRequests(restaurantId);
+    }
     this.invalidate(restaurantId);
     return (await this.restaurantRows({ id: restaurantId }))[0];
   }

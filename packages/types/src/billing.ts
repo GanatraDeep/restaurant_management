@@ -49,3 +49,10 @@ export const platformSettingsSchema = z.object({
   requireSubscription: z.boolean(),
 });
 export type PlatformSettingsDto = z.infer<typeof platformSettingsSchema>;
+
+// "Contact us to subscribe" while online payment isn't available.
+export const planRequestSchema = z.object({
+  planId: z.string().min(1),
+  message: z.string().trim().max(500).optional(),
+});
+export type PlanRequestDto = z.infer<typeof planRequestSchema>;

@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, XCircle } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -50,6 +51,9 @@ export default function AdminOverviewPage() {
         <Stat label="No plan chosen" value={o?.noSubscription} />
         <Stat label="Active plans" value={o?.activePlans} />
         <Stat label="Revenue collected" value={o ? formatCurrency(o.revenueMinor / 100) : undefined} />
+        <Link href="/admin/restaurants" className="block rounded-xl transition hover:opacity-90">
+          <Stat label="Plan requests waiting" value={o?.planRequests} />
+        </Link>
       </div>
 
       <Card className="flex flex-col gap-4 p-5 sm:p-6">

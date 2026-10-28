@@ -117,6 +117,11 @@ export function NotificationBell() {
       router.push("/admin/releases");
       return;
     }
+    // A restaurant asked to subscribe while online payment is off.
+    if (notification.type === "billing.plan_requested") {
+      router.push("/admin/restaurants");
+      return;
+    }
     if (
       (notification.entity === "Order" || notification.entity === "Reservation") &&
       notification.entityId
