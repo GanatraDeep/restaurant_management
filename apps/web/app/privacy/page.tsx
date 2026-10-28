@@ -81,7 +81,8 @@ export default function PrivacyPage() {
 
       <DocSection heading="Grievance contact">
         <p>
-          {BUSINESS.displayName} · {BUSINESS.email} · {BUSINESS.phone} ·{" "}
+          {BUSINESS.displayName} · {BUSINESS.email} · {BUSINESS.phone}
+          {BUSINESS.address ? ` · ${BUSINESS.address}` : ""} ·{" "}
           <Link href="/contact" className="text-primary underline underline-offset-4">
             Contact us
           </Link>
