@@ -2500,3 +2500,36 @@ model AggregatorOrder {
   @@index([connectionId, createdAt])
   @@map("aggregator_orders")
 }
+
+// ─── Production releases (approve-before-deploy) ────────────────────────────
+// CI announces every image it publishes; nothing reaches production until a
+// super admin presses Deploy in Admin → Releases (see modules/releases).
+
+enum ReleaseStatus {
+  AVAILABLE // announced, waiting for a decision
+  DEPLOYING
+  DEPLOYED // was live at some point (the live one matches APP_VERSION)
+  FAILED // deploy failed and the previous version was restored
+  SKIPPED
+}
+
+model AppRelease {
+  id          String        @id @default(cuid())
+  // Image tag, identical for fcartel-backend and fcartel-web (e.g. sha-1a2b3c4).
+  tag         String        @unique
+  commitSha   String?
+  message     String?
+  author      String?
+  url         String?
+  status      ReleaseStatus @default(AVAILABLE)
+  error       String?
+  decidedById String?
+  decidedAt   DateTime?
+  deployedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+  @@map("app_releases")
+}

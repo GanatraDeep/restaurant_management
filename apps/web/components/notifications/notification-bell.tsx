@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell, CheckCheck, Volume2, VolumeX } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -49,6 +50,7 @@ function timeAgo(iso: string): string {
 export function NotificationBell() {
   const { branchId } = useBranch();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const { data } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
@@ -110,6 +112,11 @@ export function NotificationBell() {
 
   const handleSelect = (notification: NotificationEntry) => {
     if (!notification.readAt) markRead.mutate(notification.id);
+    // New F Cartel version announced by CI → the super admin's Releases page.
+    if (notification.type === "release.available") {
+      router.push("/admin/releases");
+      return;
+    }
     if (
       (notification.entity === "Order" || notification.entity === "Reservation") &&
       notification.entityId

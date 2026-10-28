@@ -270,6 +270,12 @@ Postgres over the originally-specced SQLite — is in
 
 ## Quick start
 
+> **Production (F Cartel on fcartel.divtech.cloud):** use
+> [`deploy/README.md`](./deploy/README.md) — pre-built images, an isolated
+> Docker project that leaves other sites on the server alone, and
+> approve-before-deploy updates from **Admin console → Releases**. The
+> instructions below are for local / single-restaurant installs.
+
 <p align="center">
   <img src="docs/assets/install-animated.svg" alt="Animated terminal: clone the repo and run install.sh" width="100%">
 </p>
@@ -406,6 +412,7 @@ docs/           Screenshots and supplementary docs
 |---|---|
 | [`PROJECT.md`](./PROJECT.md) | Source of truth — full vision, non-negotiable principles, complete 20-module scope, current status |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Tech-stack decisions and the reasoning behind each one |
+| [`deploy/README.md`](./deploy/README.md) | Production deployment on a shared VPS, approve-before-deploy releases |
 | [`ROADMAP.md`](./ROADMAP.md) | Phased build plan / living TODO — checkboxes are the real status |
 | [`DESIGN_SYSTEM.md`](./DESIGN_SYSTEM.md) | Visual language, tokens, type scale, component inventory, per-surface UX notes |
 | [`ACCESSIBILITY.md`](./ACCESSIBILITY.md) | WCAG 2.1 AA target, what's implemented, testing methodology, known gaps |

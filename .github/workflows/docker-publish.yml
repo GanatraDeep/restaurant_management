@@ -46,6 +46,10 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
       owner: ${{ steps.version.outputs.owner }}
+      # What the images are tagged and announced as (sha-<commit> for a push
+      # to master, else the version) — baked into the backend as APP_VERSION
+      # so Admin → Releases can tell which one is running.
+      tag: ${{ steps.version.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,6 +71,11 @@ jobs:
             VERSION="edge"
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$VERSION" = "edge" ]; then
+            echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+          fi
           # GHCR image paths must be lowercase.
           echo "owner=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
@@ -109,7 +118,7 @@ jobs:
           # resolve at build). APP_VERSION is only used by the backend image.
           build-args: |
             BACKEND_URL=http://backend:4000
-            APP_VERSION=${{ needs.version.outputs.version }}
+            APP_VERSION=${{ needs.version.outputs.tag }}
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=${{ env.REGISTRY }}/${{ needs.version.outputs.owner }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.slug }}
@@ -163,4 +172,43 @@ jobs:
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ needs.version.outputs.owner }}/${{ matrix.image }}
           VERSION: ${{ needs.version.outputs.version }}
-        run: docker buildx imagetools inspect "$IMAGE:$VERSION"
+          TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          docker buildx imagetools inspect "$IMAGE:$VERSION"
+          echo "Published \`$IMAGE:$TAG\` — use \`FCARTEL_VERSION=$TAG\` for a first install (deploy/README.md)." >> "$GITHUB_STEP_SUMMARY"
+
+  # Tells the production server a new version exists. Nothing is deployed:
+  # it shows up in Admin → Releases, where a super admin decides. Skipped
+  # unless both repository secrets are set (Settings → Secrets → Actions):
+  #   RELEASE_WEBHOOK_URL     https://fcartel.divtech.cloud/api/v1/releases/announce
+  #   RELEASE_WEBHOOK_SECRET  same value as RELEASE_WEBHOOK_SECRET in the server's deploy/.env
+  announce:
+    needs: [version, merge]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Announce to production
+        env:
+          URL: ${{ secrets.RELEASE_WEBHOOK_URL }}
+          SECRET: ${{ secrets.RELEASE_WEBHOOK_SECRET }}
+          TAG: ${{ needs.version.outputs.tag }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "RELEASE_WEBHOOK_URL / RELEASE_WEBHOOK_SECRET not set — skipping the announcement."
+            exit 0
+          fi
+          BODY=$(jq -cn \
+            --arg tag "$TAG" \
+            --arg sha "$GITHUB_SHA" \
+            --arg msg "$(git log -1 --format=%B "$GITHUB_SHA" | head -c 1900)" \
+            --arg author "$(git log -1 --format=%an "$GITHUB_SHA")" \
+            --arg url "$REPO_URL/commit/$GITHUB_SHA" \
+            '{tag: $tag, commitSha: $sha, message: $msg, author: $author, url: $url}')
+          T=$(date +%s)
+          SIG=$(printf '%s.%s' "$T" "$BODY" | openssl dgst -sha256 -hmac "$SECRET" -hex | sed 's/^.* //')
+          curl -fsS --retry 3 --retry-delay 5 -X POST "$URL" \
+            -H "Content-Type: application/json" \
+            -H "X-FCartel-Signature: t=$T,v1=$SIG" \
+            --data "$BODY"
