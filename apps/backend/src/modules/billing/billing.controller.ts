@@ -13,8 +13,10 @@ import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
   choosePlanSchema,
+  planRequestSchema,
   verifyRazorpayPaymentSchema,
   type ChoosePlanDto,
+  type PlanRequestDto,
   type SessionUser,
   type VerifyRazorpayPaymentDto,
 } from '@nodedr-restaurant/types';
@@ -60,6 +62,14 @@ export class BillingController {
   @UsePipes(new ZodValidationPipe(choosePlanSchema))
   startTrial(@CurrentUser() user: SessionUser, @Body() body: ChoosePlanDto) {
     return this.billing.startTrial(user.restaurantId, body.planId);
+  }
+
+  // "Contact us to subscribe" while online payment isn't available.
+  @Auth('settings.manage')
+  @Post('plan-request')
+  @UsePipes(new ZodValidationPipe(planRequestSchema))
+  requestPlan(@CurrentUser() user: SessionUser, @Body() body: PlanRequestDto) {
+    return this.billing.requestPlan(user.restaurantId, user.id, body);
   }
 
   @Auth('settings.manage')

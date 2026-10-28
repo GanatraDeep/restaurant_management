@@ -19,6 +19,8 @@ export const BUSINESS = {
   displayName: "F Cartel - By Divtech",
   email: "hello@divtech.in",
   phone: "+91 94299 11067",
+  // wa.me number (country code + number, digits only).
+  whatsapp: "919429911067",
   // Registered / operating address — shown on /contact and the privacy page.
   address: "A-35, River Palace, Near Bahumali, Nanpura, Surat - 395001" as string | null,
   website: "https://fcartel.divtech.cloud",

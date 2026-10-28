@@ -1,7 +1,9 @@
 "use client";
 
-import { Check, Sparkles } from "lucide-react";
+import { Check, MessageCircle, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { ContactToSubscribeDialog } from "@/components/billing/contact-to-subscribe";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +31,9 @@ export function PlanPicker({
   const { data: plans, isLoading } = useBillingPlans();
   const trial = useStartTrial();
   const checkout = useCheckout();
+  const [contactPlan, setContactPlan] = useState<SubscriptionPlan | null>(null);
+  // No Razorpay keys on this server yet: paid plans are requested instead.
+  const onlinePayments = !!status?.razorpayKeyId;
   const busyPlan = (trial.isPending && trial.variables) || (checkout.isPending && checkout.variables) || null;
 
   const startTrial = (plan: SubscriptionPlan) =>
@@ -119,24 +124,41 @@ export function PlanPicker({
                     {busyPlan === plan.id && trial.isPending ? "Starting…" : "Start free trial"}
                   </Button>
                 )}
-                <Button
-                  variant={showTrial ? "outline" : "default"}
-                  onClick={() => subscribe(plan)}
-                  disabled={!!busyPlan}
-                >
-                  {busyPlan === plan.id && checkout.isPending
-                    ? "Opening payment…"
-                    : plan.priceMinor === 0
-                      ? "Choose free plan"
-                      : isCurrent
-                        ? "Renew / extend"
-                        : "Subscribe"}
-                </Button>
+                {plan.priceMinor > 0 && !onlinePayments ? (
+                  <>
+                    <Button
+                      variant={showTrial ? "outline" : "default"}
+                      onClick={() => setContactPlan(plan)}
+                      disabled={!!busyPlan}
+                    >
+                      <MessageCircle className="size-4" data-icon="inline-start" />
+                      {isCurrent ? "Contact us to renew" : "Contact us to subscribe"}
+                    </Button>
+                    {status?.planRequest?.planId === plan.id && (
+                      <p className="text-center text-xs text-success">Requested — we&rsquo;ll contact you</p>
+                    )}
+                  </>
+                ) : (
+                  <Button
+                    variant={showTrial ? "outline" : "default"}
+                    onClick={() => subscribe(plan)}
+                    disabled={!!busyPlan}
+                  >
+                    {busyPlan === plan.id && checkout.isPending
+                      ? "Opening payment…"
+                      : plan.priceMinor === 0
+                        ? "Choose free plan"
+                        : isCurrent
+                          ? "Renew / extend"
+                          : "Subscribe"}
+                  </Button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+      <ContactToSubscribeDialog plan={contactPlan} status={status} onClose={() => setContactPlan(null)} />
       <p className="text-xs text-muted-foreground">
         Prices in INR, paid in advance; plans don&rsquo;t renew automatically. Payments are not refundable once a
         billing period has started —{" "}

@@ -35,7 +35,8 @@ function ManageDialog({ restaurant, onClose }: { restaurant: AdminRestaurant; on
   const sub = restaurant.subscription;
   const [trialDays, setTrialDays] = useState("14");
   const [extendDays, setExtendDays] = useState("30");
-  const [planId, setPlanId] = useState(sub?.plan?.id ?? "");
+  // A pending "contact us" request pre-selects the plan they asked for.
+  const [planId, setPlanId] = useState(restaurant.planRequest?.planId ?? sub?.plan?.id ?? "");
   const [until, setUntil] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() + 1);
@@ -63,6 +64,19 @@ function ManageDialog({ restaurant, onClose }: { restaurant: AdminRestaurant; on
         </DialogHeader>
 
         <div className="flex flex-col gap-5 text-sm">
+          {restaurant.planRequest && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <p className="font-medium text-foreground">
+                Requested {restaurant.planRequest.planName ?? "a plan"} on {formatDate(restaurant.planRequest.createdAt)}
+              </p>
+              {restaurant.planRequest.message && (
+                <p className="mt-1 break-words text-muted-foreground">&ldquo;{restaurant.planRequest.message}&rdquo;</p>
+              )}
+              <p className="mt-1 text-muted-foreground">
+                Once they&rsquo;ve paid, activate it below — that closes the request.
+              </p>
+            </div>
+          )}
           <section className="flex flex-col gap-2">
             <Label htmlFor="grant-trial">Give a free trial</Label>
             <div className="flex gap-2">
@@ -102,7 +116,9 @@ function ManageDialog({ restaurant, onClose }: { restaurant: AdminRestaurant; on
             <div className="flex flex-col gap-2 sm:flex-row">
               <Select value={planId} onValueChange={(v) => setPlanId(v ?? "")}>
                 <SelectTrigger className="w-full sm:flex-1">
-                  <SelectValue placeholder="Choose plan" />
+                  <SelectValue placeholder="Choose plan">
+                    {(v: string) => plans?.find((p) => p.id === v)?.name ?? "Choose plan"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {plans?.map((p) => (
@@ -187,7 +203,10 @@ export default function AdminRestaurantsPage() {
         <Card className="p-8 text-center text-sm text-muted-foreground">No restaurants found.</Card>
       ) : (
         <ul className="flex flex-col gap-3">
-          {data.map((r) => {
+          {/* Open plan requests first: those restaurants are waiting on you. */}
+          {[...data]
+            .sort((a, b) => Number(!!b.planRequest) - Number(!!a.planRequest))
+            .map((r) => {
             const status = r.subscription?.status ?? "NONE";
             const left = daysUntil(r.subscription?.accessEndsAt);
             return (
@@ -211,6 +230,11 @@ export default function AdminRestaurantsPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground sm:justify-end">
+                    {r.planRequest && (
+                      <Badge className="bg-primary/15 text-primary">
+                        Wants {r.planRequest.planName ?? "a plan"}
+                      </Badge>
+                    )}
                     <Badge variant={statusVariant(status)}>{STATUS_LABEL[status]}</Badge>
                     {r.subscription?.plan && <span>{r.subscription.plan.name}</span>}
                     {left !== null && <span>{left}d left</span>}

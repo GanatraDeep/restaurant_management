@@ -13,7 +13,7 @@ import {
   RELEASE_TAG_RE,
   type ReleaseAnnounceDto,
 } from '@nodedr-restaurant/types';
-import { superAdminEmails } from '../../common/super-admin';
+import { notifySuperAdmins } from '../../common/notify-super-admins';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { verifySignature } from '../webhooks/signing';
@@ -166,29 +166,12 @@ export class ReleasesService implements OnModuleInit {
   }
 
   private async notifySuperAdmins(dto: ReleaseAnnounceDto) {
-    const emails = [...superAdminEmails()];
-    const admins = await this.prisma.user.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { isSuperAdmin: true },
-          ...(emails.length
-            ? [{ email: { in: emails, mode: 'insensitive' as const } }]
-            : []),
-        ],
-      },
-      select: { id: true, branches: { select: { branchId: true }, take: 1 } },
-    });
     const firstLine = dto.message?.split('\n')[0]?.slice(0, 140);
-    for (const a of admins) {
-      const branchId = a.branches[0]?.branchId;
-      if (!branchId) continue;
-      await this.notifications.notifyUser(a.id, branchId, {
-        type: 'release.available',
-        title: 'New F Cartel version ready to deploy',
-        body: `${dto.tag}${firstLine ? ` — ${firstLine}` : ''}. Review it in Admin → Releases.`,
-      });
-    }
+    await notifySuperAdmins(this.prisma, this.notifications, {
+      type: 'release.available',
+      title: 'New F Cartel version ready to deploy',
+      body: `${dto.tag}${firstLine ? ` — ${firstLine}` : ''}. Review it in Admin → Releases.`,
+    });
   }
 
   async deploy(id: string, userId: string) {
