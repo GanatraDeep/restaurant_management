@@ -7,11 +7,12 @@ import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
 import { BRAND } from "@/lib/brand";
 
+// "/#…" so the section links also work from /pricing and other pages.
 const links = [
-  { href: "#features", label: "Features" },
-  { href: "#branding", label: "Your brand" },
-  { href: "#security", label: "Security" },
-  { href: "#get-started", label: "Get started" },
+  { href: "/#features", label: "Features" },
+  { href: "/#branding", label: "Your brand" },
+  { href: "/pricing", label: "Pricing" },
+  { href: "/contact", label: "Contact" },
 ];
 
 export function MarketingNav() {
