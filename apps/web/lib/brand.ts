@@ -19,8 +19,8 @@ export const BUSINESS = {
   displayName: "F Cartel - By Divtech",
   email: "hello@divtech.in",
   phone: "+91 94299 11067",
-  // Registered / operating address — shown on /contact once filled in.
-  address: null as string | null,
+  // Registered / operating address — shown on /contact and the privacy page.
+  address: "A-35, River Palace, Near Bahumali, Nanpura, Surat - 395001" as string | null,
   website: "https://fcartel.divtech.cloud",
   policiesUpdated: "29 October 2026",
 } as const;
