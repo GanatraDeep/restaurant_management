@@ -251,7 +251,19 @@ export default function SignupPage() {
           </Button>
         </form>
 
-        <p className="mt-8 text-center text-xs text-muted-foreground">
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          By creating an account you agree to the{" "}
+          <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
+            Terms &amp; Conditions
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline underline-offset-2 hover:text-foreground">
+            Privacy Policy
+          </Link>
+          .
+        </p>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
           Already have an account?{" "}
           <Link href="/login" className="font-medium text-foreground hover:underline">
             Sign in

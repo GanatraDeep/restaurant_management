@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { Logo } from "@/components/layout/logo";
-import { BRAND } from "@/lib/brand";
+import { BRAND, BUSINESS } from "@/lib/brand";
 
 const columns = [
   {
     title: "Product",
     links: [
-      { href: "#features", label: "Features" },
-      { href: "#branding", label: "Your brand" },
-      { href: "#security", label: "Security" },
-      { href: "#get-started", label: "Get started" },
+      { href: "/#features", label: "Features" },
+      { href: "/#branding", label: "Your brand" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/#security", label: "Security" },
     ],
   },
   {
@@ -22,10 +22,13 @@ const columns = [
     ],
   },
   {
-    title: "Account",
+    title: "Company",
     links: [
-      { href: "/login", label: "Sign in" },
-      { href: "/signup", label: "Create account" },
+      { href: "/contact", label: "Contact us" },
+      { href: "/terms", label: "Terms & Conditions" },
+      { href: "/privacy", label: "Privacy Policy" },
+      { href: "/refunds", label: "Cancellation & Refunds" },
+      { href: "/service-delivery", label: "Service delivery" },
     ],
   },
 ];
@@ -34,7 +37,7 @@ export function MarketingFooter() {
   return (
     <footer className="border-t border-border/60 px-4 py-14 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 sm:grid-cols-[1.5fr_repeat(3,1fr)]">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.5fr_repeat(3,1fr)]">
           <div>
             <Link href="/" className="flex items-center gap-2.5">
               <Logo size={28} />
@@ -69,7 +72,7 @@ export function MarketingFooter() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-6 sm:flex-row">
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} {BRAND.name}. Made in India.
+            &copy; {new Date().getFullYear()} {BUSINESS.displayName}. Made in India.
           </p>
 
         </div>
