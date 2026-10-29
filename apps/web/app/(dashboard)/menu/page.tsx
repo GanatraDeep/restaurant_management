@@ -8,6 +8,7 @@ import { AddItemDialog } from "@/components/menu/add-item-dialog";
 import { ComboComponentsDialog } from "@/components/menu/combo-components-dialog";
 import { EditCategoryDialog } from "@/components/menu/edit-category-dialog";
 import { EditItemDialog } from "@/components/menu/edit-item-dialog";
+import { MenuTransferMenu } from "@/components/menu/menu-transfer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResponsiveTabs } from "@/components/ui/nav-picker";
@@ -68,11 +69,12 @@ export default function MenuPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Menu</h1>
           <p className="text-sm text-muted-foreground">{canManage ? "Categories, items, and pricing" : "Categories, items, and pricing (view only)"}</p>
         </div>
+        {branchId && <MenuTransferMenu branchId={branchId} canManage={canManage} />}
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[260px_1fr]">
@@ -355,7 +357,9 @@ export default function MenuPage() {
             <div className="flex flex-col items-center gap-2 py-16 text-center">
               <p className="text-sm font-medium text-foreground">No items yet</p>
               <p className="text-sm text-muted-foreground">
-                Add a category, then add your first menu item.
+                {canManage
+                  ? "Add a category, then add your first menu item — or bring in your whole menu at once with Import / Export → Import from Excel."
+                  : "Nothing has been added to this menu yet."}
               </p>
             </div>
           )}

@@ -14,7 +14,9 @@ import type {
   TableStatusDto,
   TableUpdateDto,
 } from '@nodedr-restaurant/types';
+import { localUploadPath } from '../../common/upload/image-upload.config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { buildTableQrPdf, type QrLayout } from './table-qr-pdf';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 
 @Injectable()
@@ -174,6 +176,57 @@ export class TablesService {
     // image can't be used to enumerate other tables' ids/data
     const qrToken = randomBytes(16).toString('hex');
     return this.prisma.table.update({ where: { id }, data: { qrToken } });
+  }
+
+  /**
+   * Printable QR cards for every table (or one floor's). Tables that never had
+   * a code get one now — that can't break anything already printed.
+   */
+  async qrCardsPdf(
+    branchId: string,
+    opts: { origin: string; layout: QrLayout; floorId?: string },
+  ) {
+    const floors = await this.prisma.floor.findMany({
+      where: { branchId, ...(opts.floorId ? { id: opts.floorId } : {}) },
+      orderBy: { sortOrder: 'asc' },
+      include: { tables: true },
+    });
+    const tables = floors.flatMap((f) =>
+      [...f.tables]
+        .sort((a, b) =>
+          a.number.localeCompare(b.number, undefined, { numeric: true }),
+        )
+        .map((t) => ({ ...t, floorName: f.name })),
+    );
+    if (!tables.length) {
+      throw new BadRequestException(
+        'Add tables first — there are none to print.',
+      );
+    }
+    for (const t of tables) {
+      if (!t.qrToken) {
+        t.qrToken = randomBytes(16).toString('hex');
+        await this.prisma.table.update({
+          where: { id: t.id },
+          data: { qrToken: t.qrToken },
+        });
+      }
+    }
+    const branch = await this.prisma.branch.findUniqueOrThrow({
+      where: { id: branchId },
+      select: { restaurant: { select: { name: true, logoUrl: true } } },
+    });
+    return buildTableQrPdf({
+      restaurantName: branch.restaurant.name,
+      logoPath: localUploadPath(branch.restaurant.logoUrl),
+      layout: opts.layout,
+      tables: tables.map((t) => ({
+        label: t.name ?? `Table ${t.number}`,
+        floor: t.floorName,
+        seats: t.capacity,
+        url: `${opts.origin}/order/${t.qrToken}`,
+      })),
+    });
   }
 
   private async assertFloorInBranch(branchId: string, floorId: string) {

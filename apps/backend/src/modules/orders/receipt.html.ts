@@ -207,23 +207,27 @@ export function buildReceiptHtml({
 <meta charset="utf-8">
 <title>${esc(order.orderNumber)}</title>
 <style>
-  * { box-sizing: border-box; }
+  /* Thermal printers have no grey: the driver dithers anything lighter than
+     black into sparse dots, which comes out faint and speckled. So every
+     colour is pure black, hierarchy comes from size and weight, and strokes
+     are heavy enough to survive the print head. */
+  * { box-sizing: border-box; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html { margin: 0; }
-  body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 4mm; color: #111; width: 80mm; }
+  body { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; margin: 0; padding: 4mm; color: #000; background: #fff; width: 80mm; font-weight: 600; -webkit-font-smoothing: none; text-rendering: geometricPrecision; }
   p { margin: 0 0 3px; }
   .receipt { width: 100%; margin: 0; }
-  h1 { font-size: 15px; text-align: center; margin: 0 0 2px; }
+  h1 { font-size: 18px; font-weight: 800; text-align: center; margin: 0 0 2px; }
   .center { text-align: center; }
-  .muted { color: #555; font-size: 11px; line-height: 1.35; }
-  .rule { border: none; border-top: 1px dashed #999; margin: 5px 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th { text-align: left; font-size: 10px; text-transform: uppercase; color: #777; padding-bottom: 2px; }
+  .muted { font-size: 12px; line-height: 1.4; }
+  .rule { border: none; border-top: 2px dashed #000; margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; font-weight: 800; text-transform: uppercase; padding-bottom: 2px; }
   td { padding: 1px 0; vertical-align: top; word-break: break-word; }
   .num { text-align: right; white-space: nowrap; padding-left: 6px; }
-  .sub { font-size: 10px; color: #777; }
+  .sub { font-size: 11px; font-weight: 600; }
   .totals td { padding: 1px 0; }
-  .grand td { font-weight: 700; font-size: 13px; border-top: 1px solid #111; padding-top: 3px; }
-  .vf { text-align: center; font-size: 11px; }
+  .grand td { font-weight: 800; font-size: 15px; border-top: 2px solid #000; padding-top: 3px; }
+  .vf { text-align: center; font-size: 12px; }
   .vf svg { display: block; margin: 4px auto; }
   .footer { text-align: center; margin-top: 6px; font-size: 11px; }
   @page { size: 80mm auto; margin: 0; }

@@ -18,6 +18,14 @@ export class MenuService {
     private readonly audit: AuditService,
   ) {}
 
+  async restaurantName(branchId: string) {
+    const b = await this.prisma.branch.findUniqueOrThrow({
+      where: { id: branchId },
+      select: { restaurant: { select: { name: true } } },
+    });
+    return b.restaurant.name;
+  }
+
   // --- Categories ---------------------------------------------------------
 
   listCategories(branchId: string) {

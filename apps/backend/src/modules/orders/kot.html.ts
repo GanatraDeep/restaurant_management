@@ -61,20 +61,24 @@ export function buildKotHtml({
 <meta charset="utf-8">
 <title>KOT ${esc(order.orderNumber)}</title>
 <style>
-  * { box-sizing: border-box; }
+  /* Thermal printers have no grey: the driver dithers anything lighter than
+     black into sparse dots, which comes out faint and speckled. So every
+     colour is pure black, hierarchy comes from size and weight, and strokes
+     are heavy enough to survive the print head. */
+  * { box-sizing: border-box; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html { margin: 0; }
-  body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; padding: 4mm; color: #111; width: 80mm; }
+  body { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; margin: 0; padding: 4mm; color: #000; background: #fff; width: 80mm; font-weight: 600; -webkit-font-smoothing: none; text-rendering: geometricPrecision; }
   p { margin: 0 0 3px; }
   .kot { width: 100%; margin: 0; }
-  h1 { font-size: 16px; text-align: center; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  h1 { font-size: 20px; font-weight: 800; text-align: center; margin: 0 0 2px; text-transform: uppercase; letter-spacing: 0.5px; }
   .center { text-align: center; }
-  .muted { color: #555; font-size: 12px; line-height: 1.4; }
-  .rule { border: none; border-top: 1px dashed #999; margin: 6px 0; }
-  table { width: 100%; border-collapse: collapse; font-size: 16px; }
+  .muted { font-size: 13px; line-height: 1.45; }
+  .rule { border: none; border-top: 2px dashed #000; margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 18px; font-weight: 700; }
   td { padding: 4px 0; vertical-align: top; word-break: break-word; }
-  .qty { font-weight: 700; white-space: nowrap; padding-right: 8px; width: 1%; }
-  .sub { font-size: 13px; color: #444; padding-left: 4px; }
-  .note { font-size: 13px; font-weight: 600; color: #111; padding-left: 4px; }
+  .qty { font-weight: 800; white-space: nowrap; padding-right: 8px; width: 1%; }
+  .sub { font-size: 14px; font-weight: 600; padding-left: 4px; }
+  .note { font-size: 14px; font-weight: 800; padding-left: 4px; }
   @page { size: 80mm auto; margin: 0; }
   @media print {
     html, body { width: 80mm; }

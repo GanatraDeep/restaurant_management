@@ -59,14 +59,15 @@ export function buildTicketHtml(t: TicketData): string {
 <title>${escapeHtml(t.labels.order)} ${escapeHtml(t.orderNumber)}</title>
 <style>
   @page { size: 80mm auto; margin: 0; }
-  * { box-sizing: border-box; }
+  /* Pure black and heavy strokes: thermal printers dither grey into faint dots. */
+  * { box-sizing: border-box; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html, body { width: 80mm; margin: 0; padding: 0; background: #fff; color: #000; }
-  body { padding: 4mm; font: 13px/1.35 -apple-system, Roboto, Arial, sans-serif; }
-  h1 { font-size: 16px; margin: 0 0 2px; text-align: center; }
+  body { padding: 4mm; font: 600 13px/1.35 Arial, "Helvetica Neue", Helvetica, sans-serif; -webkit-font-smoothing: none; }
+  h1 { font-size: 17px; font-weight: 800; margin: 0 0 2px; text-align: center; }
   .c { text-align: center; }
   .num { font-size: 30px; font-weight: 700; text-align: center; letter-spacing: 1px; margin: 6px 0; }
-  .small { font-size: 11px; color: #333; }
-  hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+  .small { font-size: 12px; }
+  hr { border: 0; border-top: 2px dashed #000; margin: 6px 0; }
   table { width: 100%; border-collapse: collapse; }
   td { padding: 1px 0; vertical-align: top; }
   td.q { width: 9mm; white-space: nowrap; }
