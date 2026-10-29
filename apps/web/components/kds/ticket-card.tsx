@@ -13,11 +13,11 @@ import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import {
   NEXT_STATUS,
   useRejectKot,
-  useReprintKot,
   useSetKotPriority,
   useUpdateKotStatus,
   type KotTicket,
 } from "@/hooks/use-kds";
+import { openTicketPrint } from "@/lib/print";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -56,7 +56,6 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
   const elapsed = useElapsedMinutes(ticket.createdAt);
   const updateStatus = useUpdateKotStatus(branchId);
   const setPriority = useSetKotPriority(branchId);
-  const reprint = useReprintKot(branchId);
   const { note, clear: clearNote, toast } = useNoteToast();
   const nextStatus = NEXT_STATUS[ticket.status];
   const isLate = elapsed >= 15;
@@ -217,20 +216,8 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
           className="h-12 w-12 shrink-0"
           title={ticket.printedCount > 0 ? "Reprint ticket (marked REPRINT)" : "Print ticket"}
           aria-label={ticket.printedCount > 0 ? "Reprint ticket" : "Print ticket"}
-          disabled={reprint.isPending}
-          onClick={() =>
-            reprint.mutate(
-              { id: ticket.id, reprint: ticket.printedCount > 0 },
-              {
-                onSuccess: () =>
-                  toast.success(
-                    ticket.printedCount > 0 ? "Reprint sent to the kitchen printer" : "Ticket sent to the kitchen printer",
-                  ),
-                onError: (err) =>
-                  toast.error(err instanceof ApiError ? err.message : "Could not print the ticket"),
-              },
-            )
-          }
+          disabled={!branchId}
+          onClick={() => branchId && openTicketPrint(ticket.id, branchId)}
         >
           <Printer className="h-5 w-5" />
         </Button>

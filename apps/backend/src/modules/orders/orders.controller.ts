@@ -539,6 +539,45 @@ export class OrdersController {
     };
   }
 
+  // A sample kitchen ticket for checking browser printing (Settings →
+  // Printing): paper width, margins and how dark it comes out.
+  @Auth('bills.print')
+  @Get('print/sample-kot')
+  sampleKot(@Res() res: Response) {
+    const html = buildKotHtml({
+      branchName: 'Test print',
+      ticket: { number: 'K-0001', station: 'Main kitchen', reprint: 0 },
+      order: {
+        orderNumber: 'TEST-0001',
+        type: 'DINE_IN',
+        createdAt: new Date(),
+        table: { label: '5' },
+        customer: null,
+        items: [
+          {
+            nameSnapshot: 'Paneer Tikka',
+            quantity: 2,
+            kitchenNote: 'Less spicy',
+            modifiers: [{ nameSnapshot: 'Extra mint chutney' }],
+          },
+          {
+            nameSnapshot: 'Butter Naan',
+            quantity: 4,
+            kitchenNote: null,
+            modifiers: [],
+          },
+          {
+            nameSnapshot: 'Masala Chaas',
+            quantity: 1,
+            kitchenNote: null,
+            modifiers: [],
+          },
+        ],
+      },
+    });
+    res.type('html').send(html);
+  }
+
   // Test slip. kind=kot prints a sample kitchen ticket so the kitchen printer
   // can be checked end to end (paper width, code page, wording).
   @Auth('bills.print')

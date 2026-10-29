@@ -6,9 +6,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import {
   kotItemStatusUpdateSchema,
   rejectKotSchema,
@@ -161,6 +163,19 @@ export class KdsController {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     const { isPriority } = body as { isPriority: boolean };
     return this.kdsService.setPriority(branchId, id, isPriority);
+  }
+
+  // The ticket as a page the Kitchen Display prints with the browser.
+  @Auth('kds.manage')
+  @Get('tickets/:id/kot')
+  async ticketKot(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    res.type('html').send(await this.kdsService.ticketHtml(branchId, id));
   }
 
   // First print of a ticket (409 ALREADY_PRINTED if it already went out).

@@ -5,6 +5,8 @@ export const loginSchema = z.object({
   password: z.string().min(8),
   // Authenticator code or recovery code, once two-factor auth is on.
   totp: z.string().trim().min(6).max(20).optional(),
+  // Stay signed in on this device for 30 days instead of 12 hours.
+  rememberMe: z.boolean().optional(),
 });
 export type LoginDto = z.infer<typeof loginSchema>;
 

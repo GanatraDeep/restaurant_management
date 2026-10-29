@@ -18,6 +18,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { TwoFactorService } from './two-factor.service';
 import { isSuperAdminUser } from '../common/super-admin';
 
+/** How long "Remember me" keeps someone signed in on that device. */
+export const REMEMBER_ME_DAYS = 30;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -69,7 +72,7 @@ export class AuthService {
       await this.twoFactor.verifyLogin(user, dto.totp);
     }
 
-    return this.issueSession(user);
+    return this.issueSession(user, dto.rememberMe);
   }
 
   async register(dto: RegisterDto) {
@@ -185,9 +188,13 @@ export class AuthService {
 
   private async issueSession(
     user: Parameters<AuthService['toSessionUser']>[0],
+    rememberMe = false,
   ) {
     const sessionUser = this.toSessionUser(user);
-    const token = await this.jwt.signAsync({ sub: user.id });
-    return { token, user: sessionUser };
+    const token = await this.jwt.signAsync(
+      { sub: user.id },
+      rememberMe ? { expiresIn: `${REMEMBER_ME_DAYS}d` } : undefined,
+    );
+    return { token, user: sessionUser, rememberMe };
   }
 }

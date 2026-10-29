@@ -33,9 +33,12 @@ interface KotOrder {
 export function buildKotHtml({
   branchName,
   order,
+  ticket,
 }: {
   branchName: string;
   order: KotOrder;
+  /** One station's ticket (from the Kitchen Display); `reprint` > 0 stamps the copy. */
+  ticket?: { number: string; station: string | null; reprint: number };
 }): string {
   const dateStr = new Date(order.createdAt).toLocaleString();
 
@@ -79,6 +82,8 @@ export function buildKotHtml({
   .qty { font-weight: 800; white-space: nowrap; padding-right: 8px; width: 1%; }
   .sub { font-size: 14px; font-weight: 600; padding-left: 4px; }
   .note { font-size: 14px; font-weight: 800; padding-left: 4px; }
+  .station { font-size: 17px; font-weight: 800; text-align: center; margin: 2px 0; }
+  .reprint { font-size: 15px; font-weight: 800; text-align: center; border: 2px solid #000; padding: 2px; margin: 4px 0; }
   @page { size: 80mm auto; margin: 0; }
   @media print {
     html, body { width: 80mm; }
@@ -92,11 +97,14 @@ export function buildKotHtml({
   </script>
   <div class="kot">
     <h1>Kitchen order</h1>
+    ${ticket?.station ? `<p class="station">${esc(ticket.station)}</p>` : ''}
+    ${ticket && ticket.reprint > 0 ? `<p class="reprint">*** REPRINT #${ticket.reprint} ***</p>` : ''}
     <p class="center muted">${esc(branchName)}</p>
     <hr class="rule">
     <p class="muted">
       ${esc(dateStr)}<br>
       Order: #${esc(order.orderNumber)} · ${esc(order.type.replace('_', ' '))}
+      ${ticket ? `<br>Ticket: ${esc(ticket.number)}` : ''}
       ${order.table ? `<br><strong>Table: ${esc(order.table.label)}</strong>` : ''}
       ${order.customer ? `<br>Guest: ${esc(order.customer.name)}` : ''}
     </p>

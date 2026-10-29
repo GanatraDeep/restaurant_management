@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { buildKotEscPosJob, resolveProfile } from './escpos-receipt';
+import { buildKotHtml } from './kot.html';
 import { PrinterNotFoundError } from './escpos-usb';
 import { sendToBranchPrinter } from './printer-transport';
 
@@ -60,6 +61,57 @@ export class KotPrintService {
     const kots = await this.load(branchId, { id: kotId });
     if (kots.length === 0) throw new NotFoundException('KOT not found');
     return this.run(branchId, kots, reprint);
+  }
+
+  /**
+   * One kitchen ticket as a self-printing page for the browser. Counts as a
+   * print: the first copy is plain, every later one is stamped REPRINT #n,
+   * and the Kitchen Display hears about it like any other print.
+   */
+  async ticketHtml(branchId: string, kotId: string): Promise<string> {
+    const [kot] = await this.load(branchId, { id: kotId });
+    if (!kot) throw new NotFoundException('KOT not found');
+    const updated = await this.prisma.kot.update({
+      where: { id: kot.id },
+      data: {
+        printedCount: { increment: 1 },
+        printedAt: new Date(),
+        lastPrintError: null,
+      },
+    });
+    this.realtime.emitToBranch(branchId, 'kot.reprinted', {
+      id: updated.id,
+      printedCount: updated.printedCount,
+    });
+    return buildKotHtml({
+      branchName: kot.order.branch.name,
+      ticket: {
+        number: kot.ticketNumber,
+        station: kot.station?.name ?? null,
+        reprint: kot.printedCount,
+      },
+      order: {
+        orderNumber: kot.order.orderNumber,
+        type: kot.order.type,
+        createdAt: kot.order.createdAt,
+        table: kot.order.table
+          ? { label: kot.order.table.name ?? `#${kot.order.table.number}` }
+          : null,
+        customer: kot.order.customer
+          ? { name: kot.order.customer.name ?? 'Guest' }
+          : kot.order.guestName
+            ? { name: kot.order.guestName }
+            : null,
+        items: kot.items.map(({ orderItem }) => ({
+          nameSnapshot: orderItem.nameSnapshot,
+          quantity: orderItem.quantity,
+          kitchenNote: orderItem.kitchenNote,
+          modifiers: orderItem.modifiers.map((m) => ({
+            nameSnapshot: m.nameSnapshot,
+          })),
+        })),
+      },
+    });
   }
 
   async printOrder(branchId: string, orderId: string, reprint: boolean) {
