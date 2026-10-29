@@ -8,11 +8,14 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
+import { memoryStorage } from 'multer';
 import { ApiTags } from '@nestjs/swagger';
 import {
   menuCategorySchema,
@@ -29,7 +32,27 @@ import {
   assertValidImageSignature,
   imageUploadOptions,
 } from '../../common/upload/image-upload.config';
+import { MenuTransferService } from './menu-transfer.service';
 import { MenuService } from './menu.service';
+
+const XLSX_MIME =
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+function sendFile(res: Response, body: Buffer, mime: string, name: string) {
+  res.setHeader('Content-Type', mime);
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${name}"; filename*=UTF-8''${encodeURIComponent(name)}`,
+  );
+  res.send(body);
+}
+
+// A file name that survives every OS and a quoted header.
+const fileSafe = (s: string) =>
+  s
+    .replace(/[^\p{L}\p{N} _-]+/gu, '')
+    .trim()
+    .replace(/\s+/g, '-') || 'menu';
 
 @ApiTags('menu')
 @Controller('v1/menu')
@@ -37,7 +60,69 @@ export class MenuController {
   constructor(
     private readonly menuService: MenuService,
     private readonly branchAccess: BranchAccessService,
+    private readonly transfer: MenuTransferService,
   ) {}
+
+  // --- Bulk import / export ------------------------------------------------
+
+  @Auth('menu.manage')
+  @Get('transfer/template')
+  async template(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const body = await this.transfer.template(branchId);
+    sendFile(res, body, XLSX_MIME, 'menu-template.xlsx');
+  }
+
+  // Excel = the full menu in the import format (edit and upload it back);
+  // PDF = the guest-facing catalogue to share.
+  @Auth('menu.view')
+  @Get('transfer/export')
+  async exportMenu(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Query('format') format = 'xlsx',
+    @Res() res: Response,
+  ) {
+    if (format !== 'xlsx' && format !== 'pdf') {
+      throw new BadRequestException('format must be xlsx or pdf');
+    }
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const name = fileSafe(await this.menuService.restaurantName(branchId));
+    if (format === 'pdf') {
+      const body = await this.transfer.exportPdf(branchId);
+      sendFile(res, body, 'application/pdf', `${name}-menu.pdf`);
+    } else {
+      const body = await this.transfer.exportExcel(branchId);
+      sendFile(res, body, XLSX_MIME, `${name}-menu.xlsx`);
+    }
+  }
+
+  // Without ?apply=true this only previews what the file would change.
+  @Auth('menu.manage')
+  @Post('transfer/import')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+    }),
+  )
+  async importMenu(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Query('apply') apply: string | undefined,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    if (!file) throw new BadRequestException('Choose an Excel file (max 5 MB)');
+    if (!/\.(xlsx|csv)$/i.test(file.originalname)) {
+      throw new BadRequestException('Upload an .xlsx or .csv file');
+    }
+    return this.transfer.import(branchId, user.id, file, apply === 'true');
+  }
 
   // --- Categories ---------------------------------------------------------
 
