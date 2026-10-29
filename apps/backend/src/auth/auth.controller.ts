@@ -23,7 +23,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { Auth } from '../common/decorators/auth.decorator';
-import { AuthService } from './auth.service';
+import { AuthService, REMEMBER_ME_DAYS } from './auth.service';
 import { TwoFactorService } from './two-factor.service';
 
 const SESSION_COOKIE = 'nodedr_session';
@@ -72,8 +72,14 @@ export class AuthController {
     @Body() body: unknown,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { token, user } = await this.authService.login(body as never);
-    this.setSessionCookie(res, token);
+    const { token, user, rememberMe } = await this.authService.login(
+      body as never,
+    );
+    this.setSessionCookie(
+      res,
+      token,
+      rememberMe ? REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000 : undefined,
+    );
     return { user };
   }
 
@@ -166,12 +172,18 @@ export class AuthController {
     return { isSetup };
   }
 
-  private setSessionCookie(res: Response, token: string) {
+  // The cookie lives as long as the token inside it (12h, or 30 days with
+  // "Remember me").
+  private setSessionCookie(
+    res: Response,
+    token: string,
+    maxAge = COOKIE_MAX_AGE_MS,
+  ) {
     res.cookie(SESSION_COOKIE, token, {
       httpOnly: true,
       sameSite: 'lax',
       secure: isCookieSecure(),
-      maxAge: COOKIE_MAX_AGE_MS,
+      maxAge,
     });
   }
 }

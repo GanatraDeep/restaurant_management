@@ -5,21 +5,35 @@ import { loginSchema, type LoginDto } from "@nodedr-restaurant/types";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { AlertCircle } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import { useLogin } from "@/hooks/use-auth";
+import { useCurrentUser, useLogin } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
+
+// Remembered on this device only: the email to pre-fill and whether
+// "Remember me" was ticked last time. Never the password.
+const SAVED_LOGIN_KEY = "fcartel:login";
+
+function savedLogin(): { email?: string; rememberMe?: boolean } {
+  try {
+    return JSON.parse(localStorage.getItem(SAVED_LOGIN_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
 
 export default function LoginPage() {
   const router = useRouter();
   const login = useLogin();
+  const { data: session } = useCurrentUser();
   // Set once the server says this account uses two-factor authentication.
   const [needsCode, setNeedsCode] = useState(false);
   // Shown inline under the form (a toast vanishes before it can be read).
@@ -28,13 +42,40 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    control,
+    reset,
+    setFocus,
     formState: { errors },
-  } = useForm<LoginDto>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginDto>({ resolver: zodResolver(loginSchema), defaultValues: { rememberMe: false } });
+
+  // Still signed in on this device (e.g. "Remember me" last time): go straight in.
+  useEffect(() => {
+    if (session?.user) router.replace("/dashboard");
+  }, [session, router]);
+
+  useEffect(() => {
+    const saved = savedLogin();
+    if (saved.email) {
+      reset({ email: saved.email, password: "", rememberMe: saved.rememberMe ?? false });
+      setFocus("password");
+    }
+  }, [reset, setFocus]);
 
   const onSubmit = (dto: LoginDto) => {
     setError(null);
     login.mutate(dto, {
-      onSuccess: () => router.push("/dashboard"),
+      onSuccess: () => {
+        try {
+          if (dto.rememberMe) {
+            localStorage.setItem(SAVED_LOGIN_KEY, JSON.stringify({ email: dto.email, rememberMe: true }));
+          } else {
+            localStorage.removeItem(SAVED_LOGIN_KEY);
+          }
+        } catch {
+          // Private window or storage blocked — sign-in works without it.
+        }
+        router.push("/dashboard");
+      },
       onError: (err) => {
         if (err instanceof ApiError && err.message === "TWO_FACTOR_REQUIRED") {
           setNeedsCode(true);
@@ -128,6 +169,26 @@ export default function LoginPage() {
               {errors.totp && <p className="text-xs text-destructive">{errors.totp.message}</p>}
             </div>
           )}
+
+          <Controller
+            control={control}
+            name="rememberMe"
+            render={({ field }) => (
+              <label className="-mt-1 flex cursor-pointer items-start gap-2.5 select-none">
+                <Checkbox
+                  className="mt-0.5"
+                  checked={!!field.value}
+                  onCheckedChange={(v) => field.onChange(!!v)}
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm text-foreground">Remember me</span>
+                  <span className="text-xs text-muted-foreground">
+                    Stay signed in on this device for 30 days. Don&apos;t use on a shared computer.
+                  </span>
+                </span>
+              </label>
+            )}
+          />
 
           {error && (
             <div
