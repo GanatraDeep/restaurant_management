@@ -150,6 +150,10 @@ export class KdsService {
     return this.kotPrint.printTicket(branchId, kotId, reprint);
   }
 
+  ticketHtml(branchId: string, kotId: string) {
+    return this.kotPrint.ticketHtml(branchId, kotId);
+  }
+
   setPriority(branchId: string, kotId: string, isPriority: boolean) {
     return this.ordersService.setKotPriority(branchId, kotId, isPriority);
   }

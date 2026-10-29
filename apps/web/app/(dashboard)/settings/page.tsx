@@ -11,7 +11,7 @@ import {
   type TaxRegime,
 } from "@nodedr-restaurant/types";
 import { KioskCard } from "@/components/settings/kiosk-card";
-import { PrinterDiagnosticsCard } from "@/components/settings/printer-diagnostics-card";
+import { PrintingCard } from "@/components/settings/printing-card";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -71,7 +71,7 @@ export default function SettingsPage() {
 
       <NotificationSettingsCard />
 
-      <PrinterDiagnosticsCard />
+      <PrintingCard />
     </div>
   );
 }

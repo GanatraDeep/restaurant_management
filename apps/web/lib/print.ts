@@ -37,8 +37,8 @@ export function billQueryString(adj: BillQuery = {}): string {
   return s ? `&${s}` : "";
 }
 
-/** Browser print of the bill (open order) or receipt (paid order). Read-only. */
-export function openReceiptPrint(orderId: string, branchId: string, adj: BillQuery = {}) {
+/** Loads one of the backend's self-printing pages and opens the print dialog. */
+function printPage(src: string) {
   const frame = getPrintFrame();
   frame.onload = () => {
     const win = frame.contentWindow;
@@ -50,21 +50,26 @@ export function openReceiptPrint(orderId: string, branchId: string, adj: BillQue
       win.postMessage("print", "*");
     }
   };
-  // Force a reload even if printing the same order twice in a row.
-  frame.src = `/api/v1/orders/${orderId}/receipt?branchId=${branchId}${billQueryString(adj)}&t=${Date.now()}`;
+  // The timestamp forces a reload even when printing the same page twice in a row.
+  frame.src = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`;
 }
 
+/** Browser print of the bill (open order) or receipt (paid order). Read-only. */
+export function openReceiptPrint(orderId: string, branchId: string, adj: BillQuery = {}) {
+  printPage(`/api/v1/orders/${orderId}/receipt?branchId=${branchId}${billQueryString(adj)}`);
+}
+
+/** Kitchen ticket for the whole order (every station's items). */
 export function openKotPrint(orderId: string, branchId: string) {
-  const frame = getPrintFrame();
-  frame.onload = () => {
-    const win = frame.contentWindow;
-    if (!win) return;
-    try {
-      win.focus();
-      win.print();
-    } catch {
-      win.postMessage("print", "*");
-    }
-  };
-  frame.src = `/api/v1/orders/${orderId}/kot?branchId=${branchId}&t=${Date.now()}`;
+  printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}`);
+}
+
+/** One station's ticket from the Kitchen Display; later copies say REPRINT. */
+export function openTicketPrint(ticketId: string, branchId: string) {
+  printPage(`/api/v1/kds/tickets/${ticketId}/kot?branchId=${branchId}`);
+}
+
+/** Sample kitchen ticket, to check the printer from Settings. */
+export function openSampleKotPrint() {
+  printPage(`/api/v1/orders/print/sample-kot`);
 }

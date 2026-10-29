@@ -1,8 +1,9 @@
 "use client";
 
 import type { TableStatusDto } from "@nodedr-restaurant/types";
-import { ClipboardList, Merge, Plus, QrCode, Users } from "lucide-react";
+import { ChefHat, ClipboardList, Merge, Plus, Printer, QrCode, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -11,7 +12,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { OpenOrder } from "@/hooks/use-orders";
 import { useUpdateTableStatus, type RestaurantTable } from "@/hooks/use-tables";
+import { api, ApiError } from "@/lib/api";
+import { openKotPrint, openReceiptPrint } from "@/lib/print";
 import { cn } from "@/lib/utils";
 import { BillTableDialog } from "./bill-table-dialog";
 import { ElapsedTimer } from "./elapsed-timer";
@@ -51,6 +55,23 @@ export function TableTile({
   const [qrOpen, setQrOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [billOpen, setBillOpen] = useState(false);
+
+  // Prints straight from the table, using its open order (the same one
+  // "Bill this table" opens).
+  const printForTable = async (what: "kot" | "bill") => {
+    if (!branchId) return;
+    try {
+      const [order] = await api.get<OpenOrder[]>(`/orders?branchId=${branchId}&tableId=${table.id}`);
+      if (!order) {
+        toast.error("No open order on this table");
+        return;
+      }
+      if (what === "kot") openKotPrint(order.id, branchId);
+      else openReceiptPrint(order.id, branchId);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not load the table's order");
+    }
+  };
 
   return (
     <>
@@ -105,6 +126,14 @@ export function TableTile({
               <DropdownMenuItem onClick={() => setBillOpen(true)}>
                 <ClipboardList className="h-4 w-4" />
                 Bill this table
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printForTable("kot")}>
+                <ChefHat className="h-4 w-4" />
+                Print KOT
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printForTable("bill")}>
+                <Printer className="h-4 w-4" />
+                Print bill
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setMergeOpen(true)}>
                 <Merge className="h-4 w-4" />

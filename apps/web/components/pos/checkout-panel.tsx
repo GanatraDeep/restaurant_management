@@ -24,7 +24,6 @@ import {
   type CheckoutResult,
   type CreatedOrder,
 } from "@/hooks/use-orders";
-import { usePrintKot, usePrintOrderUsb, type PrintJobResult } from "@/hooks/use-print";
 import { useSettings } from "@/hooks/use-settings";
 import { api, ApiError } from "@/lib/api";
 import { discountSummary, parseMoney, planPayment } from "@/lib/bill";
@@ -100,34 +99,6 @@ export function CheckoutPanel({
   const canDiscount = hasPermission(me?.user, "discounts.apply");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const printUsb = usePrintOrderUsb(branchId);
-  const printKot = usePrintKot(branchId);
-  const onPrinted = (r: PrintJobResult) =>
-    r.unsupportedChars?.length
-      ? toast.warning(`Sent, but ${r.unsupportedChars.join(" ")} cannot be printed by this printer's code page. Use browser print for the full text.`)
-      : toast.success("Sent to the thermal printer");
-  // First print sends only tickets not yet printed. If they already went out
-  // (e.g. a double tap or retry) the server refuses to print a duplicate and we
-  // offer an explicit, REPRINT-stamped copy instead.
-  const printKotNow = (reprint: boolean) =>
-    printKot.mutate(
-      { orderId: order.id, reprint },
-      {
-        onSuccess: (r) => {
-          onPrinted(r);
-          if (reprint) toast.success("Reprint sent — marked REPRINT on paper");
-        },
-        onError: (err) => {
-          if (err instanceof ApiError && err.code === "ALREADY_PRINTED") {
-            toast.info("The kitchen ticket was already printed", {
-              action: { label: "Print a REPRINT", onClick: () => printKotNow(true) },
-            });
-            return;
-          }
-          toast.error(err instanceof ApiError ? err.message : "Could not print to the kitchen printer");
-        },
-      },
-    );
   const [completed, setCompleted] = useState<CheckoutResult | null>(null);
   const { data: settings } = useSettings(branchId);
 
@@ -274,15 +245,6 @@ export function CheckoutPanel({
   };
 
   const printBill = () => branchId && openReceiptPrint(order.id, branchId, locked ? {} : settled);
-  const printBillThermal = () =>
-    printUsb.mutate(
-      { orderId: order.id, adjustments: locked ? {} : settled },
-      {
-        onSuccess: onPrinted,
-        onError: (err) =>
-          toast.error(err instanceof ApiError ? err.message : "Could not print to the thermal printer"),
-      },
-    );
 
   if (completed) {
     const { settlement } = completed;
@@ -312,21 +274,8 @@ export function CheckoutPanel({
             className="h-11"
             onClick={() => branchId && openReceiptPrint(completed.id, branchId)}
           >
-            Print receipt (browser)
-          </Button>
-          <Button
-            variant="outline"
-            className="h-11"
-            disabled={printUsb.isPending}
-            onClick={() =>
-              printUsb.mutate({ orderId: completed.id, drawer: completed.payments?.some((p) => p.method === "CASH") }, {
-                onSuccess: onPrinted,
-                onError: (err) =>
-                  toast.error(err instanceof ApiError ? err.message : "Could not print to the thermal printer"),
-              })
-            }
-          >
-            {printUsb.isPending ? "Printing…" : "Thermal receipt"}
+            <Printer className="h-4 w-4" />
+            Print receipt
           </Button>
           <Button className="h-11" onClick={onDone}>New order</Button>
         </div>
@@ -419,18 +368,7 @@ export function CheckoutPanel({
             onClick={() => branchId && openKotPrint(order.id, branchId)}
           >
             <Printer className="h-4 w-4" />
-            KOT (browser)
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            disabled={printKot.isPending}
-            onClick={() => printKotNow(false)}
-          >
-            <Printer className="h-4 w-4" />
-            {printKot.isPending ? "Printing…" : "KOT (thermal)"}
+            Print KOT
           </Button>
           </div>
         </div>
@@ -668,7 +606,7 @@ export function CheckoutPanel({
       <div className="mt-auto flex flex-col gap-3 border-t border-border pt-4">
         <BillSummary bill={bill} giftCardApplied={giftCardApplied} pending={repricing || billQuery.isFetching} />
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <Button
             type="button"
             variant="outline"
@@ -679,17 +617,6 @@ export function CheckoutPanel({
           >
             <Printer className="h-4 w-4" />
             Print bill
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11"
-            disabled={!bill || printUsb.isPending}
-            onClick={printBillThermal}
-            title="Prints the bill on the thermal printer. Nothing is charged and the cash drawer stays shut."
-          >
-            <Printer className="h-4 w-4" />
-            {printUsb.isPending ? "Printing…" : "Print bill (thermal)"}
           </Button>
         </div>
 
