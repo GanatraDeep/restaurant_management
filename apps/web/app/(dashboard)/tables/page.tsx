@@ -4,6 +4,7 @@ import { LayoutGrid, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AddFloorDialog } from "@/components/tables/add-floor-dialog";
 import { EditableTableTile } from "@/components/tables/editable-table-tile";
+import { QrExportButton } from "@/components/tables/qr-export-dialog";
 import { RenameFloorDialog } from "@/components/tables/rename-floor-dialog";
 import { TableEditorDialog } from "@/components/tables/table-editor-dialog";
 import { TableTile } from "@/components/tables/table-tile";
@@ -96,10 +97,13 @@ export default function TablesPage() {
           </p>
         </div>
         {canManage && floors && floors.length > 0 && (
-          <Button variant={editMode ? "default" : "outline"} size="sm" className="h-11 w-full sm:h-8 sm:w-auto" onClick={() => setEditMode((v) => !v)}>
-            <LayoutGrid className="h-4 w-4" />
-            {editMode ? "Done editing" : "Edit floor plan"}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {branchId && allTables.length > 0 && <QrExportButton branchId={branchId} floors={floors} />}
+            <Button variant={editMode ? "default" : "outline"} size="sm" className="h-11 w-full sm:h-8 sm:w-auto" onClick={() => setEditMode((v) => !v)}>
+              <LayoutGrid className="h-4 w-4" />
+              {editMode ? "Done editing" : "Edit floor plan"}
+            </Button>
+          </div>
         )}
       </div>
 

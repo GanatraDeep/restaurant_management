@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api, ApiError } from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -27,26 +28,6 @@ interface ImportResult {
   sample: { row: number; action: "add" | "update"; category: string; name: string; price?: number }[];
 }
 
-/** Fetch a file from the API and hand it to the browser as a download. */
-async function download(path: string, fallbackName: string) {
-  const res = await fetch(`/api/v1${path}`, { credentials: "include" });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ message: res.statusText }));
-    throw new ApiError(body.message ?? "Download failed", res.status);
-  }
-  const disposition = res.headers.get("Content-Disposition") ?? "";
-  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
-  const name = encoded ? decodeURIComponent(encoded) : fallbackName;
-  const url = URL.createObjectURL(await res.blob());
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 export function MenuTransferMenu({ branchId, canManage }: { branchId: string; canManage: boolean }) {
   const [importOpen, setImportOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
@@ -54,7 +35,7 @@ export function MenuTransferMenu({ branchId, canManage }: { branchId: string; ca
   const run = async (what: string, path: string, name: string) => {
     setBusy(what);
     try {
-      await download(path, name);
+      await downloadFile(path, name);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Download failed");
     } finally {

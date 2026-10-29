@@ -3,11 +3,10 @@
 // Everything here is pure (no database) so it can be unit tested; the
 // service loads the branch's current menu, calls planMenuImport and applies
 // the result in one transaction.
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
+import { brandFonts } from '../../common/pdf-fonts';
 
 export type SpiceLevel = 'NONE' | 'MILD' | 'MEDIUM' | 'HOT' | 'EXTRA_HOT';
 
@@ -686,15 +685,6 @@ export interface CatalogueInput {
   }[];
 }
 
-function fontDir(): string | null {
-  // dist/src/modules/menu (built) or src/modules/menu (tests) → apps/backend/assets/fonts
-  for (const up of ['../../../assets/fonts', '../../../../assets/fonts']) {
-    const dir = join(__dirname, up);
-    if (existsSync(join(dir, 'DejaVuSans.ttf'))) return dir;
-  }
-  return null;
-}
-
 const ACCENT = '#C0283A';
 
 export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
@@ -710,18 +700,9 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const dir = fontDir();
-    let regular = 'Helvetica';
-    let bold = 'Helvetica-Bold';
-    if (dir) {
-      doc.registerFont('body', join(dir, 'DejaVuSans.ttf'));
-      doc.registerFont('body-bold', join(dir, 'DejaVuSans-Bold.ttf'));
-      regular = 'body';
-      bold = 'body-bold';
-    }
-    // The built-in PDF fonts have no ₹ glyph; fall back to "Rs." without DejaVu.
+    const { regular, bold, rupee } = brandFonts(doc);
     const symbol =
-      input.currency === 'INR' ? (dir ? '₹' : 'Rs. ') : `${input.currency} `;
+      input.currency === 'INR' ? (rupee ? '₹' : 'Rs. ') : `${input.currency} `;
     const money = (n: number) =>
       `${symbol}${n.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
 

@@ -7,9 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import {
   bulkTableCreateSchema,
   floorSchema,
@@ -26,6 +28,16 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BranchAccessService } from '../../common/services/branch-access.service';
 import { TablesService } from './tables.service';
+
+// The browser's own address goes on the cards, so they open this same site.
+const qrExportSchema = z.object({
+  origin: z
+    .string()
+    .url()
+    .refine((u) => /^https?:\/\//.test(u), 'origin must be an http(s) URL'),
+  layout: z.enum(['cards', 'pages']).default('cards'),
+  floorId: z.string().optional(),
+});
 
 @ApiTags('tables')
 @Controller('v1/tables')
@@ -155,6 +167,30 @@ export class TablesController {
       body.status,
       body.assignedWaiterId,
     );
+  }
+
+  // POST, not GET: tables without a code are given one while exporting.
+  @Auth('tables.manage')
+  @Post('qr-codes/export')
+  @UsePipes(new ZodValidationPipe(qrExportSchema))
+  async exportQrCodes(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Body() body: z.infer<typeof qrExportSchema>,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const pdf = await this.tablesService.qrCardsPdf(branchId, {
+      origin: new URL(body.origin).origin,
+      layout: body.layout,
+      floorId: body.floorId,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="table-qr-codes.pdf"',
+    );
+    res.send(pdf);
   }
 
   @Auth('tables.manage')

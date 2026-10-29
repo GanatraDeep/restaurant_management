@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, unlinkSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { basename, extname, join } from 'node:path';
 import type { Request } from 'express';
 import { diskStorage, type FileFilterCallback } from 'multer';
 
@@ -14,6 +14,13 @@ export function uploadsDir(): string {
     mkdirSync(dir, { recursive: true });
   }
   return dir;
+}
+
+/** "/api/uploads/x.png" → that file on disk, if it is one of our uploads. */
+export function localUploadPath(url: string | null | undefined): string | null {
+  if (!url?.startsWith('/api/uploads/')) return null;
+  const file = join(uploadsDir(), basename(url));
+  return existsSync(file) ? file : null;
 }
 
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);

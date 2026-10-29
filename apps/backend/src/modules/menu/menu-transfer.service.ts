@@ -1,8 +1,6 @@
-import { existsSync } from 'node:fs';
-import { basename, join } from 'node:path';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
-import { uploadsDir } from '../../common/upload/image-upload.config';
+import { localUploadPath } from '../../common/upload/image-upload.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   buildCataloguePdf,
@@ -119,7 +117,7 @@ export class MenuTransferService {
       address: b.address,
       phone: b.phone,
       currency: b.restaurant.currency,
-      logoPath: this.localUpload(b.restaurant.logoUrl),
+      logoPath: localUploadPath(b.restaurant.logoUrl),
       categories: categories.map((c) => ({
         name: c.name,
         items: c.items.map((i) => ({
@@ -131,13 +129,6 @@ export class MenuTransferService {
         })),
       })),
     });
-  }
-
-  /** "/api/uploads/x.png" → the file on disk, if it is one of ours. */
-  private localUpload(url: string | null): string | null {
-    if (!url?.startsWith('/api/uploads/')) return null;
-    const file = join(uploadsDir(), basename(url));
-    return existsSync(file) ? file : null;
   }
 
   async import(
