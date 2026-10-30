@@ -119,6 +119,15 @@ export interface OpenOrder {
   totalAmount: string;
   status: string;
   customer: Customer | null;
+  /** What the table has ordered so far (GET /orders?tableId=). */
+  items?: {
+    id: string;
+    nameSnapshot: string;
+    quantity: number;
+    lineTotal: string;
+    status: string;
+    modifiers?: { nameSnapshot: string }[];
+  }[];
 }
 
 export type OrderChannel = "STAFF" | "ONLINE";

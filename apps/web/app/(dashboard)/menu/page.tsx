@@ -12,6 +12,7 @@ import { MenuTransferMenu } from "@/components/menu/menu-transfer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResponsiveTabs } from "@/components/ui/nav-picker";
+import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -29,6 +30,7 @@ import {
   useDeleteCategory,
   useDeleteMenuItem,
   useMenuItems,
+  useUpdateMenuItem,
   type MenuCategory,
   type MenuItem,
 } from "@/hooks/use-menu";
@@ -47,6 +49,30 @@ export default function MenuPage() {
   const { data: allItems } = useMenuItems(branchId);
   const deleteItem = useDeleteMenuItem(branchId);
   const deleteCategory = useDeleteCategory(branchId);
+  const updateItem = useUpdateMenuItem(branchId);
+  // Quick on/off for an item (sold out today, seasonal): off hides it from the
+  // QR menu and blocks it on the POS until it's switched back on.
+  const setAvailable = (item: MenuItem, isActive: boolean) =>
+    updateItem.mutate(
+      { id: item.id, dto: { isActive } },
+      {
+        onSuccess: () => toast.success(isActive ? `${item.name} is back on` : `${item.name} switched off`),
+        onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not update the item"),
+      },
+    );
+  const availability = (item: MenuItem, className?: string) =>
+    canManage ? (
+      <label className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
+        <Switch
+          checked={item.isActive}
+          onCheckedChange={(v) => setAvailable(item, v)}
+          aria-label={`${item.name} available`}
+        />
+        <span className="w-6">{item.isActive ? "On" : "Off"}</span>
+      </label>
+    ) : (
+      !item.isActive && <Badge variant="secondary" className={className}>Off</Badge>
+    );
   const [comboItem, setComboItem] = useState<MenuItem | null>(null);
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -209,7 +235,7 @@ export default function MenuPage() {
             <>
             <ul className="flex flex-col divide-y divide-border md:hidden">
               {items.map((item) => (
-                <li key={item.id} className="flex flex-col gap-2 py-3 first:pt-0">
+                <li key={item.id} className={cn("flex flex-col gap-2 py-3 first:pt-0", !item.isActive && "opacity-60")}>
                   <div className="flex items-start gap-3">
                     {item.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- uploaded asset served from the backend, not a Next-optimizable remote source
@@ -231,7 +257,8 @@ export default function MenuPage() {
                     <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatCurrency(item.price)}</p>
                   </div>
                   {canManage && (
-<div className="flex justify-end gap-1">
+<div className="flex items-center justify-end gap-1">
+                    {availability(item, "mr-auto")}
                     <Button variant="outline" size="sm" className={cn("h-10 gap-1.5 px-3", item.isCombo && "text-primary")} onClick={() => setComboItem(item)}>
                       <Layers className="h-4 w-4" /> Combo
                     </Button>
@@ -267,12 +294,13 @@ export default function MenuPage() {
                   <TableHead>Station</TableHead>
                   <TableHead className="text-right">Price</TableHead>
                   <TableHead className="text-right">Tax</TableHead>
+                  <TableHead>Available</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.map((item) => (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={cn(!item.isActive && "[&>td:not(:nth-last-child(-n+2))]:opacity-50")}>
                     <TableCell className="font-medium text-foreground">
                       <div className="flex items-center gap-3">
                         {item.imageUrl ? (
@@ -305,6 +333,7 @@ export default function MenuPage() {
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {Number(item.taxRatePercent)}%
                     </TableCell>
+                    <TableCell>{availability(item)}</TableCell>
                     <TableCell>
                       {canManage && (
 <div className="flex items-center justify-end gap-1">
