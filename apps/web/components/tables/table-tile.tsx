@@ -16,6 +16,7 @@ import type { OpenOrder } from "@/hooks/use-orders";
 import { useUpdateTableStatus, type RestaurantTable } from "@/hooks/use-tables";
 import { api, ApiError } from "@/lib/api";
 import { openKotPrint, openReceiptPrint } from "@/lib/print";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { BillTableDialog } from "./bill-table-dialog";
 import { ElapsedTimer } from "./elapsed-timer";
@@ -44,11 +45,14 @@ export function TableTile({
   allTables,
   branchId,
   style,
+  layout = "plan",
 }: {
   table: RestaurantTable;
   allTables: RestaurantTable[];
   branchId: string | null;
   style?: React.CSSProperties;
+  /** "plan" = positioned on the floor plan; "card" = in the All tables grid, with quick actions. */
+  layout?: "plan" | "card";
 }) {
   const router = useRouter();
   const updateStatus = useUpdateTableStatus(branchId);
@@ -57,7 +61,7 @@ export function TableTile({
   const [billOpen, setBillOpen] = useState(false);
 
   // Prints straight from the table, using its open order (the same one
-  // "Bill this table" opens).
+  // "View bill" opens).
   const printForTable = async (what: "kot" | "bill") => {
     if (!branchId) return;
     try {
@@ -73,18 +77,20 @@ export function TableTile({
     }
   };
 
-  return (
-    <>
+  const occupied = table.status === "OCCUPIED";
+
+  const menu = (
       <DropdownMenu>
         <DropdownMenuTrigger
           style={style}
           className={cn(
-            "absolute flex flex-col items-center justify-center gap-1 rounded-2xl border-2 text-xs font-medium shadow-sm transition-transform hover:scale-[1.03]",
+            "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 text-xs font-medium shadow-sm transition-transform",
+            layout === "plan" ? "absolute hover:scale-[1.03]" : "min-h-28 w-full py-3 hover:brightness-95",
             STATUS_STYLES[table.status],
           )}
         >
           <TableShapeIcon shape={table.shape} capacity={table.capacity} className="h-6 w-6" />
-          <span className="text-sm font-semibold">{table.name ?? `T${table.number}`}</span>
+          <span className="text-sm font-semibold">{table.name ?? (/^\d/.test(table.number) ? `T${table.number}` : table.number)}</span>
           <span className="flex items-center gap-1 text-[11px] opacity-80">
             <Users className="h-3 w-3" />
             {table.capacity}
@@ -97,6 +103,19 @@ export function TableTile({
           <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
             {STATUS_LABEL[table.status]} · {table.capacity} guests
           </div>
+          {occupied && (
+            <>
+              <DropdownMenuItem onClick={() => printForTable("kot")}>
+                <ChefHat className="h-4 w-4" />
+                Print KOT
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setBillOpen(true)}>
+                <ClipboardList className="h-4 w-4" />
+                View bill
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
           {(Object.keys(STATUS_LABEL) as TableStatusDto[]).map((status) => (
             <DropdownMenuItem
               key={status}
@@ -123,14 +142,6 @@ export function TableTile({
                 <Plus className="h-4 w-4" />
                 Add another round
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setBillOpen(true)}>
-                <ClipboardList className="h-4 w-4" />
-                Bill this table
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => printForTable("kot")}>
-                <ChefHat className="h-4 w-4" />
-                Print KOT
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => printForTable("bill")}>
                 <Printer className="h-4 w-4" />
                 Print bill
@@ -143,6 +154,29 @@ export function TableTile({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+  );
+
+  return (
+    <>
+      {layout === "plan" ? (
+        menu
+      ) : (
+        <div className="flex flex-col gap-1.5">
+          {menu}
+          {occupied && (
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button variant="outline" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => printForTable("kot")}>
+                <ChefHat className="h-3.5 w-3.5" />
+                Print KOT
+              </Button>
+              <Button variant="outline" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => setBillOpen(true)}>
+                <ClipboardList className="h-3.5 w-3.5" />
+                View bill
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       <TableQrDialog table={table} branchId={branchId} open={qrOpen} onOpenChange={setQrOpen} />
       <MergeTableDialog

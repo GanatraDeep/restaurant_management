@@ -95,6 +95,11 @@ export interface IncomingOrder {
   notes: string | null;
   createdAt: string;
   scheduledFor: string | null;
+  totalAmount: string;
+  // Table-QR "pay first": accept only once the UPI payment has arrived.
+  payFirst: boolean;
+  guestPaidAt: string | null;
+  guestPayRef: string | null;
   table: { number: string; name: string | null } | null;
   customer: { name: string | null; phone: string | null } | null;
   items: {
@@ -127,6 +132,15 @@ export function useAcceptIncoming(branchId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (orderId: string) => api.post(`/kds/incoming/${orderId}/accept?branchId=${branchId}`),
+    onSettled: () => invalidateAfterAnswer(queryClient, branchId),
+  });
+}
+
+/** Pay-first order: the UPI money arrived — accept it and record the payment. */
+export function useAcceptPaidIncoming(branchId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (orderId: string) => api.post(`/kds/incoming/${orderId}/accept-paid?branchId=${branchId}`, {}),
     onSettled: () => invalidateAfterAnswer(queryClient, branchId),
   });
 }

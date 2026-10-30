@@ -20,6 +20,8 @@ import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import { useBranch } from "@/hooks/use-branch";
 import { useFloors, type RestaurantTable } from "@/hooks/use-tables";
 
+const ALL = "all";
+
 export default function TablesPage() {
   const { branchId } = useBranch();
   const { data: me } = useCurrentUser();
@@ -54,9 +56,14 @@ export default function TablesPage() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [isLoading, floors?.length]);
+  }, [isLoading, floors?.length, activeFloorId, editModeRequested]);
 
-  const activeFloor = floors?.find((f) => f.id === (activeFloorId ?? floors[0]?.id));
+  // "All tables" (the default) lists every floor's tables as cards; picking a
+  // floor shows its floor plan. Editing always works on one floor's plan.
+  const showAll = !editMode && (activeFloorId ?? ALL) === ALL;
+  const activeFloor = showAll
+    ? undefined
+    : floors?.find((f) => f.id === (activeFloorId && activeFloorId !== ALL ? activeFloorId : floors[0]?.id));
   const allTables = floors?.flatMap((f) => f.tables) ?? [];
   const availableTables = allTables.filter((t) => t.status === "AVAILABLE");
 
@@ -122,15 +129,16 @@ export default function TablesPage() {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
           <div className="flex flex-col gap-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2 [&_button]:max-sm:min-h-10">
-              {(floors.length > 1 || editMode) && (
-                <ResponsiveTabs
-                  className="max-lg:w-full"
-                  label="Floor"
-                  value={activeFloorId ?? floors[0].id}
-                  onChange={setActiveFloorId}
-                  items={floors.map((f) => ({ id: f.id, label: f.name }))}
-                />
-              )}
+              <ResponsiveTabs
+                className="max-lg:w-full"
+                label="Floor"
+                value={showAll ? ALL : (activeFloor?.id ?? floors[0].id)}
+                onChange={setActiveFloorId}
+                items={[
+                  ...(editMode ? [] : [{ id: ALL, label: "All tables" }]),
+                  ...floors.map((f) => ({ id: f.id, label: f.name })),
+                ]}
+              />
               {editMode && (
                 <>
                   <RenameFloorDialog
@@ -147,6 +155,30 @@ export default function TablesPage() {
               )}
             </div>
 
+            {showAll ? (
+              <Card className="flex flex-col gap-6 p-3 sm:p-6">
+                {floors.map((floor) => (
+                  <section key={floor.id} className="flex flex-col gap-3">
+                    {floors.length > 1 && (
+                      <h2 className="text-sm font-medium text-muted-foreground">
+                        {floor.name} <span className="tabular-nums">· {floor.tables.length}</span>
+                      </h2>
+                    )}
+                    {floor.tables.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]">
+                        {[...floor.tables]
+                          .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
+                          .map((table) => (
+                            <TableTile key={table.id} table={table} allTables={allTables} branchId={branchId} layout="card" />
+                          ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No tables on this floor yet.</p>
+                    )}
+                  </section>
+                ))}
+              </Card>
+            ) : (
             <Card ref={cardRef} className="overflow-auto p-3 sm:p-6">
               <div
                 className="relative"
@@ -191,6 +223,7 @@ export default function TablesPage() {
                 </div>
               </div>
             </Card>
+            )}
 
             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
               <Legend color="bg-success" label="Available" />

@@ -65,7 +65,9 @@ export default function SettingsPage() {
         />
       )}
 
-      {data && <OnlineOrdersCard key={data.branch.id} branchId={branchId} branch={data.branch} />}
+      {data && (
+        <OnlineOrdersCard key={data.branch.id} branchId={branchId} branch={data.branch} hasUpi={!!data.restaurant.upiVpa} />
+      )}
 
       {data && <KioskCard key={`kiosk-${data.branch.id}`} branchId={branchId} branch={data.branch} />}
 
@@ -79,12 +81,14 @@ export default function SettingsPage() {
 function OnlineOrdersCard({
   branchId,
   branch,
+  hasUpi,
 }: {
   branchId: string | null;
-  branch: { autoConfirmOrders: boolean; autoConfirmReservations: boolean };
+  branch: { autoConfirmOrders: boolean; autoConfirmReservations: boolean; qrPayFirst: boolean };
+  hasUpi: boolean;
 }) {
   const update = useUpdateBranchSettings(branchId);
-  const save = (dto: { autoConfirmOrders?: boolean; autoConfirmReservations?: boolean }) =>
+  const save = (dto: { autoConfirmOrders?: boolean; autoConfirmReservations?: boolean; qrPayFirst?: boolean }) =>
     update.mutate(dto, {
       onSuccess: () => toast.success("Saved"),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
@@ -95,8 +99,8 @@ function OnlineOrdersCard({
       <div>
         <h2 className="text-[18px] font-medium text-foreground">Online orders &amp; table bookings</h2>
         <p className="text-sm text-muted-foreground">
-          Choose whether orders and bookings from your website are accepted automatically or wait for
-          you to accept them. You can always cancel an order or booking from its window.
+          Choose whether orders from your table QR codes and website, and table bookings, are accepted
+          automatically or wait for you to accept them. You can always cancel an order or booking from its window.
         </p>
       </div>
       <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
@@ -126,6 +130,22 @@ function OnlineOrdersCard({
           checked={branch.autoConfirmReservations}
           disabled={update.isPending}
           onCheckedChange={(v) => save({ autoConfirmReservations: v })}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+        <div className="flex flex-col gap-0.5">
+          <Label htmlFor="qr-pay-first">Table QR orders: pay first</Label>
+          <p className="text-xs text-muted-foreground">
+            On = after ordering, guests see a UPI QR for the exact amount and pay before anything is cooked. The order
+            waits on the Kitchen Display until you see the money and tap Payment received.
+            {!hasUpi && " Add your UPI ID above to use this."}
+          </p>
+        </div>
+        <Switch
+          id="qr-pay-first"
+          checked={branch.qrPayFirst}
+          disabled={update.isPending || (!hasUpi && !branch.qrPayFirst)}
+          onCheckedChange={(v) => save({ qrPayFirst: v })}
         />
       </div>
     </Card>

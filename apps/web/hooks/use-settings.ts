@@ -35,6 +35,7 @@ export interface BranchSettings {
   taxId: string | null;
   autoConfirmOrders: boolean;
   autoConfirmReservations: boolean;
+  qrPayFirst: boolean;
   kioskToken: string | null;
   kioskDineInEnabled: boolean;
   kioskTakeawayEnabled: boolean;

@@ -128,6 +128,8 @@ model Branch {
   // one from the dashboard; true = accepted automatically on arrival.
   autoConfirmOrders       Boolean @default(false)
   autoConfirmReservations Boolean @default(false)
+  // Table-QR orders must be paid (UPI) before staff accept them.
+  qrPayFirst              Boolean @default(false)
 
   // Self-service kiosk (2026-10-17). kioskToken is the opaque, unguessable
   // credential in the public /kiosk/<token> URL (same idea as
@@ -1172,10 +1174,13 @@ model Customer {
   allergies   String?
   notes       String?
 
-  loyaltyPoints   Int     @default(0)
+  loyaltyPoints   Int       @default(0)
+  // Set once the guest proved the number with a WhatsApp OTP on the table-QR
+  // page; later visits from this number skip the OTP.
+  phoneVerifiedAt DateTime?
   // Opted out of marketing messages; excluded from every campaign audience.
-  marketingOptOut Boolean @default(false)
-  walletBalance   Decimal @default(0) @db.Decimal(12, 2) // store credit
+  marketingOptOut Boolean   @default(false)
+  walletBalance   Decimal   @default(0) @db.Decimal(12, 2) // store credit
 
   createdAt DateTime   @default(now())
   orders    Order[]
@@ -1334,6 +1339,11 @@ model Order {
   cancelledById String?
   cancelSource  CancelSource?
 
+  // Table-QR order placed under "pay first": staff accept it only after the
+  // UPI payment arrives. guestPaidAt = the guest tapped "I've paid".
+  payFirst     Boolean   @default(false)
+  guestPaidAt  DateTime?
+  guestPayRef  String?
   // Who accepted an incoming order and when (acceptance gate only).
   acceptedAt   DateTime?
   acceptedById String?
@@ -2560,4 +2570,20 @@ model PlanRequest {
 
   @@index([restaurantId, status])
   @@map("plan_requests")
+}
+
+// One-time codes sent over WhatsApp to verify a guest's phone on the table-QR
+// page. Short-lived; never synced.
+model GuestOtp {
+  id        String   @id @default(cuid())
+  branchId  String
+  phone     String
+  name      String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([branchId, phone, createdAt])
+  @@map("guest_otps")
 }

@@ -169,6 +169,9 @@ export class OrdersService {
     options: {
       channel?: 'STAFF' | 'ONLINE';
       requireAcceptance?: boolean;
+      // Table-QR "pay first": waits for staff (who check the UPI payment)
+      // whatever the auto-confirm setting says.
+      payFirst?: boolean;
       clientRequestId?: string;
       // Zomato / Swiggy order (see modules/aggregators). The marketplace
       // lists its own menu, so the website-visibility check is skipped.
@@ -186,6 +189,10 @@ export class OrdersService {
       });
       acceptance = branch?.autoConfirmOrders ? 'ACCEPTED' : 'PENDING';
     }
+    if (options.payFirst) acceptance = 'PENDING';
+    // Accepted on arrival (auto-confirm): the kitchen shouldn't have to tap
+    // Accept again, so its tickets start out accepted.
+    const autoAccepted = acceptance === 'ACCEPTED';
     const menuItemIds = [...new Set(dto.items.map((i) => i.menuItemId))];
     if (channel === 'ONLINE' && !options.aggregator)
       await this.assertOrderableOnWebsite(branchId, menuItemIds);
@@ -334,6 +341,7 @@ export class OrdersService {
           notes: dto.notes,
           clientRequestId: options.clientRequestId,
           aggregator: options.aggregator,
+          payFirst: options.payFirst ?? false,
           createdById: userId,
           subtotal: totals.subtotal,
           taxAmount: totals.taxAmount,
@@ -385,7 +393,9 @@ export class OrdersService {
       // A scheduled order also waits: releaseDueScheduledOrders() sends it to
       // the kitchen shortly before its time.
       if (acceptance !== 'PENDING' && !this.isDeferred(scheduledFor)) {
-        await this.generateKots(tx, created.id, branchId, created.items);
+        await this.generateKots(tx, created.id, branchId, created.items, {
+          accepted: autoAccepted,
+        });
       }
 
       return created;
@@ -412,7 +422,9 @@ export class OrdersService {
         // Needs a decision: goes to anyone who can accept/cancel orders.
         await this.notifications.notifyByPermission(branchId, 'orders.accept', {
           type: 'order.pending',
-          title: 'New online order — accept?',
+          title: options.payFirst
+            ? 'New QR order — check the UPI payment, then accept'
+            : 'New online order — accept?',
           body: `Order ${full.orderNumber} (${full.type.replace('_', ' ')})${who ? ` — ${who}` : ''} · ₹${Number(full.totalAmount)}`,
           entity: 'Order',
           entityId: full.id,
@@ -452,7 +464,12 @@ export class OrdersService {
     branchId: string,
     orderId: string,
     items: CartItemDto[],
-    options: { enforceModifierLimits?: boolean; websiteOnly?: boolean } = {},
+    options: {
+      enforceModifierLimits?: boolean;
+      websiteOnly?: boolean;
+      // New tickets start accepted (an auto-confirmed online round).
+      autoAccept?: boolean;
+    } = {},
   ) {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, branchId },
@@ -545,7 +562,13 @@ export class OrdersService {
         },
       });
 
-      await this.generateKots(tx, orderId, branchId, newItems);
+      // An order still waiting for acceptance gets all its tickets, this round
+      // included, when it is accepted (acceptOrder).
+      if (order.acceptance !== 'PENDING') {
+        await this.generateKots(tx, orderId, branchId, newItems, {
+          accepted: options.autoAccept,
+        });
+      }
 
       return result;
     });
@@ -630,7 +653,11 @@ export class OrdersService {
         );
       }
       if (!this.isDeferred(order.scheduledFor ?? undefined)) {
-        await this.generateKots(tx, orderId, branchId, order.items);
+        // Someone already said yes to this order, so its tickets reach the
+        // kitchen accepted rather than asking for a second Accept.
+        await this.generateKots(tx, orderId, branchId, order.items, {
+          accepted: true,
+        });
       }
     });
     this.realtime.emitToBranch(branchId, 'order.updated', {
@@ -657,6 +684,47 @@ export class OrdersService {
     } catch (err) {
       this.logger.warn(
         `Failed to notify kitchen of accepted order ${orderId}: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+    return this.getOrder(branchId, orderId);
+  }
+
+  /**
+   * Pay-first table-QR order: staff saw the UPI payment arrive, so the order
+   * is accepted (tickets go to the kitchen) and that payment is recorded
+   * against the bill in one step.
+   */
+  async acceptPrepaidOrder(
+    branchId: string,
+    orderId: string,
+    userId: string,
+    reference?: string,
+  ) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, branchId },
+      select: { payFirst: true, guestPayRef: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (!order.payFirst) {
+      throw new BadRequestException('This order is not a pay-first order');
+    }
+    await this.acceptOrder(branchId, orderId, userId);
+    const { balanceDue } = await this.previewBill(branchId, orderId, {});
+    if (balanceDue > 0) {
+      await this.checkout(
+        branchId,
+        orderId,
+        userId,
+        {
+          payments: [
+            {
+              method: 'UPI',
+              amount: balanceDue,
+              reference: reference || order.guestPayRef || undefined,
+            },
+          ],
+        },
+        { keepTable: true },
       );
     }
     return this.getOrder(branchId, orderId);
@@ -1447,6 +1515,9 @@ export class OrdersService {
     orderId: string,
     userId: string,
     dto: CheckoutDto,
+    // Pay-first QR orders are paid before the meal: the guests are still at
+    // the table, so it stays occupied.
+    opts: { keepTable?: boolean } = {},
   ) {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, branchId },
@@ -1646,7 +1717,9 @@ export class OrdersService {
         );
         stockSkipped = deduction.skipped;
 
-        await this.releaseTableIfIdle(tx, order.tableId, orderId);
+        if (!opts.keepTable) {
+          await this.releaseTableIfIdle(tx, order.tableId, orderId);
+        }
 
         // Loyalty earn on net spend (excluding tip), only once the sale is
         // actually paid — an atomic increment (race-free by construction, no
@@ -2221,6 +2294,7 @@ export class OrdersService {
     orderId: string,
     branchId: string,
     orderItems: { id: string; menuItemId: string }[],
+    opts: { accepted?: boolean } = {},
   ) {
     const stationLookup = await tx.menuItem.findMany({
       where: { id: { in: orderItems.map((i) => i.menuItemId) } },
@@ -2248,7 +2322,15 @@ export class OrdersService {
           orderId,
           stationId: stationId ?? undefined,
           ticketNumber: `${orderId.slice(-6)}-${ticketSeq++}`,
-          items: { create: items.map((item) => ({ orderItemId: item.id })) },
+          ...(opts.accepted
+            ? { status: 'ACCEPTED' as const, acceptedAt: new Date() }
+            : {}),
+          items: {
+            create: items.map((item) => ({
+              orderItemId: item.id,
+              ...(opts.accepted ? { status: 'ACCEPTED' as const } : {}),
+            })),
+          },
         },
       });
       this.realtime.emitToBranch(branchId, 'kot.created', {

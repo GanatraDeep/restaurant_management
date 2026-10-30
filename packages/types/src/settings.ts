@@ -45,6 +45,8 @@ export const branchSettingsSchema = z.object({
   // Online order / table-booking handling (false = staff accept manually).
   autoConfirmOrders: z.boolean().optional(),
   autoConfirmReservations: z.boolean().optional(),
+  // Table-QR orders are paid by UPI first and accepted once the money arrives.
+  qrPayFirst: z.boolean().optional(),
   // Self-service kiosk: which service-mode buttons the start screen offers.
   kioskDineInEnabled: z.boolean().optional(),
   kioskTakeawayEnabled: z.boolean().optional(),

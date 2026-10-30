@@ -66,6 +66,10 @@ export class KdsService {
         notes: true,
         createdAt: true,
         scheduledFor: true,
+        totalAmount: true,
+        payFirst: true,
+        guestPaidAt: true,
+        guestPayRef: true,
         table: { select: { number: true, name: true } },
         customer: { select: { name: true, phone: true } },
         items: {
@@ -133,6 +137,20 @@ export class KdsService {
 
   acceptIncoming(branchId: string, orderId: string, userId: string) {
     return this.ordersService.acceptOrder(branchId, orderId, userId);
+  }
+
+  acceptPrepaid(
+    branchId: string,
+    orderId: string,
+    userId: string,
+    reference?: string,
+  ) {
+    return this.ordersService.acceptPrepaidOrder(
+      branchId,
+      orderId,
+      userId,
+      reference,
+    );
   }
 
   declineIncoming(
