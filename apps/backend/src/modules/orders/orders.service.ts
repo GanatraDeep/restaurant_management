@@ -157,6 +157,15 @@ export class OrdersService {
     }
   }
 
+  private assertAvailable(items: { name: string; isActive: boolean }[]) {
+    const off = items.filter((m) => !m.isActive);
+    if (off.length > 0) {
+      throw new BadRequestException(
+        `${off.map((m) => `"${m.name}"`).join(', ')} ${off.length === 1 ? 'is' : 'are'} switched off on the menu right now`,
+      );
+    }
+  }
+
   private async getBranchTaxMode(branchId: string): Promise<TaxMode> {
     const branch = await this.prisma.branch.findUnique({
       where: { id: branchId },
@@ -211,6 +220,9 @@ export class OrdersService {
         'One or more menu items are invalid for this branch',
       );
     }
+    // Switched off on the Menu page (sold out, seasonal). A marketplace order
+    // was already taken by Zomato/Swiggy, so it isn't refused here.
+    if (!options.aggregator) this.assertAvailable(menuItems);
     const menuItemById = new Map(menuItems.map((m) => [m.id, m]));
     const taxMode = await this.getBranchTaxMode(branchId);
 
@@ -504,6 +516,7 @@ export class OrdersService {
         'One or more menu items are invalid for this branch',
       );
     }
+    this.assertAvailable(menuItems);
     const menuItemById = new Map(menuItems.map((m) => [m.id, m]));
     const taxMode = await this.getBranchTaxMode(branchId);
 
