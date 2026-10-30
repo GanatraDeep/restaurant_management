@@ -1,6 +1,6 @@
 "use client";
 
-import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
+import { ChefHat, CreditCard, Minus, Plus, Printer, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CartLine } from "@/components/pos/cart-line";
+import type { OpenOrder } from "@/hooks/use-orders";
 import type { RestaurantTable } from "@/hooks/use-tables";
 import { formatCurrency } from "@/lib/format";
 import { subtotalOf } from "@/lib/pricing-preview";
@@ -35,8 +36,10 @@ export function CartPanel({
   onRemove,
   onSubmit,
   isSubmitting,
-  existingOrderNumber,
-  onViewExistingOrder,
+  existingOrder,
+  onPayExisting,
+  onPrintKot,
+  onPrintBill,
   openBills,
   selectedBillId,
   onSelectBill,
@@ -57,8 +60,11 @@ export function CartPanel({
   onRemove: (key: string) => void;
   onSubmit: () => void;
   isSubmitting: boolean;
-  existingOrderNumber?: string;
-  onViewExistingOrder?: () => void;
+  /** The selected table's open bill: shown in full, with Print KOT / Print bill / Pay. */
+  existingOrder?: OpenOrder;
+  onPayExisting?: () => void;
+  onPrintKot?: () => void;
+  onPrintBill?: () => void;
   /** All unpaid bills on the selected table (more than one is possible). */
   openBills?: { id: string; orderNumber: string }[];
   selectedBillId?: string | null;
@@ -172,29 +178,20 @@ export function CartPanel({
           ))}
         </div>
       )}
-      {existingOrderNumber && (
-        <div className="flex items-center justify-between gap-3 rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
-          <span>
-            This table already has open order{" "}
-            <span className="font-medium text-foreground">#{existingOrderNumber}</span>
-            {lines.length > 0 && " — these items will be added to it as a new round."}
-          </span>
-          {onViewExistingOrder && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 shrink-0 px-2 text-xs"
-              onClick={onViewExistingOrder}
-            >
-              View & pay
-            </Button>
-          )}
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto">
-        {lines.length === 0 ? (
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
+        {existingOrder && (
+          <ExistingOrder order={existingOrder} onPay={onPayExisting} onPrintKot={onPrintKot} onPrintBill={onPrintBill} />
+        )}
+        {existingOrder && (
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {lines.length > 0 ? "New items — sent as the next round" : "Add more"}
+          </p>
+        )}
+        {lines.length === 0 && existingOrder ? (
+          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+            Pick items from the menu to add another round to this table.
+          </p>
+        ) : lines.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
             <ShoppingCart className="h-8 w-8 opacity-40" />
             <p className="text-sm">Cart is empty</p>
@@ -255,11 +252,77 @@ export function CartPanel({
         <Button className="h-11" disabled={!canSubmit} onClick={onSubmit}>
           {isSubmitting
             ? "Sending to kitchen…"
-            : existingOrderNumber
+            : existingOrder
               ? "Add to order & send to kitchen"
               : "Send to kitchen"}
         </Button>
       </div>
     </div>
+  );
+}
+
+const ITEM_STATUS: Record<string, string> = {
+  NEW: "New",
+  ACCEPTED: "Accepted",
+  PREPARING: "Cooking",
+  READY: "Ready",
+  SERVED: "Served",
+  CANCELLED: "Cancelled",
+};
+
+/** What the selected table has ordered so far, with the actions used most. */
+function ExistingOrder({
+  order,
+  onPay,
+  onPrintKot,
+  onPrintBill,
+}: {
+  order: OpenOrder;
+  onPay?: () => void;
+  onPrintKot?: () => void;
+  onPrintBill?: () => void;
+}) {
+  const items = order.items ?? [];
+  return (
+    <section className="flex flex-col gap-2 rounded-xl border border-border p-3" aria-label={`Order #${order.orderNumber}`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">Order #{order.orderNumber}</p>
+        <p className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(order.totalAmount)}</p>
+      </div>
+      {items.length > 0 && (
+        <ul className="flex flex-col gap-1.5 text-sm">
+          {items.map((i) => {
+            const cancelled = i.status === "CANCELLED";
+            return (
+              <li key={i.id} className="flex items-start justify-between gap-2">
+                <span className={cancelled ? "text-muted-foreground line-through" : "text-foreground"}>
+                  {i.quantity} × {i.nameSnapshot}
+                  {i.modifiers && i.modifiers.length > 0 && (
+                    <span className="block text-xs text-muted-foreground">{i.modifiers.map((m) => m.nameSnapshot).join(", ")}</span>
+                  )}
+                </span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    {ITEM_STATUS[i.status] ?? i.status}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{formatCurrency(i.lineTotal)}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <div className="grid grid-cols-3 gap-1.5 pt-1">
+        <Button type="button" variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs" onClick={onPrintKot}>
+          <ChefHat className="h-3.5 w-3.5" /> Print KOT
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs" onClick={onPrintBill}>
+          <Printer className="h-3.5 w-3.5" /> Print bill
+        </Button>
+        <Button type="button" size="sm" className="h-9 gap-1 px-1 text-xs" onClick={onPay}>
+          <CreditCard className="h-3.5 w-3.5" /> Pay
+        </Button>
+      </div>
+    </section>
   );
 }

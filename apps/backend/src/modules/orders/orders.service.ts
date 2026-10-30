@@ -76,7 +76,14 @@ export class OrdersService {
   async listOpen(branchId: string, tableId?: string) {
     return this.prisma.order.findMany({
       where: { branchId, status: 'OPEN', ...(tableId ? { tableId } : {}) },
-      include: { table: true, items: true, customer: true },
+      include: {
+        table: true,
+        // Options too, so the POS can show what the table has ordered so far.
+        items: {
+          include: { modifiers: { select: { nameSnapshot: true } } },
+        },
+        customer: true,
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

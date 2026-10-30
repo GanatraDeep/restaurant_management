@@ -25,7 +25,8 @@ import {
   type OpenOrder,
 } from "@/hooks/use-orders";
 import { useFloors, type RestaurantTable } from "@/hooks/use-tables";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { openKotPrint, openReceiptPrint } from "@/lib/print";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -241,6 +242,28 @@ function PosPageInner() {
 
   const handleTablePick = (table: RestaurantTable) => setTableId(table.id);
 
+  // Shortcuts from the table grid: act on the table's open bill directly.
+  const tableShortcut = async (table: RestaurantTable, action: "kot" | "bill") => {
+    if (!branchId) return;
+    try {
+      const [order] = await api.get<OpenOrder[]>(`/orders?branchId=${branchId}&tableId=${table.id}`);
+      if (!order) {
+        toast.error("No open order on this table");
+        return;
+      }
+      if (action === "kot") {
+        openKotPrint(order.id, branchId);
+        return;
+      }
+      setTableId(table.id);
+      setActiveCustomer(order.customer);
+      setActiveOrder(order);
+      setCartOpen(true);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not load the table's order");
+    }
+  };
+
   // Click-to-order: for a fresh dine-in ticket, land on a visual table grid
   // first — the rest of the flow (menu, cart, bill-or-add-more) is
   // unchanged once a table's picked. Takeaway orders and orders already
@@ -275,6 +298,8 @@ function PosPageInner() {
           <PosTablePicker
             floors={floors ?? []}
             onSelect={handleTablePick}
+            onPrintKot={(t) => void tableShortcut(t, "kot")}
+            onViewBill={(t) => void tableShortcut(t, "bill")}
             isLoading={floorsQuery.isLoading || branchLoading}
             error={floorsQuery.isError ? floorsQuery.error : null}
             onRetry={() => void floorsQuery.refetch()}
@@ -323,8 +348,10 @@ function PosPageInner() {
                 onRemove={removeLine}
                 onSubmit={handleSubmit}
                 isSubmitting={createOrder.isPending || addOrderItems.isPending}
-                existingOrderNumber={existingOrder?.orderNumber}
-                onViewExistingOrder={existingOrder ? viewExistingOrder : undefined}
+                existingOrder={existingOrder}
+                onPayExisting={viewExistingOrder}
+                onPrintKot={() => existingOrder && branchId && openKotPrint(existingOrder.id, branchId)}
+                onPrintBill={() => existingOrder && branchId && openReceiptPrint(existingOrder.id, branchId)}
                 openBills={existingOrders?.map((o) => ({ id: o.id, orderNumber: o.orderNumber }))}
                 selectedBillId={existingOrder?.id ?? null}
                 onSelectBill={setSelectedBillId}
