@@ -108,11 +108,37 @@ export const addOrderItemsSchema = z.object({
 });
 export type AddOrderItemsDto = z.infer<typeof addOrderItemsSchema>;
 
-// Guest self-order from a table's QR code — no account, so a name is the
-// only way staff can tell whose order this is (shown on KDS/order lists).
+// Guest self-order from a table's QR code. The guest proves their phone
+// number first (publicVerifyStart/Check) and orders with the token that
+// returns; their name and number come from it.
 export const publicOrderSchema = z.object({
-  guestName: z.string().trim().min(1, "Please enter your name").max(60),
+  guestToken: z.string().min(10),
   items: z.array(cartItemSchema).min(1),
+});
+
+/** Indian mobile number: 10 digits, optionally with +91 / 0 in front. */
+export const guestPhoneSchema = z
+  .string()
+  .transform((v) => v.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, ""))
+  .refine((v) => /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit mobile number");
+
+export const publicVerifyStartSchema = z.object({
+  name: z.string().trim().min(1, "Please enter your name").max(60),
+  phone: guestPhoneSchema,
+});
+export type PublicVerifyStartDto = z.infer<typeof publicVerifyStartSchema>;
+
+export const publicVerifyCheckSchema = z.object({
+  phone: guestPhoneSchema,
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+});
+export type PublicVerifyCheckDto = z.infer<typeof publicVerifyCheckSchema>;
+
+// "Pay first" orders: the guest says they've paid, optionally with the UPI
+// transaction reference so staff can match it.
+export const publicPaidSchema = z.object({
+  guestToken: z.string().min(10),
+  reference: z.string().trim().max(40).optional(),
 });
 export type PublicOrderDto = z.infer<typeof publicOrderSchema>;
 

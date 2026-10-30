@@ -52,6 +52,8 @@ services:
       RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-}"
       RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:-}"
       RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:-}"
+      WHATSAPP_API_URL: "${WHATSAPP_API_URL:-}"
+      WHATSAPP_SESSION_NAME: "${WHATSAPP_SESSION_NAME:-}"
       # Admin → Releases: CI announces new versions with this secret, and the
       # backend asks the updater below to deploy the one a super admin approves.
       RELEASE_WEBHOOK_SECRET: "${RELEASE_WEBHOOK_SECRET:-}"

@@ -3,7 +3,12 @@ import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
   publicOrderSchema,
+  publicPaidSchema,
   publicRequestSchema,
+  publicVerifyCheckSchema,
+  publicVerifyStartSchema,
+  type PublicVerifyCheckDto,
+  type PublicVerifyStartDto,
 } from '@nodedr-restaurant/types';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { PublicMenuService } from './public-menu.service';
@@ -29,8 +34,37 @@ export class PublicMenuController {
   @Post('menu/:qrToken/order')
   @UsePipes(new ZodValidationPipe(publicOrderSchema))
   createOrder(@Param('qrToken') qrToken: string, @Body() body: unknown) {
-    const { items, guestName } = body as { items: never; guestName: string };
-    return this.publicMenuService.createOrder(qrToken, items, guestName);
+    const { items, guestToken } = body as { items: never; guestToken: string };
+    return this.publicMenuService.createOrder(qrToken, items, guestToken);
+  }
+
+  // Name + phone. A number new to this restaurant gets a WhatsApp code;
+  // a known one is let straight in. Tight limits: this sends messages.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('menu/:qrToken/verify/start')
+  @UsePipes(new ZodValidationPipe(publicVerifyStartSchema))
+  verifyStart(@Param('qrToken') qrToken: string, @Body() body: unknown) {
+    const { name, phone } = body as PublicVerifyStartDto;
+    return this.publicMenuService.verifyStart(qrToken, name, phone);
+  }
+
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('menu/:qrToken/verify/check')
+  @UsePipes(new ZodValidationPipe(publicVerifyCheckSchema))
+  verifyCheck(@Param('qrToken') qrToken: string, @Body() body: unknown) {
+    const { phone, code } = body as PublicVerifyCheckDto;
+    return this.publicMenuService.verifyCheck(qrToken, phone, code);
+  }
+
+  @Throttle({ default: { limit: 6, ttl: 60_000 } })
+  @Post('menu/:qrToken/paid')
+  @UsePipes(new ZodValidationPipe(publicPaidSchema))
+  markPaid(@Param('qrToken') qrToken: string, @Body() body: unknown) {
+    const { guestToken, reference } = body as {
+      guestToken: string;
+      reference?: string;
+    };
+    return this.publicMenuService.markPaid(qrToken, guestToken, reference);
   }
 
   @Get('menu/:qrToken/status')

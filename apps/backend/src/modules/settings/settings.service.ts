@@ -83,6 +83,17 @@ export class SettingsService {
         );
       }
     }
+    if (dto.qrPayFirst) {
+      const branch = await this.prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { restaurant: { select: { upiVpa: true } } },
+      });
+      if (!branch?.restaurant.upiVpa) {
+        throw new BadRequestException(
+          'Add your UPI ID in the restaurant settings first — guests pay to it',
+        );
+      }
+    }
     if (dto.printerConnection === 'NETWORK' || dto.printerHost !== undefined) {
       const current = await this.prisma.branch.findUnique({
         where: { id: branchId },

@@ -76,6 +76,23 @@ export class KdsController {
     return this.kdsService.acceptIncoming(branchId, id, user.id);
   }
 
+  // Pay-first QR order: the UPI payment arrived — accept and record it.
+  @Auth('orders.accept', 'bills.print')
+  @Post('incoming/:id/accept-paid')
+  async acceptPaidIncoming(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Body() body: { reference?: string },
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const reference =
+      typeof body?.reference === 'string'
+        ? body.reference.trim().slice(0, 40)
+        : undefined;
+    return this.kdsService.acceptPrepaid(branchId, id, user.id, reference);
+  }
+
   @Auth('orders.accept')
   @Post('incoming/:id/reject')
   @UsePipes(new ZodValidationPipe(rejectOrderSchema))
