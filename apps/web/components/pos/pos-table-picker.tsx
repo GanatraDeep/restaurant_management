@@ -4,7 +4,6 @@ import type { TableStatusDto } from "@nodedr-restaurant/types";
 import { ChefHat, ClipboardList, Users } from "lucide-react";
 import { useState } from "react";
 import { ElapsedTimer } from "@/components/tables/elapsed-timer";
-import { TableShapeIcon } from "@/components/tables/table-shape-icon";
 import { ResponsiveTabs } from "@/components/ui/nav-picker";
 import { QueryError } from "@/components/ui/query-error";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,7 +79,7 @@ export function PosTablePicker({
         aria-busy="true"
       >
         {Array.from({ length: 10 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-2xl" />
+          <Skeleton key={i} className="h-16 rounded-xl" />
         ))}
       </div>
     );
@@ -124,7 +123,7 @@ export function PosTablePicker({
                 {floor.name}
               </h3>
             )}
-            <div className="grid auto-rows-min grid-cols-3 items-start gap-3 sm:grid-cols-4 lg:grid-cols-5 lg:gap-4 xl:grid-cols-6 2xl:grid-cols-7">
+            <div className="grid auto-rows-min grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] items-start gap-2 lg:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))]">
               {[...floor.tables]
                 .sort((a, b) =>
                   a.number.localeCompare(b.number, undefined, {
@@ -144,40 +143,33 @@ export function PosTablePicker({
                         title={STATUS_LABEL[table.status]}
                         onClick={() => onSelect(table)}
                         className={cn(
-                          "flex h-28 flex-col items-center justify-center gap-1 rounded-2xl border-2 p-3 text-xs font-medium shadow-sm transition-transform lg:h-36 lg:gap-1.5",
+                          "flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-1.5 text-xs font-medium shadow-sm transition-transform",
                           clickable &&
                             "cursor-pointer hover:scale-[1.03] hover:shadow-md",
                           !clickable && "cursor-not-allowed",
                           STATUS_STYLES[table.status],
                         )}
                       >
-                        <TableShapeIcon
-                          shape={table.shape}
-                          capacity={table.capacity}
-                          className="h-6 w-6 lg:h-8 lg:w-8"
-                        />
-                        <span className="text-sm font-semibold lg:text-lg">
+                        <span className="max-w-full truncate text-base font-semibold leading-tight">
                           {table.name ??
                             (/^\d/.test(table.number)
                               ? `T${table.number}`
                               : table.number)}
                         </span>
-                        <span className="flex items-center gap-1 text-[11px] opacity-80">
-                          <Users className="h-3 w-3" />
-                          {table.capacity}
+                        {/* Seats, and how long it's been occupied; the colour says the status. */}
+                        <span className="flex items-center gap-2 text-[11px] opacity-80">
+                          <span className="flex items-center gap-0.5">
+                            <Users className="h-3 w-3" />
+                            {table.capacity}
+                          </span>
+                          {(table.status === "OCCUPIED" ||
+                            table.status === "RESERVED") && (
+                            <ElapsedTimer
+                              since={table.statusSince}
+                              className="flex items-center gap-0.5"
+                            />
+                          )}
                         </span>
-                        <span className="hidden rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide lg:inline">
-                          {table.status === "OUT_OF_SERVICE"
-                            ? "Out of service"
-                            : table.status.toLowerCase()}
-                        </span>
-                        {(table.status === "OCCUPIED" ||
-                          table.status === "RESERVED") && (
-                          <ElapsedTimer
-                            since={table.statusSince}
-                            className="flex items-center gap-1 text-[10px] opacity-70"
-                          />
-                        )}
                       </button>
                       {occupied && (onPrintKot || onViewBill) && (
                         <div className="grid grid-cols-2 gap-1">
@@ -186,7 +178,7 @@ export function PosTablePicker({
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="h-8 gap-1 px-1 text-[11px]"
+                              className="h-7 gap-1 px-1 text-[11px]"
                               title="Print KOT"
                               onClick={() => onPrintKot(table)}
                             >
@@ -198,7 +190,7 @@ export function PosTablePicker({
                               type="button"
                               variant="outline"
                               size="sm"
-                              className="h-8 gap-1 px-1 text-[11px]"
+                              className="h-7 gap-1 px-1 text-[11px]"
                               title="View bill"
                               onClick={() => onViewBill(table)}
                             >
