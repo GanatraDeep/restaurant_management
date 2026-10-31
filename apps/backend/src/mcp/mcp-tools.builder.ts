@@ -1019,6 +1019,7 @@ export class McpToolsBuilder {
               spiceLevel: spiceLevel as never,
               allergens: [],
               isActive: true,
+              isFavorite: false,
               modifierGroupIds: [],
             }),
           );

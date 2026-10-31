@@ -87,6 +87,7 @@ export class MenuTransferService {
       spiceLevel: i.spiceLevel,
       station: i.station?.name ?? null,
       isActive: i.isActive,
+      isFavorite: i.isFavorite,
     }));
     return buildMenuWorkbook(rows, { restaurantName: b.restaurant.name });
   }

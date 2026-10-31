@@ -104,6 +104,7 @@ export function AddItemDialog({
         spiceLevel: "NONE",
         allergens: [],
         isActive: true,
+        isFavorite: false,
         modifierGroupIds: [],
         imageUrl,
       },

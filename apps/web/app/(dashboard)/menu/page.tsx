@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeOff, Layers, Leaf, Pencil, Trash2 } from "lucide-react";
+import { EyeOff, Layers, Leaf, Pencil, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AddCategoryDialog } from "@/components/menu/add-category-dialog";
@@ -60,6 +60,31 @@ export default function MenuPage() {
         onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not update the item"),
       },
     );
+  // Favourites lead the POS ("Favourite items") and the QR menu.
+  const favouriteButton = (item: MenuItem) =>
+    canManage ? (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        aria-pressed={item.isFavorite}
+        aria-label={item.isFavorite ? `Remove ${item.name} from favourites` : `Add ${item.name} to favourites`}
+        title={item.isFavorite ? "Favourite — shown first on the POS and QR menu" : "Mark as favourite"}
+        onClick={() =>
+          updateItem.mutate(
+            { id: item.id, dto: { isFavorite: !item.isFavorite } },
+            {
+              onSuccess: () => toast.success(item.isFavorite ? `${item.name} removed from favourites` : `${item.name} added to favourites`),
+              onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not update the item"),
+            },
+          )
+        }
+      >
+        <Star className={cn("h-4 w-4", item.isFavorite ? "fill-warning text-warning" : "text-muted-foreground")} />
+      </Button>
+    ) : item.isFavorite ? (
+      <Star className="h-4 w-4 shrink-0 fill-warning text-warning" aria-label="Favourite" />
+    ) : null;
   const availability = (item: MenuItem, className?: string) =>
     canManage ? (
       // A <div>, not a <label>: a label around the switch passes the click on and flips it twice.
@@ -248,6 +273,7 @@ export default function MenuPage() {
                       <p className="flex items-center gap-1.5 text-sm font-medium text-foreground">
                         {item.isVeg && <Leaf className="h-3.5 w-3.5 shrink-0 text-success" />}
                         <span className="min-w-0 break-words">{item.name}</span>
+                        {favouriteButton(item)}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {item.category.name}
@@ -316,6 +342,7 @@ export default function MenuPage() {
                         )}
                         {item.isVeg && <Leaf className="h-3.5 w-3.5 shrink-0 text-success" />}
                         {item.name}
+                        {favouriteButton(item)}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{item.category.name}</TableCell>

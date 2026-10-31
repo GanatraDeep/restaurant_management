@@ -1,6 +1,6 @@
 "use client";
 
-import { Flame, Minus, Plus, Search, X } from "lucide-react";
+import { Flame, Minus, Plus, Search, Star, X } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
@@ -142,7 +142,8 @@ export function GuestMenu({
             (!q || i.name.toLowerCase().includes(q) || i.description?.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)),
         ),
       }))
-      .filter((c) => c.items.length > 0);
+      // While searching, favourites already show in their own category.
+      .filter((c) => c.items.length > 0 && !(q && c.id === "favourites"));
   }, [categories, query, diet]);
 
   const jumpTo = (id: string) => {
@@ -198,6 +199,7 @@ export function GuestMenu({
               onClick={() => jumpTo(c.id)}
               className="h-9 shrink-0 rounded-full border border-border bg-background px-3 text-sm text-foreground hover:bg-secondary"
             >
+              {c.id === "favourites" && <Star className="mr-1 inline h-3.5 w-3.5 -translate-y-px fill-warning text-warning" aria-hidden />}
               {c.name}
             </button>
           ))}
@@ -229,7 +231,10 @@ export function GuestMenu({
             className="pt-6"
           >
             <h2 className="flex items-baseline justify-between text-lg font-semibold text-foreground">
-              {c.name}
+              <span className="flex items-center gap-1.5">
+                {c.id === "favourites" && <Star className="h-4 w-4 fill-warning text-warning" aria-hidden />}
+                {c.name}
+              </span>
               <span className="text-xs font-normal text-muted-foreground tabular-nums">{c.items.length}</span>
             </h2>
             <div className="divide-y divide-border">

@@ -17,20 +17,13 @@ import { useUpdateTableStatus, type RestaurantTable } from "@/hooks/use-tables";
 import { api, ApiError } from "@/lib/api";
 import { openKotPrint, openReceiptPrint } from "@/lib/print";
 import { Button } from "@/components/ui/button";
+import { TABLE_DISPLAY, tableDisplayOf } from "@/lib/table-colors";
 import { cn } from "@/lib/utils";
 import { BillTableDialog } from "./bill-table-dialog";
 import { ElapsedTimer } from "./elapsed-timer";
 import { MergeTableDialog } from "./merge-table-dialog";
 import { TableQrDialog } from "./table-qr-dialog";
 import { TableShapeIcon } from "./table-shape-icon";
-
-const STATUS_STYLES: Record<TableStatusDto, string> = {
-  AVAILABLE: "bg-success/10 border-success/30 text-success",
-  OCCUPIED: "bg-primary/10 border-primary/30 text-primary",
-  RESERVED: "bg-warning/10 border-warning/30 text-warning",
-  CLEANING: "bg-muted border-border text-muted-foreground",
-  OUT_OF_SERVICE: "bg-muted border-border text-muted-foreground opacity-60",
-};
 
 const STATUS_LABEL: Record<TableStatusDto, string> = {
   AVAILABLE: "Available",
@@ -86,7 +79,7 @@ export function TableTile({
           className={cn(
             "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 text-xs font-medium shadow-sm transition-transform",
             layout === "plan" ? "absolute hover:scale-[1.03]" : "min-h-28 w-full py-3 hover:brightness-95",
-            STATUS_STYLES[table.status],
+            TABLE_DISPLAY[tableDisplayOf(table)].tile,
           )}
         >
           <TableShapeIcon shape={table.shape} capacity={table.capacity} className="h-6 w-6" />
@@ -101,7 +94,7 @@ export function TableTile({
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-            {STATUS_LABEL[table.status]} · {table.capacity} guests
+            {TABLE_DISPLAY[tableDisplayOf(table)].hint} · {table.capacity} guests
           </div>
           {occupied && (
             <>

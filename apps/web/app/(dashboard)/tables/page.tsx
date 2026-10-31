@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AddFloorDialog } from "@/components/tables/add-floor-dialog";
 import { EditableTableTile } from "@/components/tables/editable-table-tile";
 import { QrExportButton } from "@/components/tables/qr-export-dialog";
+import { TableLegend } from "@/components/tables/table-legend";
 import { RenameFloorDialog } from "@/components/tables/rename-floor-dialog";
 import { TableEditorDialog } from "@/components/tables/table-editor-dialog";
 import { TableTile } from "@/components/tables/table-tile";
@@ -139,6 +140,7 @@ export default function TablesPage() {
                   ...floors.map((f) => ({ id: f.id, label: f.name })),
                 ]}
               />
+              {!editMode && <TableLegend className="ml-auto" />}
               {editMode && (
                 <>
                   <RenameFloorDialog
@@ -225,12 +227,6 @@ export default function TablesPage() {
             </Card>
             )}
 
-            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-              <Legend color="bg-success" label="Available" />
-              <Legend color="bg-primary" label="Occupied" />
-              <Legend color="bg-warning" label="Reserved" />
-              <Legend color="bg-muted-foreground" label="Cleaning / out of service" />
-            </div>
           </div>
 
           <WaitlistPanel branchId={branchId} availableTables={availableTables} />
@@ -253,15 +249,6 @@ export default function TablesPage() {
           onOpenChange={setEditorOpen}
         />
       )}
-    </div>
-  );
-}
-
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-      {label}
     </div>
   );
 }

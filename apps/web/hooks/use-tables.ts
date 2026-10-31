@@ -25,6 +25,8 @@ export interface RestaurantTable {
   rotation: number;
   shape: "square" | "round" | "rect";
   qrToken: string | null;
+  /** Floor colour (Blank / Running / Running KOT / Printed / Paid …). */
+  display?: import("@/lib/table-colors").TableDisplay;
   assignedWaiter: { id: string; name: string } | null;
 }
 

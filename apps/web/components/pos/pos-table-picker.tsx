@@ -1,6 +1,5 @@
 "use client";
 
-import type { TableStatusDto } from "@nodedr-restaurant/types";
 import { ChefHat, ClipboardList, Users } from "lucide-react";
 import { useState } from "react";
 import { ElapsedTimer } from "@/components/tables/elapsed-timer";
@@ -9,25 +8,11 @@ import { QueryError } from "@/components/ui/query-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Floor, RestaurantTable } from "@/hooks/use-tables";
 import { Button } from "@/components/ui/button";
+import { TABLE_DISPLAY, tableDisplayOf } from "@/lib/table-colors";
 import { cn } from "@/lib/utils";
+import { TableLegend } from "@/components/tables/table-legend";
 
 const ALL = "all";
-
-const STATUS_STYLES: Record<TableStatusDto, string> = {
-  AVAILABLE: "bg-success/10 border-success/30 text-success hover:bg-success/15",
-  OCCUPIED: "bg-primary/10 border-primary/30 text-primary hover:bg-primary/15",
-  RESERVED: "bg-warning/10 border-warning/30 text-warning hover:bg-warning/15",
-  CLEANING: "bg-muted border-border text-muted-foreground",
-  OUT_OF_SERVICE: "bg-muted border-border text-muted-foreground opacity-50",
-};
-
-const STATUS_LABEL: Record<TableStatusDto, string> = {
-  AVAILABLE: "Available",
-  OCCUPIED: "Occupied — tap to add items or bill",
-  RESERVED: "Reserved",
-  CLEANING: "Cleaning",
-  OUT_OF_SERVICE: "Out of service",
-};
 
 // A click-to-order table grid, purpose-built for POS: pick a table, land
 // straight in the menu. Deliberately a separate, simpler component from
@@ -95,25 +80,28 @@ export function PosTablePicker({
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {floors.length > 1 && (
-        <ResponsiveTabs
-          label="Floor"
-          value={activeFloorId}
-          onChange={setActiveFloorId}
-          items={[
-            {
-              id: ALL,
-              label: "All tables",
-              hint: `${floors.flatMap((f) => f.tables).filter((t) => t.status === "AVAILABLE").length} free`,
-            },
-            ...floors.map((f) => ({
-              id: f.id,
-              label: f.name,
-              hint: `${f.tables.filter((t) => t.status === "AVAILABLE").length} free`,
-            })),
-          ]}
-        />
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {floors.length > 1 && (
+          <ResponsiveTabs
+            label="Floor"
+            value={activeFloorId}
+            onChange={setActiveFloorId}
+            items={[
+              {
+                id: ALL,
+                label: "All tables",
+                hint: `${floors.flatMap((f) => f.tables).filter((t) => t.status === "AVAILABLE").length} free`,
+              },
+              ...floors.map((f) => ({
+                id: f.id,
+                label: f.name,
+                hint: `${f.tables.filter((t) => t.status === "AVAILABLE").length} free`,
+              })),
+            ]}
+          />
+        )}
+        <TableLegend />
+      </div>
 
       <div className="flex flex-1 flex-col gap-5 overflow-y-auto pb-2">
         {shown.map((floor) => (
@@ -140,14 +128,14 @@ export function PosTablePicker({
                       <button
                         type="button"
                         disabled={!clickable}
-                        title={STATUS_LABEL[table.status]}
+                        title={TABLE_DISPLAY[tableDisplayOf(table)].hint}
                         onClick={() => onSelect(table)}
                         className={cn(
                           "flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-1.5 text-xs font-medium shadow-sm transition-transform",
                           clickable &&
                             "cursor-pointer hover:scale-[1.03] hover:shadow-md",
                           !clickable && "cursor-not-allowed",
-                          STATUS_STYLES[table.status],
+                          TABLE_DISPLAY[tableDisplayOf(table)].tile,
                         )}
                       >
                         <span className="max-w-full truncate text-base font-semibold leading-tight">
@@ -212,22 +200,6 @@ export function PosTablePicker({
           </section>
         ))}
       </div>
-
-      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground lg:border-t lg:border-border lg:pt-3">
-        <Legend color="bg-success" label="Available" />
-        <Legend color="bg-primary" label="Occupied" />
-        <Legend color="bg-warning" label="Reserved" />
-        <Legend color="bg-muted-foreground" label="Cleaning / out of service" />
-      </div>
-    </div>
-  );
-}
-
-function Legend({ color, label }: { color: string; label: string }) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className={cn("h-2.5 w-2.5 rounded-full", color)} />
-      {label}
     </div>
   );
 }

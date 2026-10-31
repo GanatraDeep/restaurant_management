@@ -46,6 +46,7 @@ export interface MenuItem {
   isVeg: boolean;
   isActive: boolean;
   isCombo: boolean;
+  isFavorite: boolean;
   category: { id: string; name: string };
   station: { id: string; name: string } | null;
   modifierGroups: { modifierGroup: ModifierGroup }[];
