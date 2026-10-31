@@ -8,8 +8,8 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { WhatsAppService } from '../../common/whatsapp/whatsapp.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -42,15 +42,8 @@ export class GuestVerificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-    private readonly config: ConfigService,
+    private readonly whatsapp: WhatsAppService,
   ) {}
-
-  /** The WhatsApp sender, or null when it isn't configured (OTP is skipped). */
-  private whatsapp() {
-    const url = this.config.get<string>('WHATSAPP_API_URL');
-    const session = this.config.get<string>('WHATSAPP_SESSION_NAME');
-    return url && session ? { url, session } : null;
-  }
 
   async start(
     branchId: string,
@@ -62,7 +55,7 @@ export class GuestVerificationService {
       where: { branchId, phone },
       orderBy: { createdAt: 'asc' },
     });
-    const sender = this.whatsapp();
+    const sender = this.whatsapp.settings();
     // Seen and verified before (or OTP not set up on this server): no code.
     if (customer?.phoneVerifiedAt || !sender) {
       return {
@@ -108,7 +101,6 @@ export class GuestVerificationService {
     });
     // A failed send doesn't count against the resend wait.
     await this.send(
-      sender,
       phone,
       `Hello ${name},\n\nFor ordering at ${restaurantName}, please find the OTP below to be verified. \n\n${code}`,
     ).catch(async (err: unknown) => {
@@ -208,31 +200,9 @@ export class GuestVerificationService {
     return claims;
   }
 
-  private async send(
-    sender: { url: string; session: string },
-    number: string,
-    message: string,
-  ) {
-    try {
-      const res = await fetch(sender.url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionName: sender.session,
-          type: 'text',
-          number,
-          message,
-        }),
-        signal: AbortSignal.timeout(15_000),
-      });
-      if (!res.ok)
-        throw new Error(
-          `HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`,
-        );
-    } catch (err) {
-      this.logger.warn(
-        `WhatsApp OTP to ${number.slice(0, 2)}******${number.slice(-2)} failed: ${err instanceof Error ? err.message : String(err)}`,
-      );
+  private async send(number: string, message: string) {
+    const r = await this.whatsapp.sendText(number, message);
+    if (!r.ok) {
       throw new ServiceUnavailableException(
         'Could not send the WhatsApp code right now — please try again, or ask the staff to take your order',
       );
