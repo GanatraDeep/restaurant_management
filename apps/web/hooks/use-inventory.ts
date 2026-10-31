@@ -216,6 +216,16 @@ export function useCreateIngredient(branchId: string | null) {
   });
 }
 
+/** Deletes an ingredient, or archives it when purchases/stock history point at it. */
+export function useDeleteIngredient(branchId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.delete<{ ok: true; archived: boolean }>(`/inventory/ingredients/${id}?branchId=${branchId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["inventory"] }),
+  });
+}
+
 export function useUpdateIngredient(branchId: string | null) {
   const qc = useQueryClient();
   return useMutation({

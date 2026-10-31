@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -7,9 +8,15 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
+import { memoryStorage } from 'multer';
 import {
   goodsReceiptSchema,
   ingredientSchema,
@@ -34,6 +41,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BranchAccessService } from '../../common/services/branch-access.service';
 import { GoodsReceiptsService } from './goods-receipts.service';
+import { InventoryTransferService } from './inventory-transfer.service';
 import { InventoryService } from './inventory.service';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseRequestsService } from './purchase-requests.service';
@@ -55,6 +63,7 @@ export class InventoryController {
     private readonly supplierQuotationsService: SupplierQuotationsService,
     private readonly supplierInvoicesService: SupplierInvoicesService,
     private readonly branchAccess: BranchAccessService,
+    private readonly transfer: InventoryTransferService,
   ) {}
 
   // --- Ingredients ------------------------------------------------------------
@@ -112,6 +121,61 @@ export class InventoryController {
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     return this.inventoryService.updateIngredient(branchId, id, body as never);
+  }
+
+  // --- Bulk import / export (Excel) ---------------------------------------
+
+  @Auth('inventory.manage')
+  @Get('ingredients/transfer/template')
+  async template(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    sendXlsx(
+      res,
+      await this.transfer.template(branchId),
+      'inventory-template.xlsx',
+    );
+  }
+
+  @Auth('inventory.manage')
+  @Get('ingredients/transfer/export')
+  async exportIngredients(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    sendXlsx(
+      res,
+      await this.transfer.exportExcel(branchId),
+      `inventory-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
+  // Without ?apply=true this only previews what the file would change.
+  @Auth('inventory.manage')
+  @Post('ingredients/transfer/import')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+    }),
+  )
+  async importIngredients(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Query('apply') apply: string | undefined,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    if (!file) throw new BadRequestException('Choose an Excel file (max 5 MB)');
+    if (!/\.(xlsx|csv)$/i.test(file.originalname)) {
+      throw new BadRequestException('Upload an .xlsx or .csv file');
+    }
+    return this.transfer.import(branchId, user.id, file, apply === 'true');
   }
 
   @Auth('inventory.manage')
@@ -611,4 +675,13 @@ export class InventoryController {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     return this.supplierInvoicesService.getSupplierPerformance(branchId, id);
   }
+}
+
+function sendXlsx(res: Response, body: Buffer, name: string) {
+  res.setHeader(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  );
+  res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+  res.send(body);
 }

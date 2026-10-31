@@ -1,10 +1,13 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useState } from "react";
 import { AddIngredientDialog } from "@/components/inventory/add-ingredient-dialog";
 import { AdjustStockDialog } from "@/components/inventory/adjust-stock-dialog";
 import { InventoryTabs } from "@/components/inventory/inventory-tabs";
+import { InventoryTransferMenu } from "@/components/inventory/inventory-transfer";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useBranch } from "@/hooks/use-branch";
-import { useIngredients, useTrackingStatus } from "@/hooks/use-inventory";
+import { useDeleteIngredient, useIngredients, useTrackingStatus, type Ingredient } from "@/hooks/use-inventory";
+import { ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 
 export default function InventoryPage() {
@@ -26,6 +30,15 @@ export default function InventoryPage() {
   const [search, setSearch] = useState("");
   const { data: ingredients, isLoading } = useIngredients(branchId);
   const { data: trackingStatus } = useTrackingStatus(branchId);
+  const remove = useDeleteIngredient(branchId);
+  const onDelete = (i: Ingredient) => {
+    if (!confirm(`Delete "${i.name}"? It disappears from inventory; any purchase and stock history is kept.`)) return;
+    remove.mutate(i.id, {
+      onSuccess: (r) =>
+        toast.success(r.archived ? `${i.name} removed — its purchase and stock history is kept` : `${i.name} deleted`),
+      onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not delete"),
+    });
+  };
 
   const filtered = ingredients?.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
@@ -33,14 +46,17 @@ export default function InventoryPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Inventory</h1>
           <p className="text-sm text-muted-foreground">
             Ingredients, recipe costing, purchase orders, and waste
           </p>
         </div>
-        <AddIngredientDialog branchId={branchId} />
+        <div className="flex flex-wrap gap-2">
+          {branchId && <InventoryTransferMenu branchId={branchId} />}
+          <AddIngredientDialog branchId={branchId} />
+        </div>
       </div>
 
       <InventoryTabs />
@@ -115,7 +131,20 @@ export default function InventoryPage() {
                       {formatCurrency(Number(i.currentStock) * Number(i.costPerUnit))}
                     </TableCell>
                     <TableCell>
-                      <AdjustStockDialog branchId={branchId} ingredient={i} />
+                      <div className="flex items-center justify-end gap-1">
+                        <AdjustStockDialog branchId={branchId} ingredient={i} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          title={`Delete ${i.name}`}
+                          aria-label={`Delete ${i.name}`}
+                          disabled={remove.isPending}
+                          onClick={() => onDelete(i)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -126,7 +155,7 @@ export default function InventoryPage() {
           <div className="flex flex-col items-center gap-2 py-16 text-center">
             <p className="text-sm font-medium text-foreground">No ingredients yet</p>
             <p className="text-sm text-muted-foreground">
-              Add your raw materials to start recipe costing and stock tracking.
+              Add your raw materials to start recipe costing and stock tracking — or bring them all in at once with Import / Export → Import from Excel.
             </p>
           </div>
         )}
