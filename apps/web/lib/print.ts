@@ -38,11 +38,40 @@ export function billQueryString(adj: BillQuery = {}): string {
 }
 
 /**
- * Loads one of the backend's self-printing pages and opens the print dialog.
- * Resolves once print() returns (after the dialog closes, or at once with
- * Chrome's --kiosk-printing), so callers can print several in turn.
+ * The F Cartel desktop app (Electron) exposes this bridge. Electron ignores
+ * Chrome's --kiosk-printing, and a print() from inside an iframe can't be
+ * made silent, so in the app the page's address is handed over instead: the
+ * app loads it in a hidden window (same login) and prints it straight to the
+ * chosen printer, no dialog.
+ */
+interface DesktopPrintBridge {
+  printUrl?: (url: string) => Promise<unknown>;
+}
+function desktopBridge(): DesktopPrintBridge | undefined {
+  if (typeof window === "undefined") return undefined;
+  return (window as unknown as { nativePrint?: DesktopPrintBridge }).nativePrint;
+}
+
+/** True inside the desktop app: prints go out silently, no dialog. */
+export function hasSilentPrinting(): boolean {
+  return typeof desktopBridge()?.printUrl === "function";
+}
+
+/**
+ * Loads one of the backend's self-printing pages and prints it: silently in
+ * the desktop app, otherwise through the browser's print dialog. Resolves
+ * once printing is done (or the dialog closes), so callers can print several
+ * in turn.
  */
 function printPage(src: string): Promise<void> {
+  const url = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  const bridge = desktopBridge();
+  if (typeof bridge?.printUrl === "function") {
+    return bridge
+      .printUrl(new URL(url, window.location.origin).href)
+      .then(() => undefined)
+      .catch(() => undefined);
+  }
   return new Promise((resolve) => {
     const frame = getPrintFrame();
     frame.onload = () => {
@@ -58,7 +87,7 @@ function printPage(src: string): Promise<void> {
       resolve();
     };
     // The timestamp forces a reload even when printing the same page twice in a row.
-    frame.src = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    frame.src = url;
   });
 }
 
