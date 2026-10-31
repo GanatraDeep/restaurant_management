@@ -3,6 +3,7 @@ import { AuditModule } from '../../audit/audit.module';
 import { BranchAccessService } from '../../common/services/branch-access.service';
 import { GoodsReceiptsService } from './goods-receipts.service';
 import { InventoryController } from './inventory.controller';
+import { InventoryTransferService } from './inventory-transfer.service';
 import { InventoryService } from './inventory.service';
 import { PurchaseOrdersService } from './purchase-orders.service';
 import { PurchaseRequestsService } from './purchase-requests.service';
@@ -18,6 +19,7 @@ import { WasteService } from './waste.service';
   controllers: [InventoryController, TransfersController],
   providers: [
     InventoryService,
+    InventoryTransferService,
     PurchaseOrdersService,
     GoodsReceiptsService,
     WasteService,

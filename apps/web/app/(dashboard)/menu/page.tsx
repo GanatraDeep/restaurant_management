@@ -62,14 +62,15 @@ export default function MenuPage() {
     );
   const availability = (item: MenuItem, className?: string) =>
     canManage ? (
-      <label className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
+      // A <div>, not a <label>: a label around the switch passes the click on and flips it twice.
+      <div className={cn("flex items-center gap-2 text-xs text-muted-foreground", className)}>
         <Switch
           checked={item.isActive}
           onCheckedChange={(v) => setAvailable(item, v)}
           aria-label={`${item.name} available`}
         />
         <span className="w-6">{item.isActive ? "On" : "Off"}</span>
-      </label>
+      </div>
     ) : (
       !item.isActive && <Badge variant="secondary" className={className}>Off</Badge>
     );

@@ -168,8 +168,16 @@ export class KdsService {
     return this.kotPrint.printTicket(branchId, kotId, reprint);
   }
 
-  ticketHtml(branchId: string, kotId: string) {
-    return this.kotPrint.ticketHtml(branchId, kotId);
+  ticketHtml(branchId: string, kotId: string, claimed = false) {
+    return this.kotPrint.ticketHtml(branchId, kotId, { claimed });
+  }
+
+  pendingAutoPrint(branchId: string, since: Date) {
+    return this.kotPrint.pendingAutoPrint(branchId, since);
+  }
+
+  claimFirstPrint(branchId: string, kotId: string) {
+    return this.kotPrint.claimFirstPrint(branchId, kotId);
   }
 
   setPriority(branchId: string, kotId: string, isPriority: boolean) {

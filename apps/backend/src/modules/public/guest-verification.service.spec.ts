@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { WhatsAppService } from '../../common/whatsapp/whatsapp.service';
 import type { PrismaService } from '../../prisma/prisma.service';
 import {
   GuestVerificationService,
@@ -141,7 +142,9 @@ function setup(opts: { whatsapp?: boolean; customers?: Customer[] } = {}) {
   const service = new GuestVerificationService(
     prisma as unknown as PrismaService,
     new JwtService({ secret: 'test-secret-test-secret' }),
-    { get: (k: string) => env[k] } as unknown as ConfigService,
+    new WhatsAppService({
+      get: (k: string) => env[k],
+    } as unknown as ConfigService),
   );
   const sent: { number: string; message: string; sessionName: string }[] = [];
   const fetchMock = jest.fn((_url: string, init: { body: string }) => {

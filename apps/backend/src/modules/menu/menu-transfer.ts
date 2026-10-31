@@ -3,9 +3,15 @@
 // Everything here is pure (no database) so it can be unit tested; the
 // service loads the branch's current menu, calls planMenuImport and applies
 // the result in one transaction.
-import { Readable } from 'node:stream';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
+import {
+  cellText,
+  loadSheet,
+  normHeading,
+  parseNumber,
+  safeCell,
+} from '../../common/sheets';
 import { brandFonts } from '../../common/pdf-fonts';
 
 export type SpiceLevel = 'NONE' | 'MILD' | 'MEDIUM' | 'HOT' | 'EXTRA_HOT';
@@ -182,10 +188,6 @@ export interface RowError {
 // Writing
 // ---------------------------------------------------------------------------
 
-const FORMULA_START = /^[=+\-@\t\r]/;
-// Same spreadsheet-injection guard as the report exports.
-const safe = (v: string | null | undefined) =>
-  v == null || v === '' ? null : FORMULA_START.test(v) ? `'${v}` : v;
 const yesNo = (v: boolean | undefined) => (v === false ? 'No' : 'Yes');
 
 export async function buildMenuWorkbook(
@@ -253,19 +255,19 @@ export async function buildMenuWorkbook(
     : rows;
   for (const r of sample) {
     ws.addRow({
-      category: safe(r.category),
-      name: safe(r.name),
+      category: safeCell(r.category),
+      name: safeCell(r.name),
       price: r.price,
       halfPrice: r.halfPrice ?? null,
       taxRatePercent: r.taxRatePercent ?? 0,
       isVeg: yesNo(r.isVeg),
-      description: safe(r.description),
-      sku: safe(r.sku),
-      barcode: safe(r.barcode),
+      description: safeCell(r.description),
+      sku: safeCell(r.sku),
+      barcode: safeCell(r.barcode),
       costPrice: r.costPrice ?? null,
       prepTimeMinutes: r.prepTimeMinutes ?? null,
       spiceLevel: SPICE_LABELS[r.spiceLevel ?? 'NONE'],
-      station: safe(r.station),
+      station: safeCell(r.station),
       isActive: yesNo(r.isActive),
     });
   }
@@ -321,35 +323,6 @@ export async function buildMenuWorkbook(
 // Reading
 // ---------------------------------------------------------------------------
 
-const norm = (s: string) =>
-  s.toLowerCase().replace(/[*:]/g, '').replace(/\s+/g, ' ').trim();
-
-function cellText(v: ExcelJS.CellValue): string {
-  if (v == null) return '';
-  if (typeof v === 'string') return v.trim();
-  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (typeof v === 'object') {
-    if ('richText' in v)
-      return v.richText
-        .map((t) => t.text)
-        .join('')
-        .trim();
-    if ('result' in v) return cellText(v.result);
-    if ('text' in v) return String(v.text).trim();
-    if ('error' in v) return '';
-  }
-  return '';
-}
-
-function parseNumber(s: string): number | null {
-  // "₹ 1,299.50", "Rs.249", "249/-", "5%" all mean what they say.
-  const cleaned = s.replace(/(rs\.?|inr|₹|\/-|%|,|\s)/gi, '');
-  if (cleaned === '') return null;
-  const n = Number(cleaned);
-  return Number.isFinite(n) ? n : NaN;
-}
-
 function parseBool(
   s: string,
   yes: RegExp,
@@ -376,10 +349,10 @@ const parseVeg = (s: string) =>
 
 function parseSpice(s: string): SpiceLevel | null | undefined {
   if (s === '') return undefined;
-  const v = norm(s).replace(/[_-]/g, ' ');
+  const v = normHeading(s).replace(/[_-]/g, ' ');
   const hit = (Object.entries(SPICE_LABELS) as [SpiceLevel, string][]).find(
     ([key, label]) =>
-      norm(label) === v || key.toLowerCase().replace('_', ' ') === v,
+      normHeading(label) === v || key.toLowerCase().replace('_', ' ') === v,
   );
   if (hit) return hit[0];
   if (v === 'no' || v === 'not spicy' || v === '0') return 'NONE';
@@ -388,32 +361,11 @@ function parseSpice(s: string): SpiceLevel | null | undefined {
   return null;
 }
 
-async function loadSheet(
-  buf: Buffer,
-  fileName: string,
-): Promise<ExcelJS.Worksheet> {
-  const wb = new ExcelJS.Workbook();
-  if (/\.csv$/i.test(fileName)) {
-    return wb.csv.read(Readable.from(buf));
-  }
-  try {
-    await wb.xlsx.load(buf as unknown as ArrayBuffer);
-  } catch {
-    throw new Error(
-      'That file could not be read. Upload the .xlsx template (or a .csv) — older .xls files need to be saved as .xlsx first.',
-    );
-  }
-  const ws =
-    wb.getWorksheet('Menu') ?? wb.worksheets.find((w) => w.rowCount > 0);
-  if (!ws) throw new Error('The file has no sheets with data.');
-  return ws;
-}
-
 export async function parseMenuFile(
   buf: Buffer,
   fileName: string,
 ): Promise<{ rows: ParsedRow[]; errors: RowError[] }> {
-  const ws = await loadSheet(buf, fileName);
+  const ws = await loadSheet(buf, fileName, 'Menu');
 
   // Find the heading row (the first row that names both Category and Item name)
   // so a title line or two above the table doesn't matter.
@@ -422,9 +374,9 @@ export async function parseMenuFile(
   for (let r = 1; r <= Math.min(10, ws.rowCount) && !headRow; r++) {
     const found = new Map<ColumnKey, number>();
     ws.getRow(r).eachCell((cell, c) => {
-      const h = norm(cellText(cell.value));
+      const h = normHeading(cellText(cell.value));
       const col = MENU_COLUMNS.find(
-        (m) => norm(m.header) === h || m.aliases.includes(h),
+        (m) => normHeading(m.header) === h || m.aliases.includes(h),
       );
       if (col && !found.has(col.key)) found.set(col.key, c);
     });

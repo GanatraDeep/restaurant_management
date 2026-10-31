@@ -3,6 +3,7 @@
 import type { KotStatusDto } from "@nodedr-restaurant/types";
 import { useEffect } from "react";
 import { BranchNotice } from "@/components/layout/branch-notice";
+import { AutoPrintToggle } from "@/components/kds/auto-print-toggle";
 import { PerformanceWidget } from "@/components/kds/performance-widget";
 import { IncomingOrderCard } from "@/components/kds/incoming-order-card";
 import { LiveStatus } from "@/components/kds/live-status";
@@ -18,11 +19,11 @@ import { installAudioUnlock } from "@/lib/audio-unlock";
 import { resolveStation } from "@/lib/kds-station";
 import { cn } from "@/lib/utils";
 
-const COLUMNS: { status: KotStatusDto; label: string }[] = [
-  { status: "NEW", label: "New" },
-  { status: "ACCEPTED", label: "Accepted" },
-  { status: "PREPARING", label: "Preparing" },
-  { status: "READY", label: "Ready" },
+const COLUMNS: { status: KotStatusDto; label: string; dot: string }[] = [
+  { status: "NEW", label: "New", dot: "bg-primary" },
+  { status: "ACCEPTED", label: "Accepted", dot: "bg-sky-500" },
+  { status: "PREPARING", label: "Preparing", dot: "bg-warning" },
+  { status: "READY", label: "Ready", dot: "bg-success" },
 ];
 
 export default function KdsPage() {
@@ -46,14 +47,21 @@ export default function KdsPage() {
 
   return (
     <div className="flex min-h-[calc(100dvh-10rem)] flex-col gap-4 xl:h-[calc(100dvh-8rem)]">
-      <div>
-        <h1 className="text-2xl font-semibold sm:text-[32px] tracking-tight text-foreground">
-          Kitchen Display
-        </h1>
-        <p className="text-sm text-muted-foreground">Live order tickets by station</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-2xl font-semibold sm:text-[32px] tracking-tight text-foreground">
+            Kitchen Display
+          </h1>
+          <PerformanceWidget branchId={branchId} />
+        </div>
+        {/* The sound button disappears on the first tap anywhere (it unlocks
+            audio); keeping the switch last in this right-aligned row means
+            that never shifts it mid-click. */}
+        <div className="flex flex-wrap items-start justify-end gap-2">
+          <LiveStatus />
+          <AutoPrintToggle branchId={branchId} />
+        </div>
       </div>
-
-      <LiveStatus />
 
       {stations && stations.length > 0 && (
         <div role="group" aria-label="Station" className="flex flex-wrap gap-2">
@@ -108,8 +116,6 @@ export default function KdsPage() {
         </p>
       )}
 
-      <PerformanceWidget branchId={branchId} />
-
       {tickets.isError ? (
         <QueryError
           error={tickets.error}
@@ -122,8 +128,11 @@ export default function KdsPage() {
           {COLUMNS.map((col) => (
             <div key={col.status} className="flex w-[85%] shrink-0 snap-center flex-col gap-3 overflow-hidden rounded-2xl bg-secondary/40 p-3 sm:w-auto sm:shrink">
               <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-semibold text-foreground">{col.label}</h2>
-                <span className="text-xs font-medium text-muted-foreground">
+                <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-foreground">
+                  <span className={cn("h-2.5 w-2.5 rounded-full", col.dot)} aria-hidden />
+                  {col.label}
+                </h2>
+                <span className="min-w-6 rounded-full bg-background px-2 py-0.5 text-center text-xs font-semibold tabular-nums text-foreground">
                   {byStatus(col.status).length}
                 </span>
               </div>

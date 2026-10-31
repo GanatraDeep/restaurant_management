@@ -2,7 +2,9 @@
 
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AutoPrintToggle } from "@/components/kds/auto-print-toggle";
 import { Card } from "@/components/ui/card";
+import { useBranch } from "@/hooks/use-branch";
 import { openSampleKotPrint } from "@/lib/print";
 
 const STEPS = [
@@ -14,6 +16,7 @@ const STEPS = [
 
 /** Everything prints through the browser's print dialog — explain the one-time setup. */
 export function PrintingCard() {
+  const { branchId } = useBranch();
   return (
     <Card className="flex flex-col gap-4 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -39,6 +42,18 @@ export function PrintingCard() {
           </li>
         ))}
       </ol>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-foreground">Auto-print KOTs on this device</p>
+          <p className="text-xs text-muted-foreground">
+            Turn this on at the computer the kitchen printer is connected to. Every order&rsquo;s KOT then prints as soon as
+            it&rsquo;s accepted (or arrives already accepted), from any F Cartel page — each KOT prints once, even if two
+            devices have this on.
+          </p>
+        </div>
+        <AutoPrintToggle branchId={branchId} />
+      </div>
 
       <p className="rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
         Want KOTs to print without the dialog each time? On a dedicated kitchen or billing PC, start Chrome with the{" "}

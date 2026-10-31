@@ -7,9 +7,11 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { customerSchema, type SessionUser } from '@nodedr-restaurant/types';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -34,6 +36,27 @@ export class CustomersController {
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     return this.customersService.list(branchId, search);
+  }
+
+  // Personal data leaving the app: needs data.export as well.
+  @Auth('customers.manage', 'data.export')
+  @Get('export')
+  async exportCustomers(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const body = await this.customersService.exportExcel(branchId);
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="customers-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+    );
+    res.send(body);
   }
 
   @Auth('customers.manage')

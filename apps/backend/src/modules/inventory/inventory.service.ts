@@ -28,7 +28,8 @@ export class InventoryService {
 
   listIngredients(branchId: string) {
     return this.prisma.ingredient.findMany({
-      where: { branchId },
+      // Archived (deleted with history) items stay in the ledger, not the list.
+      where: { branchId, isActive: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -64,8 +65,35 @@ export class InventoryService {
         'Ingredient is used in a menu item recipe — remove it from every recipe first',
       );
     }
-    await this.prisma.ingredient.delete({ where: { id } });
-    return { ok: true };
+    const stockItemFor = await this.prisma.menuItem.findMany({
+      where: { stockIngredientId: id, branchId },
+      select: { name: true },
+      take: 3,
+    });
+    if (stockItemFor.length > 0) {
+      throw new BadRequestException(
+        `Ingredient is the stock item for ${stockItemFor.map((m) => `"${m.name}"`).join(', ')} — change that in Menu → Edit item first`,
+      );
+    }
+    try {
+      await this.prisma.ingredient.delete({ where: { id } });
+      return { ok: true, archived: false };
+    } catch (err) {
+      // Purchases, stock movements, waste… point at it (foreign key): those
+      // records must stay, so it is archived instead — hidden everywhere,
+      // history intact, and its name freed for a new item.
+      const code = (err as { code?: string }).code;
+      if (code !== 'P2003' && code !== 'P2014') throw err;
+      const ingredient = await this.getIngredient(branchId, id);
+      await this.prisma.ingredient.update({
+        where: { id },
+        data: {
+          isActive: false,
+          name: `${ingredient.name} (deleted ${new Date().toISOString().slice(0, 16).replace('T', ' ')})`,
+        },
+      });
+      return { ok: true, archived: true };
+    }
   }
 
   async lowStockIngredients(branchId: string) {

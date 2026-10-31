@@ -1,3 +1,4 @@
+import { WhatsAppModule } from './common/whatsapp/whatsapp.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -89,6 +90,7 @@ import { ReleasesModule } from './modules/releases/releases.module';
     AuditModule,
     RolesModule,
     NotificationsModule,
+    WhatsAppModule,
     BackupModule,
     IntegrationsModule,
     McpModule,
