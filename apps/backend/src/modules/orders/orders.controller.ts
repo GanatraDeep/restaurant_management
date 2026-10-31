@@ -475,6 +475,7 @@ export class OrdersController {
       branchName: order.branch.name,
       order: toKotOrder(order),
     });
+    await this.kotPrint.markOrderPrinted(branchId, id);
     res.type('html').send(html);
   }
 
