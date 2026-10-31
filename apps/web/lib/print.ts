@@ -37,21 +37,29 @@ export function billQueryString(adj: BillQuery = {}): string {
   return s ? `&${s}` : "";
 }
 
-/** Loads one of the backend's self-printing pages and opens the print dialog. */
-function printPage(src: string) {
-  const frame = getPrintFrame();
-  frame.onload = () => {
-    const win = frame.contentWindow;
-    if (!win) return;
-    try {
-      win.focus();
-      win.print();
-    } catch {
-      win.postMessage("print", "*");
-    }
-  };
-  // The timestamp forces a reload even when printing the same page twice in a row.
-  frame.src = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`;
+/**
+ * Loads one of the backend's self-printing pages and opens the print dialog.
+ * Resolves once print() returns (after the dialog closes, or at once with
+ * Chrome's --kiosk-printing), so callers can print several in turn.
+ */
+function printPage(src: string): Promise<void> {
+  return new Promise((resolve) => {
+    const frame = getPrintFrame();
+    frame.onload = () => {
+      const win = frame.contentWindow;
+      if (win) {
+        try {
+          win.focus();
+          win.print();
+        } catch {
+          win.postMessage("print", "*");
+        }
+      }
+      resolve();
+    };
+    // The timestamp forces a reload even when printing the same page twice in a row.
+    frame.src = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  });
 }
 
 /** Browser print of the bill (open order) or receipt (paid order). Read-only. */
@@ -62,6 +70,11 @@ export function openReceiptPrint(orderId: string, branchId: string, adj: BillQue
 /** Kitchen ticket for the whole order (every station's items). */
 export function openKotPrint(orderId: string, branchId: string) {
   printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}`);
+}
+
+/** Auto-print: a ticket this device already claimed (prints as the first copy). */
+export function openClaimedTicketPrint(ticketId: string, branchId: string) {
+  return printPage(`/api/v1/kds/auto-print/${ticketId}/kot?branchId=${branchId}`);
 }
 
 /** One station's ticket from the Kitchen Display; later copies say REPRINT. */

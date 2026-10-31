@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -193,6 +194,47 @@ export class KdsController {
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     res.type('html').send(await this.kdsService.ticketHtml(branchId, id));
+  }
+
+  // --- Auto-print (a per-device switch, on whichever screen has the printer).
+  // orders.accept: both counter staff and kitchen staff hold it.
+
+  @Auth('orders.accept')
+  @Get('auto-print/pending')
+  async autoPrintPending(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Query('since') since: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const from = new Date(since);
+    if (Number.isNaN(from.getTime())) {
+      throw new BadRequestException('since must be a date');
+    }
+    return this.kdsService.pendingAutoPrint(branchId, from);
+  }
+
+  @Auth('orders.accept')
+  @Post('auto-print/:id/claim')
+  async autoPrintClaim(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.kdsService.claimFirstPrint(branchId, id);
+  }
+
+  @Auth('orders.accept')
+  @Get('auto-print/:id/kot')
+  async autoPrintKot(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    res.type('html').send(await this.kdsService.ticketHtml(branchId, id, true));
   }
 
   // First print of a ticket (409 ALREADY_PRINTED if it already went out).

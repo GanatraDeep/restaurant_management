@@ -58,7 +58,6 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
   const setPriority = useSetKotPriority(branchId);
   const { note, clear: clearNote, toast } = useNoteToast();
   const nextStatus = NEXT_STATUS[ticket.status];
-  const isLate = elapsed >= 15;
   const isFresh = ticket.status === "NEW" && elapsed < FRESH_MINUTES;
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -71,12 +70,17 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
     (ticket.status === "NEW" || ticket.status === "ACCEPTED" || started) &&
     (!started || hasPermission(me?.user, "orders.cancel"));
 
+  const urgency = elapsed >= 20 ? "late" : elapsed >= 10 ? "warn" : "ok";
+  const where = ticket.order.table ? `Table ${ticket.order.table.number}` : ticket.order.type.replace("_", " ").toLowerCase();
+  const who = customerDisplayName(ticket.order);
+
   return (
     <Card
       className={cn(
-        "flex shrink-0 flex-col gap-3 p-4",
-        (isLate || ticket.isPriority) && "border-warning/50 ring-1 ring-warning/30",
-        isFresh && "border-primary ring-2 ring-primary/40 motion-safe:animate-pulse",
+        "flex shrink-0 flex-col gap-0 overflow-hidden border-l-4 p-0",
+        urgency === "late" ? "border-l-destructive" : urgency === "warn" ? "border-l-warning" : "border-l-success",
+        ticket.isPriority && "ring-2 ring-warning/40",
+        isFresh && "ring-2 ring-primary/40 motion-safe:animate-pulse",
       )}
     >
       <StatusNote note={note} onClear={clearNote} />
@@ -101,73 +105,78 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
         title={`Order #${ticket.order.orderNumber}`}
-        name={customerDisplayName(ticket.order)}
+        name={who}
         subtitle={ticket.order.table ? `Table ${ticket.order.table.number}` : ticket.order.type}
         phone={customerPhone(ticket.order)}
-        waMessage={`Hi ${customerDisplayName(ticket.order) ?? ""}, this is regarding your order #${ticket.order.orderNumber}.`}
+        waMessage={`Hi ${who ?? ""}, this is regarding your order #${ticket.order.orderNumber}.`}
       />
+
       <button
         type="button"
         onClick={() => setDetailsOpen(true)}
-        className="flex items-center justify-between rounded-md text-left transition hover:opacity-80"
+        className="flex items-start justify-between gap-3 px-4 pb-2 pt-3 text-left transition hover:bg-secondary/40"
         title="View customer details"
       >
-        <div>
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-            #{ticket.order.orderNumber}
-            {ticket.isPriority && <Star className="h-3.5 w-3.5 fill-warning text-warning" />}
-            {ticket.order.channel === "ONLINE" && (
-              <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-label="Online order" />
-            )}
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-lg font-bold capitalize leading-tight text-foreground">
+            {where}
+            {ticket.isPriority && <Star className="h-4 w-4 shrink-0 fill-warning text-warning" aria-label="Priority" />}
+          </p>
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
+            <span className="tabular-nums">#{ticket.order.orderNumber}</span>
+            {who && <span>· {who}</span>}
+            {ticket.station && <span>· {ticket.station.name}</span>}
+            {ticket.order.channel === "ONLINE" && <Globe className="h-3.5 w-3.5" aria-label="Online order" />}
             <AggregatorBadge aggregator={ticket.order.aggregator} />
           </p>
-          <p className="text-xs text-muted-foreground">
-            {ticket.order.table ? `Table ${ticket.order.table.number}` : ticket.order.type}
-            {ticket.station && ` · ${ticket.station.name}`}
-            {customerDisplayName(ticket.order) && ` · ${customerDisplayName(ticket.order)}`}
-          </p>
         </div>
-        <div
+        <span
           className={cn(
-            "flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium tabular-nums",
-            isLate ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground",
+            "flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums",
+            urgency === "late"
+              ? "bg-destructive/15 text-destructive"
+              : urgency === "warn"
+                ? "bg-warning/15 text-warning"
+                : "bg-secondary text-muted-foreground",
           )}
+          title={`Waiting ${elapsed} minutes`}
         >
-          <Timer className="h-3 w-3" />
-          {elapsed}m
-        </div>
+          <Timer className="h-3.5 w-3.5" />
+          {formatElapsed(elapsed)}
+        </span>
       </button>
 
       {ticket.order.notes && (
-        <p className="flex items-start gap-1 rounded-lg bg-warning/10 px-2 py-1.5 text-xs text-warning">
-          <Flame className="mt-0.5 h-3 w-3 shrink-0" /> {ticket.order.notes}
+        <p className="mx-4 mb-2 flex items-start gap-1.5 rounded-lg bg-warning/10 px-2.5 py-1.5 text-xs font-medium text-warning">
+          <Flame className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {ticket.order.notes}
         </p>
       )}
 
-      <div className="flex flex-col gap-2 border-t border-border pt-3">
+      <ul className="flex flex-col gap-2 border-t border-border px-4 py-3">
         {ticket.items.map((item) => (
-          <div key={item.id} className="text-sm">
-            <p className="font-medium text-foreground">
-              {item.orderItem.quantity}× {item.orderItem.nameSnapshot}
-            </p>
-            {item.orderItem.modifiers.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {item.orderItem.modifiers.map((m) => m.nameSnapshot).join(", ")}
-              </p>
-            )}
-            {item.orderItem.kitchenNote && (
-              <p className="flex items-center gap-1 text-xs text-warning">
-                <Flame className="h-3 w-3" /> {item.orderItem.kitchenNote}
-              </p>
-            )}
-          </div>
+          <li key={item.id} className="flex gap-2.5">
+            <span className="flex h-6 min-w-7 shrink-0 items-center justify-center rounded-md bg-foreground px-1.5 text-sm font-bold tabular-nums text-background">
+              {item.orderItem.quantity}
+            </span>
+            <div className="min-w-0">
+              <p className="text-[15px] font-semibold leading-6 text-foreground">{item.orderItem.nameSnapshot}</p>
+              {item.orderItem.modifiers.length > 0 && (
+                <p className="text-xs text-muted-foreground">{item.orderItem.modifiers.map((m) => m.nameSnapshot).join(", ")}</p>
+              )}
+              {item.orderItem.kitchenNote && (
+                <p className="flex items-center gap-1 text-xs font-medium text-warning">
+                  <Flame className="h-3 w-3" /> {item.orderItem.kitchenNote}
+                </p>
+              )}
+            </div>
+          </li>
         ))}
-      </div>
+      </ul>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 border-t border-border bg-secondary/30 p-3">
         {nextStatus && (
           <Button
-            className="h-12 min-w-[6.5rem] flex-1 text-base"
+            className="h-12 w-full text-base"
             disabled={updateStatus.isPending}
             onClick={() =>
               updateStatus.mutate(
@@ -186,42 +195,52 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
             {updateStatus.isPending ? "Updating…" : STATUS_LABEL[ticket.status]}
           </Button>
         )}
-        {canReject && (
-          <Button
-            variant="destructive"
-            className="h-12 shrink-0 px-4"
-            onClick={() => setRejectOpen(true)}
-            aria-label={`Reject ticket for order ${ticket.order.orderNumber}`}
-          >
-            <X className="h-5 w-5" aria-hidden />
-            Reject
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12 shrink-0"
-          title={ticket.isPriority ? "Unmark priority" : "Mark priority"}
-          aria-label={ticket.isPriority ? "Unmark priority" : "Mark priority"}
-          disabled={setPriority.isPending}
-          onClick={() =>
-            setPriority.mutate({ id: ticket.id, isPriority: !ticket.isPriority })
-          }
-        >
-          <Star className={cn("h-5 w-5", ticket.isPriority && "fill-warning text-warning")} />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-12 w-12 shrink-0"
-          title={ticket.printedCount > 0 ? "Reprint ticket (marked REPRINT)" : "Print ticket"}
-          aria-label={ticket.printedCount > 0 ? "Reprint ticket" : "Print ticket"}
-          disabled={!branchId}
-          onClick={() => branchId && openTicketPrint(ticket.id, branchId)}
-        >
-          <Printer className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          {canReject && (
+            <Button
+              variant="ghost"
+              className="h-10 px-3 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setRejectOpen(true)}
+              aria-label={`Reject ticket for order ${ticket.order.orderNumber}`}
+            >
+              <X className="h-4 w-4" aria-hidden />
+              Reject
+            </Button>
+          )}
+          <div className="ml-auto flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+              title={ticket.isPriority ? "Unmark priority" : "Mark priority"}
+              aria-label={ticket.isPriority ? "Unmark priority" : "Mark priority"}
+              disabled={setPriority.isPending}
+              onClick={() => setPriority.mutate({ id: ticket.id, isPriority: !ticket.isPriority })}
+            >
+              <Star className={cn("h-4 w-4", ticket.isPriority && "fill-warning text-warning")} />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-10 w-10"
+              title={ticket.printedCount > 0 ? "Reprint ticket (marked REPRINT)" : "Print ticket"}
+              aria-label={ticket.printedCount > 0 ? "Reprint ticket" : "Print ticket"}
+              disabled={!branchId}
+              onClick={() => branchId && openTicketPrint(ticket.id, branchId)}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </Card>
   );
+}
+
+/** 12m · 2h 05m · 1d 3h — a forgotten ticket shouldn't read "1451m". */
+export function formatElapsed(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  if (h < 24) return `${h}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return `${Math.floor(h / 24)}d ${h % 24}h`;
 }

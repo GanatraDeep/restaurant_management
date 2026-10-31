@@ -68,27 +68,35 @@ export class KotPrintService {
    * print: the first copy is plain, every later one is stamped REPRINT #n,
    * and the Kitchen Display hears about it like any other print.
    */
-  async ticketHtml(branchId: string, kotId: string): Promise<string> {
+  async ticketHtml(
+    branchId: string,
+    kotId: string,
+    opts: { claimed?: boolean } = {},
+  ): Promise<string> {
     const [kot] = await this.load(branchId, { id: kotId });
     if (!kot) throw new NotFoundException('KOT not found');
-    const updated = await this.prisma.kot.update({
-      where: { id: kot.id },
-      data: {
-        printedCount: { increment: 1 },
-        printedAt: new Date(),
-        lastPrintError: null,
-      },
-    });
-    this.realtime.emitToBranch(branchId, 'kot.reprinted', {
-      id: updated.id,
-      printedCount: updated.printedCount,
-    });
+    // An auto-print claim (claimFirstPrint) already counted this copy.
+    const alreadyCounted = opts.claimed && kot.printedCount === 1;
+    if (!alreadyCounted) {
+      const updated = await this.prisma.kot.update({
+        where: { id: kot.id },
+        data: {
+          printedCount: { increment: 1 },
+          printedAt: new Date(),
+          lastPrintError: null,
+        },
+      });
+      this.realtime.emitToBranch(branchId, 'kot.reprinted', {
+        id: updated.id,
+        printedCount: updated.printedCount,
+      });
+    }
     return buildKotHtml({
       branchName: kot.order.branch.name,
       ticket: {
         number: kot.ticketNumber,
         station: kot.station?.name ?? null,
-        reprint: kot.printedCount,
+        reprint: alreadyCounted ? 0 : kot.printedCount,
       },
       order: {
         orderNumber: kot.order.orderNumber,
@@ -112,6 +120,42 @@ export class KotPrintService {
         })),
       },
     });
+  }
+
+  /**
+   * Auto-print: accepted tickets nobody has printed yet, since the device
+   * switched auto-print on (so turning it on doesn't print the backlog).
+   */
+  pendingAutoPrint(branchId: string, since: Date) {
+    return this.prisma.kot.findMany({
+      where: {
+        order: { branchId },
+        status: { in: ['ACCEPTED', 'PREPARING', 'READY'] },
+        printedCount: 0,
+        OR: [{ acceptedAt: { gte: since } }, { createdAt: { gte: since } }],
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+    });
+  }
+
+  /**
+   * Takes the first print of a ticket for one device. Two screens with
+   * auto-print on can't both get it: only the one that flips 0 -> 1 prints.
+   */
+  async claimFirstPrint(branchId: string, kotId: string) {
+    const claimed = await this.prisma.kot.updateMany({
+      where: { id: kotId, printedCount: 0, order: { branchId } },
+      data: { printedCount: 1, printedAt: new Date(), lastPrintError: null },
+    });
+    if (claimed.count > 0) {
+      this.realtime.emitToBranch(branchId, 'kot.reprinted', {
+        id: kotId,
+        printedCount: 1,
+      });
+    }
+    return { claimed: claimed.count > 0 };
   }
 
   async printOrder(branchId: string, orderId: string, reprint: boolean) {

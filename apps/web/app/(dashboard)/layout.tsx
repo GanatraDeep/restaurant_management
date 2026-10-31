@@ -6,6 +6,7 @@ import { SubscriptionGate } from "@/components/billing/subscription-gate";
 import { AppShell } from "@/components/layout/app-shell";
 import { useCurrentUser } from "@/hooks/use-auth";
 import { BranchProvider, useBranch } from "@/hooks/use-branch";
+import { useKotAutoPrint } from "@/hooks/use-kot-auto-print";
 import { useRealtime } from "@/hooks/use-realtime";
 import { NAV_ITEMS } from "@/components/layout/nav-items";
 import { canOpen, firstAllowedHref } from "@/lib/route-access";
@@ -21,6 +22,8 @@ import { canOpen, firstAllowedHref } from "@/lib/route-access";
 function RealtimeBridge() {
   const { branchId } = useBranch();
   useRealtime(branchId);
+  // KOT auto-print, if this device has it switched on (any page, not just KDS).
+  useKotAutoPrint(branchId);
   return null;
 }
 
