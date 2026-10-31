@@ -1,6 +1,6 @@
 "use client";
 
-import { Gift, Pencil, Star, Trash2 } from "lucide-react";
+import { FileDown, Gift, Pencil, Star, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import { useBranch } from "@/hooks/use-branch";
 import { useCustomers, useDeleteCustomer, type Customer } from "@/hooks/use-customers";
 import { ApiError } from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 
 export default function CustomersPage() {
   const { branchId } = useBranch();
@@ -20,6 +22,19 @@ export default function CustomersPage() {
   const { data: customers, isLoading } = useCustomers(branchId, search || undefined);
   const deleteCustomer = useDeleteCustomer(branchId);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const { data: me } = useCurrentUser();
+  const canExport = hasPermission(me?.user, "data.export");
+  const [exporting, setExporting] = useState(false);
+  const exportAll = async () => {
+    setExporting(true);
+    try {
+      await downloadFile(`/customers/export?branchId=${branchId}`, "customers.xlsx");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not export customers");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const onDelete = (e: React.MouseEvent, customer: Customer) => {
     e.preventDefault();
@@ -34,12 +49,20 @@ export default function CustomersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Customers</h1>
           <p className="text-sm text-muted-foreground">Profiles, loyalty, and order history</p>
         </div>
-        <AddCustomerDialog branchId={branchId} />
+        <div className="flex flex-wrap gap-2">
+          {canExport && branchId && (
+            <Button variant="outline" className="gap-1.5" disabled={exporting} onClick={exportAll}>
+              <FileDown className="h-4 w-4" />
+              {exporting ? "Preparing…" : "Export to Excel"}
+            </Button>
+          )}
+          <AddCustomerDialog branchId={branchId} />
+        </div>
       </div>
 
       <Input
