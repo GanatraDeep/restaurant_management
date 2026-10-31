@@ -1344,12 +1344,15 @@ model Order {
 
   // Table-QR order placed under "pay first": staff accept it only after the
   // UPI payment arrives. guestPaidAt = the guest tapped "I've paid".
-  payFirst     Boolean   @default(false)
-  guestPaidAt  DateTime?
-  guestPayRef  String?
+  // Bill handed to the guest while still unpaid (cleared if more is ordered):
+  // the table shows as "Printed" on the floor.
+  billPrintedAt DateTime?
+  payFirst      Boolean   @default(false)
+  guestPaidAt   DateTime?
+  guestPayRef   String?
   // Who accepted an incoming order and when (acceptance gate only).
-  acceptedAt   DateTime?
-  acceptedById String?
+  acceptedAt    DateTime?
+  acceptedById  String?
 
   // The manual discount as the cashier entered it, kept next to the computed
   // discountAmount so a bill can show both the percentage and the amount.

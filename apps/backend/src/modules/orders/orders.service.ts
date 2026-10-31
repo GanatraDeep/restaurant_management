@@ -576,6 +576,8 @@ export class OrdersService {
       const result = await tx.order.update({
         where: { id: orderId },
         data: {
+          // A printed bill no longer covers everything once more is ordered.
+          billPrintedAt: null,
           subtotal: totals.subtotal,
           taxAmount: totals.taxAmount,
           totalAmount: totals.subtotal,
@@ -1521,6 +1523,11 @@ export class OrdersService {
   }
 
   async recordBillPrinted(branchId: string, orderId: string, userId: string) {
+    await this.prisma.order.updateMany({
+      where: { id: orderId, branchId, status: 'OPEN' },
+      data: { billPrintedAt: new Date() },
+    });
+    this.realtime.emitToBranch(branchId, 'order.updated', { id: orderId });
     await this.audit.record({
       userId,
       action: 'order.bill_printed',

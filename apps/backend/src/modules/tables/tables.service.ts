@@ -26,8 +26,8 @@ export class TablesService {
     private readonly realtime: RealtimeGateway,
   ) {}
 
-  listFloors(branchId: string) {
-    return this.prisma.floor.findMany({
+  async listFloors(branchId: string) {
+    const floors = await this.prisma.floor.findMany({
       where: { branchId },
       orderBy: { sortOrder: 'asc' },
       include: {
@@ -36,6 +36,41 @@ export class TablesService {
         },
       },
     });
+    const tableIds = floors.flatMap((f) => f.tables.map((t) => t.id));
+    if (tableIds.length === 0) return floors;
+    const [open, paid] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { branchId, tableId: { in: tableIds }, status: 'OPEN' },
+        select: {
+          tableId: true,
+          billPrintedAt: true,
+          _count: { select: { kots: true } },
+        },
+      }),
+      // Settled while the guests are still seated (pay-first orders).
+      this.prisma.order.findMany({
+        where: {
+          branchId,
+          tableId: { in: tableIds },
+          status: 'PAID',
+          updatedAt: { gt: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+        },
+        // updatedAt ≈ when it was paid: the order is created a moment before
+        // its table turns occupied, so createdAt can't be compared.
+        select: { tableId: true, updatedAt: true },
+      }),
+    ]);
+    return floors.map((f) => ({
+      ...f,
+      tables: f.tables.map((t) => ({
+        ...t,
+        display: tableDisplay(
+          t,
+          open.filter((o) => o.tableId === t.id),
+          paid.some((o) => o.tableId === t.id && o.updatedAt >= t.statusSince),
+        ),
+      })),
+    }));
   }
 
   createFloor(branchId: string, dto: FloorDto) {
@@ -264,4 +299,38 @@ export class TablesService {
     this.realtime.emitToBranch(branchId, 'table.request', { id });
     return updated;
   }
+}
+
+/**
+ * The colour a table shows on the floor (POS and Tables), as on a Petpooja
+ * floor: Blank (free), Running (seated / order not in the kitchen yet),
+ * Running KOT (order in the kitchen), Printed (bill printed, not paid),
+ * Paid (settled, guests still seated) — plus Reserved / Cleaning / Out of
+ * service from the table's own status.
+ */
+export type TableDisplay =
+  | 'BLANK'
+  | 'RUNNING'
+  | 'RUNNING_KOT'
+  | 'PRINTED'
+  | 'PAID'
+  | 'RESERVED'
+  | 'CLEANING'
+  | 'OUT_OF_SERVICE';
+
+export function tableDisplay(
+  table: { status: string },
+  openOrders: { billPrintedAt: Date | null; _count: { kots: number } }[],
+  paidWhileSeated: boolean,
+): TableDisplay {
+  if (table.status === 'OUT_OF_SERVICE') return 'OUT_OF_SERVICE';
+  if (table.status === 'CLEANING') return 'CLEANING';
+  if (openOrders.length > 0) {
+    if (openOrders.every((o) => o.billPrintedAt)) return 'PRINTED';
+    if (openOrders.some((o) => o._count.kots > 0)) return 'RUNNING_KOT';
+    return 'RUNNING';
+  }
+  if (table.status === 'RESERVED') return 'RESERVED';
+  if (table.status === 'OCCUPIED') return paidWhileSeated ? 'PAID' : 'RUNNING';
+  return 'BLANK';
 }
