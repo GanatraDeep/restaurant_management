@@ -100,8 +100,8 @@ export class PublicMenuService {
   }
 
   /** Customer-visible menu tree, shared by the table-QR page and the kiosk. */
-  menuCategoriesForBranch(branchId: string) {
-    return this.prisma.menuCategory.findMany({
+  async menuCategoriesForBranch(branchId: string) {
+    const categories = await this.prisma.menuCategory.findMany({
       where: { branchId, isActive: true, showOnWebsite: true },
       orderBy: { sortOrder: 'asc' },
       include: {
@@ -117,6 +117,7 @@ export class PublicMenuService {
             halfPrice: true,
             taxRatePercent: true,
             isVeg: true,
+            isFavorite: true,
             isVegan: true,
             spiceLevel: true,
             allergens: true,
@@ -147,6 +148,21 @@ export class PublicMenuService {
         },
       },
     });
+    // Starred items lead the menu as their own section (they also stay in
+    // their usual category).
+    const favourites = categories.flatMap((c) =>
+      c.items.filter((i) => i.isFavorite),
+    );
+    if (favourites.length === 0 || categories.length === 0) return categories;
+    return [
+      {
+        ...categories[0],
+        id: 'favourites',
+        name: 'Favourites',
+        items: favourites,
+      },
+      ...categories,
+    ];
   }
 
   async createOrder(qrToken: string, items: CartItemDto[], guestToken: string) {

@@ -1083,9 +1083,12 @@ model MenuItem {
   seasonStart   DateTime?
   seasonEnd     DateTime?
 
-  barcode  String?
-  isActive Boolean @default(true)
-  isCombo  Boolean @default(false)
+  barcode    String?
+  isActive   Boolean @default(true)
+  isCombo    Boolean @default(false)
+  // Starred on the Menu page: shown first on the POS ("Favourite items")
+  // and as a Favourites section at the top of the QR menu and kiosk.
+  isFavorite Boolean @default(false)
 
   inventoryTracking    InventoryTracking @default(NONE)
   stockIngredientId    String?

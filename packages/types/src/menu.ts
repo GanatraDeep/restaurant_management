@@ -54,6 +54,7 @@ export const menuItemSchema = z.object({
   availableTo: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   barcode: z.string().optional(),
   isActive: z.boolean().default(true),
+  isFavorite: z.boolean().default(false),
   modifierGroupIds: z.array(z.string()).default([]),
 });
 export type MenuItemDto = z.infer<typeof menuItemSchema>;

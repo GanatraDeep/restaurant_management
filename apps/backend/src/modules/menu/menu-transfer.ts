@@ -38,7 +38,8 @@ type ColumnKey =
   | 'prepTimeMinutes'
   | 'spiceLevel'
   | 'station'
-  | 'isActive';
+  | 'isActive'
+  | 'isFavorite';
 
 interface Column {
   key: ColumnKey;
@@ -152,6 +153,13 @@ export const MENU_COLUMNS: Column[] = [
     width: 11,
     help: 'No hides the item from billing and the QR menu. Defaults to Yes.',
   },
+  {
+    key: 'isFavorite',
+    header: 'Favourite',
+    aliases: ['favorite', 'fav', 'starred', 'popular', 'bestseller'],
+    width: 11,
+    help: 'Yes puts it in "Favourite items" first on the POS and at the top of the QR menu. Defaults to No.',
+  },
 ];
 
 export const MAX_IMPORT_ROWS = 3000;
@@ -172,6 +180,7 @@ export interface MenuRow {
   spiceLevel?: SpiceLevel;
   station?: string | null;
   isActive?: boolean;
+  isFavorite?: boolean;
 }
 
 export interface ParsedRow extends MenuRow {
@@ -269,6 +278,7 @@ export async function buildMenuWorkbook(
       spiceLevel: SPICE_LABELS[r.spiceLevel ?? 'NONE'],
       station: safeCell(r.station),
       isActive: yesNo(r.isActive),
+      isFavorite: r.isFavorite ? 'Yes' : 'No',
     });
   }
 
@@ -290,6 +300,7 @@ export async function buildMenuWorkbook(
     });
   list('isVeg', ['Yes', 'No']);
   list('isActive', ['Yes', 'No']);
+  list('isFavorite', ['Yes', 'No']);
   list('spiceLevel', Object.values(SPICE_LABELS));
   for (const key of ['price', 'halfPrice', 'costPrice'] as const) {
     ws.getColumn(key).numFmt = '0.00';
@@ -454,6 +465,11 @@ export async function parseMenuFile(
     const isVeg = parseVeg(get('isVeg'));
     if (isVeg === null)
       problems.push(`Veg should be Yes or No, not "${get('isVeg')}"`);
+    const isFavorite = parseYesNo(get('isFavorite'));
+    if (isFavorite === null)
+      problems.push(
+        `Favourite should be Yes or No, not "${get('isFavorite')}"`,
+      );
     const isActive = parseYesNo(get('isActive'));
     if (isActive === null)
       problems.push(`Available should be Yes or No, not "${get('isActive')}"`);
@@ -484,6 +500,7 @@ export async function parseMenuFile(
       spiceLevel: spiceLevel ?? undefined,
       station: opt('station', 60),
       isActive: isActive ?? undefined,
+      isFavorite: isFavorite ?? undefined,
     });
   }
 
