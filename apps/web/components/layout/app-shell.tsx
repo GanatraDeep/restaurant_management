@@ -2,12 +2,13 @@
 
 import type { SessionUser } from "@nodedr-restaurant/types";
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { EntityDialogHost } from "@/components/layout/entity-dialog-host";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useRestaurantBranding } from "@/hooks/use-settings";
 import { BRAND } from "@/lib/brand";
+import { cn } from "@/lib/utils";
 import { BrandFooter } from "./brand-footer";
 import { BranchSwitcher } from "./branch-switcher";
 import { LanguageSwitcher } from "./language-switcher";
@@ -61,6 +62,8 @@ function RestaurantBrand() {
   );
 }
 
+const SIDEBAR_KEY = "fcartel:sidebar";
+
 export function AppShell({
   user,
   children,
@@ -69,11 +72,37 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  // Desktop sidebar: closed by default for more working room; the menu
+  // button opens it, and the choice is remembered on this device.
+  const [desktopOpen, setDesktopOpen] = useState(false);
+  useEffect(() => {
+    try {
+      // localStorage only exists after hydration.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDesktopOpen(localStorage.getItem(SIDEBAR_KEY) === "open");
+    } catch {
+      // Storage blocked: stays closed.
+    }
+  }, []);
+  const toggleMenu = () => {
+    if (window.matchMedia("(min-width: 1024px)").matches) {
+      setDesktopOpen((open) => {
+        try {
+          localStorage.setItem(SIDEBAR_KEY, open ? "closed" : "open");
+        } catch {
+          // Not remembered; still toggles.
+        }
+        return !open;
+      });
+    } else {
+      setMobileOpen(true);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar lg:flex">
+      <aside className={cn("hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar", desktopOpen && "lg:flex")}>
         <div className="flex h-16 items-center gap-2 px-5">
           <RestaurantBrand />
         </div>
@@ -105,15 +134,23 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary lg:hidden"
-            aria-label="Open navigation"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="hidden lg:block" />
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleMenu}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-secondary"
+              aria-label={desktopOpen ? "Close navigation" : "Open navigation"}
+              aria-expanded={desktopOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+            {/* With the sidebar closed, the restaurant's name moves up here. */}
+            {!desktopOpen && (
+              <div className="hidden min-w-0 items-center gap-2 lg:flex">
+                <RestaurantBrand />
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <LanguageSwitcher compact />
             <NotificationBell />

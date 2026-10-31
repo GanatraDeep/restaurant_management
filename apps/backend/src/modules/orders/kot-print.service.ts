@@ -123,6 +123,30 @@ export class KotPrintService {
   }
 
   /**
+   * The whole order's KOT was printed from the POS / Tables: count it against
+   * every live ticket of the order, so auto-print doesn't print them again
+   * when they're accepted.
+   */
+  async markOrderPrinted(branchId: string, orderId: string) {
+    const kots = await this.prisma.kot.findMany({
+      where: {
+        orderId,
+        order: { branchId },
+        status: { notIn: ['CANCELLED', 'REJECTED'] },
+      },
+      select: { id: true },
+    });
+    if (kots.length === 0) return;
+    await this.prisma.kot.updateMany({
+      where: { id: { in: kots.map((k) => k.id) } },
+      data: { printedCount: { increment: 1 }, printedAt: new Date() },
+    });
+    for (const k of kots) {
+      this.realtime.emitToBranch(branchId, 'kot.reprinted', { id: k.id });
+    }
+  }
+
+  /**
    * Auto-print: accepted tickets nobody has printed yet, since the device
    * switched auto-print on (so turning it on doesn't print the backlog).
    */

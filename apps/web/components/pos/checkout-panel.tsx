@@ -80,7 +80,10 @@ export function CheckoutPanel({
       }
     : orderSnapshot;
   const [method, setMethod] = useState<PaymentMethodDto>("CASH");
+  // Empty until the cashier types: until then the field shows (and pays)
+  // the full amount due, following any discount or tip changes.
   const [amountText, setAmountText] = useState("");
+  const [amountEdited, setAmountEdited] = useState(false);
   const [discountPercent, setDiscountPercent] = useState("0");
   const [tipAmount, setTipAmount] = useState("0");
   const [pointsToRedeem, setPointsToRedeem] = useState("0");
@@ -147,7 +150,9 @@ export function CheckoutPanel({
   const balance = bill?.balanceDue ?? 0;
   const giftCardApplied = giftCardBalance !== null ? round2(Math.min(giftCardBalance, balance)) : 0;
   const remainingDue = round2(balance - giftCardApplied);
-  const entered = parseMoney(amountText);
+  const fullAmount = remainingDue > 0 ? String(Number.isInteger(remainingDue) ? remainingDue : remainingDue.toFixed(2)) : "";
+  const shownAmount = amountEdited ? amountText : fullAmount;
+  const entered = parseMoney(shownAmount);
   const plan = planPayment({ remaining: remainingDue, entered, method });
   const split = Math.max(1, Math.floor(Number(splitCount) || 1));
 
@@ -227,6 +232,7 @@ export function CheckoutPanel({
         onSuccess: (result) => {
           attempt.current = null;
           setAmountText("");
+          setAmountEdited(false);
           if (result.settlement.fullyPaid) {
             setCompleted(result);
             publishDisplay({ kind: "paid", total: Number(result.totalAmount), method });
@@ -538,9 +544,13 @@ export function CheckoutPanel({
                 min="0"
                 step="0.01"
                 className="h-12 text-lg tabular-nums"
-                value={amountText}
+                value={shownAmount}
                 placeholder={String(remainingDue)}
-                onChange={(e) => setAmountText(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  setAmountEdited(true);
+                  setAmountText(e.target.value);
+                }}
               />
               {plan.valid && plan.change > 0 && (
                 <p className="rounded-lg bg-success/10 px-3 py-2 text-base font-semibold tabular-nums text-success" role="status">
