@@ -55,8 +55,10 @@ model Restaurant {
   // UPI payee for the dynamic QR shown at checkout and on the customer
   // display (NPCI deep link, see apps/web/lib/upi.ts). Optional: when unset
   // the UPI method still works, it just shows no QR.
-  upiVpa       String?
-  upiPayeeName String?
+  upiVpa        String?
+  upiPayeeName  String?
+  // Last line of the printed bill, e.g. "Thanks! Connect with us @bsc.chai_wala".
+  receiptFooter String?
 
   // Loyalty program config — previously hardcoded constants in
   // OrdersService, now per-restaurant and settings-editable. Point value
@@ -1083,12 +1085,15 @@ model MenuItem {
   seasonStart   DateTime?
   seasonEnd     DateTime?
 
-  barcode    String?
-  isActive   Boolean @default(true)
-  isCombo    Boolean @default(false)
+  barcode       String?
+  isActive      Boolean @default(true)
+  isCombo       Boolean @default(false)
   // Starred on the Menu page: shown first on the POS ("Favourite items")
   // and as a Favourites section at the top of the QR menu and kiosk.
-  isFavorite Boolean @default(false)
+  isFavorite    Boolean @default(false)
+  // false = served straight from the counter (water, soft drinks): never on
+  // a KOT or the Kitchen Display.
+  sendToKitchen Boolean @default(true)
 
   inventoryTracking    InventoryTracking @default(NONE)
   stockIngredientId    String?
@@ -1478,6 +1483,8 @@ model Kot {
   station   KitchenStation? @relation(fields: [stationId], references: [id], onDelete: SetNull)
 
   ticketNumber   String
+  // "KOT - 23": counts up per branch, restarting each day (restaurant time).
+  kotNo          Int?
   status         KotStatus @default(NEW)
   isPriority     Boolean   @default(false)
   printedCount   Int       @default(0)

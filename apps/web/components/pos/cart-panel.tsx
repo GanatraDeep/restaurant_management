@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, CreditCard, Minus, Plus, Printer, ShoppingCart, Trash2 } from "lucide-react";
+import { ChefHat, ChevronLeft, CreditCard, Minus, Plus, Printer, Save, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -36,6 +36,8 @@ export function CartPanel({
   onRemove,
   onSubmit,
   isSubmitting,
+  submittingPrint = false,
+  onBackToTables,
   existingOrder,
   onPayExisting,
   onPrintKot,
@@ -58,8 +60,13 @@ export function CartPanel({
   onIncrement: (key: string) => void;
   onDecrement: (key: string) => void;
   onRemove: (key: string) => void;
-  onSubmit: () => void;
+  /** Save the new items (KOT to the kitchen); `print` also prints this round's KOT here. */
+  onSubmit: (print: boolean) => void;
   isSubmitting: boolean;
+  /** Which of the two save buttons is busy. */
+  submittingPrint?: boolean;
+  /** Dine-in: back to the table grid (the unsent cart is kept for this table). */
+  onBackToTables?: () => void;
   /** The selected table's open bill: shown in full, with Print KOT / Print bill / Pay. */
   existingOrder?: OpenOrder;
   onPayExisting?: () => void;
@@ -99,7 +106,26 @@ export function CartPanel({
         </TabsList>
       </Tabs>
 
-      {orderType === "DINE_IN" && (
+      {orderType === "DINE_IN" && tableId && onBackToTables ? (
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="outline" size="sm" className="h-9 gap-1 pl-2" onClick={onBackToTables}>
+            <ChevronLeft className="h-4 w-4" /> All tables
+          </Button>
+          <p className="min-w-0 flex-1 truncate text-right text-sm font-semibold text-foreground">
+            {(() => {
+              const t = tables.find((table) => table.id === tableId);
+              return t ? (t.name ?? (/^\d/.test(t.number) ? `Table T${t.number}` : t.number)) : "Table";
+            })()}
+            {existingOrder && <span className="font-normal text-muted-foreground"> · #{existingOrder.orderNumber}</span>}
+          </p>
+          {existingOrder && onPrintKot && (
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Reprint the whole KOT" aria-label="Reprint KOT" onClick={onPrintKot}>
+              <ChefHat className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ) : (
+      orderType === "DINE_IN" && (
         <Select value={tableId} onValueChange={(v) => onTableChange(v ?? "")}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select table">
@@ -118,6 +144,7 @@ export function CartPanel({
             ))}
           </SelectContent>
         </Select>
+      )
       )}
 
       {orderType === "DELIVERY" && (
@@ -178,151 +205,123 @@ export function CartPanel({
           ))}
         </div>
       )}
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-        {existingOrder && (
-          <ExistingOrder order={existingOrder} onPay={onPayExisting} onPrintKot={onPrintKot} onPrintBill={onPrintBill} />
-        )}
-        {existingOrder && (
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {lines.length > 0 ? "New items — sent as the next round" : "Add more"}
-          </p>
-        )}
-        {lines.length === 0 && existingOrder ? (
-          <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
-            Pick items from the menu to add another round to this table.
-          </p>
-        ) : lines.length === 0 ? (
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {lines.length === 0 && !existingOrder ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
             <ShoppingCart className="h-8 w-8 opacity-40" />
             <p className="text-sm">Cart is empty</p>
           </div>
         ) : (
-          <div className="flex flex-col divide-y divide-border">
-            {lines.map((line) => (
-              <div key={line.key} className="flex items-start justify-between gap-3 py-3">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">{line.name}</p>
-                  {line.modifierLabel && (
-                    <p className="text-xs text-muted-foreground">{line.modifierLabel}</p>
-                  )}
-                  <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
-                    {formatCurrency(line.unitPrice * line.quantity)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onDecrement(line.key)}
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-5 text-center text-sm tabular-nums">{line.quantity}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    onClick={() => onIncrement(line.key)}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                    onClick={() => onRemove(line.key)}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 z-10 bg-card">
+              <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
+                <th className="py-2 font-medium">Item</th>
+                <th className="w-[6.5rem] py-2 text-center font-medium">Qty.</th>
+                <th className="w-20 py-2 text-right font-medium">Price</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {/* Already sent: read-only, with where it is in the kitchen. */}
+              {(existingOrder?.items ?? []).map((i) => {
+                const cancelled = i.status === "CANCELLED";
+                return (
+                  <tr key={i.id} className={cancelled ? "text-muted-foreground line-through" : "text-foreground"}>
+                    <td className="py-2 pr-2 align-top">
+                      <span className="block">{i.nameSnapshot}</span>
+                      <span className="text-[11px] text-muted-foreground no-underline">
+                        {[
+                          i.modifiers?.map((m) => m.nameSnapshot).join(", "),
+                          ITEM_STATUS[i.status] ?? i.status,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </td>
+                    <td className="py-2 text-center align-top tabular-nums">{i.quantity}</td>
+                    <td className="py-2 text-right align-top tabular-nums">{formatCurrency(i.lineTotal)}</td>
+                  </tr>
+                );
+              })}
+              {existingOrder && lines.length > 0 && (
+                <tr>
+                  <td colSpan={3} className="pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                    New items — not sent yet
+                  </td>
+                </tr>
+              )}
+              {lines.map((line) => (
+                <tr key={line.key} className="text-foreground">
+                  <td className="py-2 pr-2 align-middle">
+                    <span className="block font-medium">{line.name}</span>
+                    {line.modifierLabel && <span className="block text-[11px] text-muted-foreground">{line.modifierLabel}</span>}
+                  </td>
+                  <td className="py-2 align-middle">
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7"
+                        aria-label={line.quantity === 1 ? `Remove ${line.name}` : `One less ${line.name}`}
+                        onClick={() => (line.quantity === 1 ? onRemove(line.key) : onDecrement(line.key))}
+                      >
+                        {line.quantity === 1 ? <Trash2 className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                      </Button>
+                      <span className="w-6 text-center tabular-nums">{line.quantity}</span>
+                      <Button variant="outline" size="icon" className="h-7 w-7" aria-label={`One more ${line.name}`} onClick={() => onIncrement(line.key)}>
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </td>
+                  <td className="py-2 text-right align-middle font-medium tabular-nums">{formatCurrency(line.unitPrice * line.quantity)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {existingOrder && lines.length === 0 && (
+          <p className="mt-3 rounded-lg border border-dashed border-border px-3 py-3 text-center text-xs text-muted-foreground">
+            Pick items from the menu to add another round.
+          </p>
         )}
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-border pt-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Subtotal (incl. tax)</span>
-          <span className="font-semibold tabular-nums text-foreground">
-            {formatCurrency(subtotal)}
+      <div className="flex flex-col gap-3 border-t border-border pt-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-foreground">Total</span>
+          <span className="text-lg font-semibold tabular-nums text-foreground">
+            {formatCurrency(subtotal + (existingOrder ? Number(existingOrder.totalAmount) : 0))}
           </span>
         </div>
-        <Button className="h-11" disabled={!canSubmit} onClick={onSubmit}>
-          {isSubmitting
-            ? "Sending to kitchen…"
-            : existingOrder
-              ? "Add to order & send to kitchen"
-              : "Send to kitchen"}
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="outline" className="h-11 gap-1.5" disabled={!canSubmit} onClick={() => onSubmit(false)}>
+            <Save className="h-4 w-4" />
+            {isSubmitting && !submittingPrint ? "Saving…" : "Save"}
+          </Button>
+          <Button className="h-11 gap-1.5" disabled={!canSubmit} onClick={() => onSubmit(true)}>
+            <Printer className="h-4 w-4" />
+            {isSubmitting && submittingPrint ? "Saving…" : "Save & Print KOT"}
+          </Button>
+          {existingOrder && (
+            <>
+              <Button variant="outline" className="h-11 gap-1.5" onClick={onPrintBill}>
+                <Printer className="h-4 w-4" /> Print bill
+              </Button>
+              <Button variant="secondary" className="h-11 gap-1.5" onClick={onPayExisting}>
+                <CreditCard className="h-4 w-4" /> Settle &amp; pay
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
 const ITEM_STATUS: Record<string, string> = {
-  NEW: "New",
+  NEW: "Sent",
   ACCEPTED: "Accepted",
   PREPARING: "Cooking",
   READY: "Ready",
   SERVED: "Served",
   CANCELLED: "Cancelled",
 };
-
-/** What the selected table has ordered so far, with the actions used most. */
-function ExistingOrder({
-  order,
-  onPay,
-  onPrintKot,
-  onPrintBill,
-}: {
-  order: OpenOrder;
-  onPay?: () => void;
-  onPrintKot?: () => void;
-  onPrintBill?: () => void;
-}) {
-  const items = order.items ?? [];
-  return (
-    <section className="flex flex-col gap-2 rounded-xl border border-border p-3" aria-label={`Order #${order.orderNumber}`}>
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="text-sm font-semibold text-foreground">Order #{order.orderNumber}</p>
-        <p className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(order.totalAmount)}</p>
-      </div>
-      {items.length > 0 && (
-        <ul className="flex flex-col gap-1.5 text-sm">
-          {items.map((i) => {
-            const cancelled = i.status === "CANCELLED";
-            return (
-              <li key={i.id} className="flex items-start justify-between gap-2">
-                <span className={cancelled ? "text-muted-foreground line-through" : "text-foreground"}>
-                  {i.quantity} × {i.nameSnapshot}
-                  {i.modifiers && i.modifiers.length > 0 && (
-                    <span className="block text-xs text-muted-foreground">{i.modifiers.map((m) => m.nameSnapshot).join(", ")}</span>
-                  )}
-                </span>
-                <span className="flex shrink-0 items-center gap-2">
-                  <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    {ITEM_STATUS[i.status] ?? i.status}
-                  </span>
-                  <span className="tabular-nums text-muted-foreground">{formatCurrency(i.lineTotal)}</span>
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <div className="grid grid-cols-3 gap-1.5 pt-1">
-        <Button type="button" variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs" onClick={onPrintKot}>
-          <ChefHat className="h-3.5 w-3.5" /> Print KOT
-        </Button>
-        <Button type="button" variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs" onClick={onPrintBill}>
-          <Printer className="h-3.5 w-3.5" /> Print bill
-        </Button>
-        <Button type="button" size="sm" className="h-9 gap-1 px-1 text-xs" onClick={onPay}>
-          <CreditCard className="h-3.5 w-3.5" /> Pay
-        </Button>
-      </div>
-    </section>
-  );
-}

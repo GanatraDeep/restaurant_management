@@ -53,6 +53,7 @@ export function EditItemDialog({
   const [halfPrice, setHalfPrice] = useState(item.halfPrice ?? "");
   const [taxRatePercent, setTaxRatePercent] = useState(item.taxRatePercent);
   const [isVeg, setIsVeg] = useState(item.isVeg);
+  const [sendToKitchen, setSendToKitchen] = useState(item.sendToKitchen ?? true);
   const [imageUrl, setImageUrl] = useState<string | undefined>(item.imageUrl ?? undefined);
   const [imagePreview, setImagePreview] = useState<string | undefined>(item.imageUrl ?? undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -95,6 +96,7 @@ export function EditItemDialog({
           halfPrice: halfPrice.trim() === "" ? null : Number(halfPrice),
           taxRatePercent: Number(taxRatePercent),
           isVeg,
+          sendToKitchen,
           imageUrl,
         },
       },
@@ -252,6 +254,18 @@ export function EditItemDialog({
               Vegetarian
             </Label>
             <Switch id="edit-is-veg" checked={isVeg} onCheckedChange={setIsVeg} />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+            <div>
+              <Label htmlFor="edit-send-kot" className="cursor-pointer">
+                Send to kitchen (KOT)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Turn off for items given straight from the counter, like cold drinks or water bottles.
+              </p>
+            </div>
+            <Switch id="edit-send-kot" checked={sendToKitchen} onCheckedChange={setSendToKitchen} />
           </div>
 
           <DialogFooter>

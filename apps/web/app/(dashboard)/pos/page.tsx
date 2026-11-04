@@ -14,6 +14,7 @@ import { KitchenProgressWidget } from "@/components/pos/kitchen-progress-widget"
 import { ModifierPickerDialog } from "@/components/pos/modifier-picker-dialog";
 import { PosTablePicker } from "@/components/pos/pos-table-picker";
 import { ProductGrid } from "@/components/pos/product-grid";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useBranch } from "@/hooks/use-branch";
 import type { MenuItem } from "@/hooks/use-menu";
@@ -115,6 +116,7 @@ function PosPageInner() {
     modifierIds: string[],
     modifierLabel: string,
     portion?: Portion,
+    toKitchen = true,
   ) => {
     const key = cartLineKey(menuItemId, modifierIds, portion);
     setLines((prev) => {
@@ -122,7 +124,7 @@ function PosPageInner() {
       if (existing) {
         return prev.map((l) => (l.key === key ? { ...l, quantity: l.quantity + 1 } : l));
       }
-      return [...prev, { key, menuItemId, name, unitPrice, quantity: 1, modifierIds, modifierLabel, portion }];
+      return [...prev, { key, menuItemId, name, unitPrice, quantity: 1, modifierIds, modifierLabel, portion, toKitchen }];
     });
   };
 
@@ -131,7 +133,7 @@ function PosPageInner() {
       setPickerItem(item);
       return;
     }
-    addLine(item.id, item.name, Number(item.price), [], "");
+    addLine(item.id, item.name, Number(item.price), [], "", undefined, item.sendToKitchen !== false);
   };
 
   const handleModifierConfirm = (modifierIds: string[], modifierLabel: string, portion?: Portion) => {
@@ -152,6 +154,7 @@ function PosPageInner() {
       modifierIds,
       modifierLabel,
       portion,
+      pickerItem.sendToKitchen !== false,
     );
   };
 
@@ -165,9 +168,31 @@ function PosPageInner() {
 
   const removeLine = (key: string) => setLines((prev) => prev.filter((l) => l.key !== key));
 
-  const handleSubmit = () => {
+  const [submittingPrint, setSubmittingPrint] = useState(false);
+  const handleSubmit = (print: boolean) => {
     if (checkingTable) return;
+    setSubmittingPrint(print);
     const sentTableId = tableId;
+    const kitchenItems = lines.some((l) => l.toKitchen !== false);
+    // After saving: print this round's KOT here if asked, then a dine-in
+    // table goes back to the table grid; takeaway / delivery go on to payment.
+    const afterSave = (order: CreatedOrder, verb: string) => {
+      setDrafts((d) => clearDraft(d, sentTableId));
+      if (print && branchId) {
+        if (kitchenItems) openKotPrint(order.id, branchId, { onlyNew: true });
+        else toast.success("Saved — nothing in this round goes to the kitchen, so no KOT");
+      }
+      if (orderType === "DINE_IN") {
+        const t = tables.find((x) => x.id === sentTableId);
+        toast.success(`${verb} #${order.orderNumber}${t ? ` · ${t.name ?? `T${t.number}`}` : ""}`);
+        goToTables(true);
+        return;
+      }
+      toast.success(`${verb} #${order.orderNumber}`);
+      setActiveCustomer(null);
+      setActiveOrder(order);
+      setCartOpen(true);
+    };
     const items = lines.map((l) => ({
       menuItemId: l.menuItemId,
       quantity: l.quantity,
@@ -185,12 +210,7 @@ function PosPageInner() {
       addOrderItems.mutate(
         { orderId: existingOrder.id, dto: { items } },
         {
-          onSuccess: (order) => {
-            setDrafts((d) => clearDraft(d, sentTableId));
-            setActiveCustomer(existingOrder.customer);
-            setActiveOrder(order);
-            toast.success(`Added to order #${order.orderNumber} — sent to kitchen`);
-          },
+          onSuccess: (order) => afterSave(order, "Added to order"),
           onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not add items"),
         },
       );
@@ -208,13 +228,7 @@ function PosPageInner() {
         items,
       },
       {
-        onSuccess: (order) => {
-          setDrafts((d) => clearDraft(d, sentTableId));
-          setActiveCustomer(null);
-          setActiveOrder(order);
-          setCartOpen(true);
-          toast.success(`Order #${order.orderNumber} sent to kitchen`);
-        },
+        onSuccess: (order) => afterSave(order, "Saved order"),
         onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not create order"),
       },
     );
@@ -238,6 +252,22 @@ function PosPageInner() {
     setActiveCustomer(null);
     setDelivery({ address: "", pincode: "", phone: "" });
     setScheduledFor("");
+  };
+
+  // Back to the table grid. `sent`: the cart was just saved, so drop it
+  // instead of keeping it as this table's draft.
+  const goToTables = (sent = false) => {
+    setActiveOrder(null);
+    setActiveCustomer(null);
+    setCartOpen(false);
+    setSelectedBillId(null);
+    if (sent) {
+      setLines([]);
+      setTableIdRaw("");
+    } else {
+      setTableId("");
+    }
+    if (orderType !== "DINE_IN") setOrderType("DINE_IN");
   };
 
   const handleTablePick = (table: RestaurantTable) => setTableId(table.id);
@@ -328,6 +358,11 @@ function PosPageInner() {
               <ChevronLeft className="h-4 w-4" />
               Back to menu
             </button>
+            {activeOrder && orderType === "DINE_IN" && (
+              <Button type="button" variant="outline" size="sm" className="mb-3 h-9 gap-1 pl-2" onClick={() => goToTables()}>
+                <ChevronLeft className="h-4 w-4" /> All tables
+              </Button>
+            )}
             {activeOrder ? (
               <CheckoutPanel
                 order={activeOrder}
@@ -348,6 +383,8 @@ function PosPageInner() {
                 onRemove={removeLine}
                 onSubmit={handleSubmit}
                 isSubmitting={createOrder.isPending || addOrderItems.isPending}
+                submittingPrint={submittingPrint}
+                onBackToTables={() => goToTables()}
                 existingOrder={existingOrder}
                 onPayExisting={viewExistingOrder}
                 onPrintKot={() => existingOrder && branchId && openKotPrint(existingOrder.id, branchId)}

@@ -7,6 +7,8 @@ export interface CartLine {
   modifierIds: string[];
   modifierLabel?: string;
   portion?: Portion;
+  /** false for counter items (no KOT). */
+  toKitchen?: boolean;
 }
 
 export type PortionKind = "HALF" | "FULL" | "CUSTOM";

@@ -79,7 +79,11 @@ describe('menu import parsing', () => {
       'Paneer Tikka',
       'Chicken 65',
       'Masala Chaas',
+      'Water Bottle',
     ]);
+    expect(rows.find((r) => r.name === 'Water Bottle')?.sendToKitchen).toBe(
+      false,
+    );
   });
 
   it('accepts a home-made sheet with a title line, other headings and loose values', async () => {

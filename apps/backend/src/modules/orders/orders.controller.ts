@@ -43,7 +43,6 @@ import {
   buildReceiptEscPosJob,
   buildTestSlip,
   resolveProfile,
-  type EscposKotOrder,
   type EscposReceiptOrder,
   type PrintResult,
 } from './escpos-receipt';
@@ -53,7 +52,7 @@ import {
   findPrinterDescriptor,
   probeCharDevices,
 } from './escpos-usb';
-import { KotPrintService } from './kot-print.service';
+import { KotPrintService, tableLabel } from './kot-print.service';
 import {
   sendToBranchPrinter,
   type BranchPrinterTarget,
@@ -75,24 +74,6 @@ function branchPrinterProfile(branch: {
     codepage: branch.printerCodepage,
     columns: branch.printerColumns,
   });
-}
-
-function toKotOrder(order: ReceiptData): EscposKotOrder {
-  return {
-    orderNumber: order.orderNumber,
-    type: order.type,
-    createdAt: order.createdAt,
-    table: order.table
-      ? { label: order.table.name ?? `#${order.table.number}` }
-      : null,
-    customer: order.customer ? { name: order.customer.name ?? 'Guest' } : null,
-    items: order.items.map((item) => ({
-      nameSnapshot: item.nameSnapshot,
-      quantity: item.quantity,
-      kitchenNote: item.kitchenNote,
-      modifiers: item.modifiers.map((m) => ({ nameSnapshot: m.nameSnapshot })),
-    })),
-  };
 }
 
 // Figures that replace the stored ones on a printed bill (an open order's
@@ -119,9 +100,7 @@ function toEscposOrder(
     orderNumber: order.orderNumber,
     type: order.type,
     createdAt: order.createdAt,
-    table: order.table
-      ? { label: order.table.name ?? `#${order.table.number}` }
-      : null,
+    table: order.table ? { label: tableLabel(order.table) } : null,
     customer: order.customer
       ? { name: order.customer.name ?? 'Guest', phone: order.customer.phone }
       : null,
@@ -451,8 +430,19 @@ export class OrdersController {
         taxLabel: order.branch.taxLabel,
         taxId: order.branch.taxId,
       },
+      timeZone: order.branch.restaurant.timezone,
+      footer: order.branch.restaurant.receiptFooter,
+      upi: order.branch.restaurant.upiVpa
+        ? {
+            vpa: order.branch.restaurant.upiVpa,
+            payeeName:
+              order.branch.restaurant.upiPayeeName ||
+              order.branch.restaurant.name,
+          }
+        : null,
       order: {
         ...toEscposOrder(order, overrides),
+        cashier: order.createdBy?.name ?? null,
         verifactu: overrides.isProvisional
           ? null
           : await this.verifactu.qrForOrder(order.id),
@@ -467,15 +457,16 @@ export class OrdersController {
     @CurrentUser() user: SessionUser,
     @Query('branchId') branchId: string,
     @Param('id') id: string,
+    // new=1: only the round just sent (POS "Save & Print KOT").
+    @Query('new') onlyNew: string | undefined,
     @Res() res: Response,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
-    const order = await this.ordersService.getReceiptData(branchId, id);
-    const html = buildKotHtml({
-      branchName: order.branch.name,
-      order: toKotOrder(order),
-    });
-    await this.kotPrint.markOrderPrinted(branchId, id);
+    const html = await this.kotPrint.orderKotHtml(
+      branchId,
+      id,
+      onlyNew === '1',
+    );
     res.type('html').send(html);
   }
 
@@ -547,12 +538,12 @@ export class OrdersController {
   sampleKot(@Res() res: Response) {
     const html = buildKotHtml({
       branchName: 'Test print',
-      ticket: { number: 'K-0001', station: 'Main kitchen', reprint: 0 },
+      ticket: { number: 'K-0001', station: null, reprint: 0, kotNo: 23 },
       order: {
         orderNumber: 'TEST-0001',
         type: 'DINE_IN',
         createdAt: new Date(),
-        table: { label: '5' },
+        table: { label: 'T8' },
         customer: null,
         items: [
           {

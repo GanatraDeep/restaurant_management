@@ -47,6 +47,7 @@ export interface MenuItem {
   isActive: boolean;
   isCombo: boolean;
   isFavorite: boolean;
+  sendToKitchen: boolean;
   category: { id: string; name: string };
   station: { id: string; name: string } | null;
   modifierGroups: { modifierGroup: ModifierGroup }[];

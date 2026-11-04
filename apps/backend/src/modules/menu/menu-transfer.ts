@@ -39,7 +39,8 @@ type ColumnKey =
   | 'spiceLevel'
   | 'station'
   | 'isActive'
-  | 'isFavorite';
+  | 'isFavorite'
+  | 'sendToKitchen';
 
 interface Column {
   key: ColumnKey;
@@ -160,6 +161,13 @@ export const MENU_COLUMNS: Column[] = [
     width: 11,
     help: 'Yes puts it in "Favourite items" first on the POS and at the top of the QR menu. Defaults to No.',
   },
+  {
+    key: 'sendToKitchen',
+    header: 'Send to kitchen',
+    aliases: ['kot', 'to kitchen', 'kitchen order'],
+    width: 15,
+    help: 'No for items served straight from the counter (cold drinks, water bottles): they are billed but never printed on a KOT. Defaults to Yes.',
+  },
 ];
 
 export const MAX_IMPORT_ROWS = 3000;
@@ -181,6 +189,7 @@ export interface MenuRow {
   station?: string | null;
   isActive?: boolean;
   isFavorite?: boolean;
+  sendToKitchen?: boolean;
 }
 
 export interface ParsedRow extends MenuRow {
@@ -260,6 +269,15 @@ export async function buildMenuWorkbook(
           station: 'Bar',
           isActive: true,
         },
+        {
+          category: 'Beverages',
+          name: 'Water Bottle',
+          price: 20,
+          isVeg: true,
+          sku: 'BV02',
+          isActive: true,
+          sendToKitchen: false,
+        },
       ]
     : rows;
   for (const r of sample) {
@@ -279,6 +297,7 @@ export async function buildMenuWorkbook(
       station: safeCell(r.station),
       isActive: yesNo(r.isActive),
       isFavorite: r.isFavorite ? 'Yes' : 'No',
+      sendToKitchen: r.sendToKitchen === false ? 'No' : 'Yes',
     });
   }
 
@@ -301,6 +320,7 @@ export async function buildMenuWorkbook(
   list('isVeg', ['Yes', 'No']);
   list('isActive', ['Yes', 'No']);
   list('isFavorite', ['Yes', 'No']);
+  list('sendToKitchen', ['Yes', 'No']);
   list('spiceLevel', Object.values(SPICE_LABELS));
   for (const key of ['price', 'halfPrice', 'costPrice'] as const) {
     ws.getColumn(key).numFmt = '0.00';
@@ -470,6 +490,11 @@ export async function parseMenuFile(
       problems.push(
         `Favourite should be Yes or No, not "${get('isFavorite')}"`,
       );
+    const sendToKitchen = parseYesNo(get('sendToKitchen'));
+    if (sendToKitchen === null)
+      problems.push(
+        `Send to kitchen should be Yes or No, not "${get('sendToKitchen')}"`,
+      );
     const isActive = parseYesNo(get('isActive'));
     if (isActive === null)
       problems.push(`Available should be Yes or No, not "${get('isActive')}"`);
@@ -501,6 +526,7 @@ export async function parseMenuFile(
       station: opt('station', 60),
       isActive: isActive ?? undefined,
       isFavorite: isFavorite ?? undefined,
+      sendToKitchen: sendToKitchen ?? undefined,
     });
   }
 

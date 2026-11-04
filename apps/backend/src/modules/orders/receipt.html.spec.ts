@@ -69,3 +69,48 @@ describe('receipt HTML with VERI*FACTU', () => {
     ).not.toContain('QR tributario');
   });
 });
+
+describe('receipt HTML layout (Petpooja style)', () => {
+  const india = {
+    ...base,
+    restaurantName: 'BSC Chai Wala',
+    currency: 'INR',
+    timeZone: 'Asia/Kolkata',
+    branch: { ...base.branch, taxRegime: 'INDIA_GST' as const, taxId: null },
+  };
+  const dineIn = {
+    ...base.order,
+    type: 'DINE_IN',
+    table: { label: 'T7' },
+    cashier: 'biller',
+    createdAt: new Date('2026-02-11T16:49:00Z'),
+  };
+
+  it('prints a Scan & Pay UPI QR for what is still due', () => {
+    const html = buildReceiptHtml({
+      ...india,
+      upi: { vpa: 'bsc@upi', payeeName: 'BSC Chai Wala' },
+      order: { ...dineIn, isProvisional: true, payments: [] },
+    });
+    expect(html).toContain('Scan &amp; Pay ₹11.00');
+    expect(html).toContain('aria-label="UPI payment QR"');
+    expect(html).toContain('RETAIL INVOICE');
+    expect(html).toContain('Date: 11/02/26');
+    expect(html).toContain('22:19');
+    expect(html).toContain('Dine In: 7');
+    expect(html).toContain('Cashier: biller');
+    expect(html).toContain('Total Qty: 1');
+    expect(html).toContain('Grand Total');
+  });
+
+  it('has no QR once paid, and prints the custom footer', () => {
+    const html = buildReceiptHtml({
+      ...india,
+      upi: { vpa: 'bsc@upi', payeeName: 'BSC' },
+      footer: 'Thanks Connect with us @bsc.chai_wala',
+      order: dineIn,
+    });
+    expect(html).not.toContain('UPI payment QR');
+    expect(html).toContain('Thanks Connect with us @bsc.chai_wala');
+  });
+});

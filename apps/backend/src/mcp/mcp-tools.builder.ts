@@ -1020,6 +1020,7 @@ export class McpToolsBuilder {
               allergens: [],
               isActive: true,
               isFavorite: false,
+              sendToKitchen: true,
               modifierGroupIds: [],
             }),
           );

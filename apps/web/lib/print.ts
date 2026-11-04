@@ -76,7 +76,14 @@ function printPage(src: string): Promise<void> {
     const frame = getPrintFrame();
     frame.onload = () => {
       const win = frame.contentWindow;
-      if (win) {
+      // e.g. a KOT for an order of counter-only items: nothing to print.
+      let skip = false;
+      try {
+        skip = !!win?.document.body?.hasAttribute("data-noprint");
+      } catch {
+        /* cross-origin: print as usual */
+      }
+      if (win && !skip) {
         try {
           win.focus();
           win.print();
@@ -96,9 +103,12 @@ export function openReceiptPrint(orderId: string, branchId: string, adj: BillQue
   printPage(`/api/v1/orders/${orderId}/receipt?branchId=${branchId}${billQueryString(adj)}`);
 }
 
-/** Kitchen ticket for the whole order (every station's items). */
-export function openKotPrint(orderId: string, branchId: string) {
-  printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}`);
+/**
+ * Kitchen ticket for the whole order (every station's items). `onlyNew`
+ * prints just the round that was sent and not yet printed (POS "Save & Print KOT").
+ */
+export function openKotPrint(orderId: string, branchId: string, opts: { onlyNew?: boolean } = {}) {
+  printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`);
 }
 
 /** Auto-print: a ticket this device already claimed (prints as the first copy). */

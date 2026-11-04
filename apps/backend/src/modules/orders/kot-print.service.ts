@@ -45,7 +45,7 @@ export class KotPrintService {
           include: {
             table: true,
             customer: true,
-            branch: true,
+            branch: { include: { restaurant: { select: { timezone: true } } } },
           },
         },
         items: {
@@ -91,52 +91,31 @@ export class KotPrintService {
         printedCount: updated.printedCount,
       });
     }
-    return buildKotHtml({
-      branchName: kot.order.branch.name,
+    return kotPage([kot], {
       ticket: {
         number: kot.ticketNumber,
         station: kot.station?.name ?? null,
         reprint: alreadyCounted ? 0 : kot.printedCount,
-      },
-      order: {
-        orderNumber: kot.order.orderNumber,
-        type: kot.order.type,
-        createdAt: kot.order.createdAt,
-        table: kot.order.table
-          ? { label: kot.order.table.name ?? `#${kot.order.table.number}` }
-          : null,
-        customer: kot.order.customer
-          ? { name: kot.order.customer.name ?? 'Guest' }
-          : kot.order.guestName
-            ? { name: kot.order.guestName }
-            : null,
-        items: kot.items.map(({ orderItem }) => ({
-          nameSnapshot: orderItem.nameSnapshot,
-          quantity: orderItem.quantity,
-          kitchenNote: orderItem.kitchenNote,
-          modifiers: orderItem.modifiers.map((m) => ({
-            nameSnapshot: m.nameSnapshot,
-          })),
-        })),
+        kotNo: kot.kotNo,
       },
     });
   }
 
   /**
-   * The whole order's KOT was printed from the POS / Tables: count it against
-   * every live ticket of the order, so auto-print doesn't print them again
-   * when they're accepted.
+   * The order's KOT as one page, from the POS / Tables. With `onlyNew`, just
+   * the tickets nobody has printed yet (the round just sent, for "Save & Print
+   * KOT"); otherwise every live ticket. Either way they count as printed, so
+   * auto-print doesn't print them again.
    */
-  async markOrderPrinted(branchId: string, orderId: string) {
-    const kots = await this.prisma.kot.findMany({
-      where: {
-        orderId,
-        order: { branchId },
-        status: { notIn: ['CANCELLED', 'REJECTED'] },
-      },
-      select: { id: true },
-    });
-    if (kots.length === 0) return;
+  async orderKotHtml(branchId: string, orderId: string, onlyNew: boolean) {
+    const all = (await this.load(branchId, { orderId })).filter(
+      (k) => k.status !== 'REJECTED' && k.items.length > 0,
+    );
+    const fresh = all.filter((k) => k.printedCount === 0);
+    const kots = onlyNew && fresh.length > 0 ? fresh : all;
+    // Only counter items (cold drinks, water): a page that tells the
+    // browser not to print, rather than an error slip on the printer.
+    if (kots.length === 0) return NO_KOT_PAGE;
     await this.prisma.kot.updateMany({
       where: { id: { in: kots.map((k) => k.id) } },
       data: { printedCount: { increment: 1 }, printedAt: new Date() },
@@ -144,6 +123,7 @@ export class KotPrintService {
     for (const k of kots) {
       this.realtime.emitToBranch(branchId, 'kot.reprinted', { id: k.id });
     }
+    return kotPage(kots);
   }
 
   /**
@@ -317,3 +297,49 @@ export class KotPrintService {
     return result;
   }
 }
+
+type LoadedKot = Awaited<ReturnType<KotPrintService['load']>>[number];
+
+/** "T8" for a numbered table, its own name otherwise — as on the floor. */
+export function tableLabel(t: { name: string | null; number: string }): string {
+  return t.name ?? (/^\d/.test(t.number) ? `T${t.number}` : t.number);
+}
+
+/** One KOT page for one or more tickets of the same order. */
+function kotPage(
+  kots: LoadedKot[],
+  extra: { ticket?: Parameters<typeof buildKotHtml>[0]['ticket'] } = {},
+): string {
+  const { order } = kots[0];
+  return buildKotHtml({
+    branchName: order.branch.name,
+    timeZone: order.branch.restaurant.timezone,
+    kotNos: kots.map((k) => k.kotNo ?? 0),
+    ...extra,
+    order: {
+      orderNumber: order.orderNumber,
+      type: order.type,
+      // When the round was sent, not when the table first ordered.
+      createdAt: kots[kots.length - 1].createdAt,
+      table: order.table ? { label: tableLabel(order.table) } : null,
+      customer: order.customer
+        ? { name: order.customer.name ?? 'Guest' }
+        : order.guestName
+          ? { name: order.guestName }
+          : null,
+      items: kots.flatMap((k) =>
+        k.items.map(({ orderItem }) => ({
+          nameSnapshot: orderItem.nameSnapshot,
+          quantity: orderItem.quantity,
+          kitchenNote: orderItem.kitchenNote,
+          modifiers: orderItem.modifiers.map((m) => ({
+            nameSnapshot: m.nameSnapshot,
+          })),
+        })),
+      ),
+    },
+  });
+}
+
+/** Served when nothing on the order goes to the kitchen: never printed. */
+export const NO_KOT_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="fc-noprint" content="1"><title>No KOT</title></head><body data-noprint="1"><p>Nothing on this order goes to the kitchen.</p></body></html>`;

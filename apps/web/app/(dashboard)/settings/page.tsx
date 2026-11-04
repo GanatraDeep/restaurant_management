@@ -198,6 +198,7 @@ function GeneralSettingsForm({
   const [timezone, setTimezone] = useState(restaurant.timezone);
   const [upiVpa, setUpiVpa] = useState(restaurant.upiVpa ?? "");
   const [upiPayeeName, setUpiPayeeName] = useState(restaurant.upiPayeeName ?? "");
+  const [receiptFooter, setReceiptFooter] = useState(restaurant.receiptFooter ?? "");
   const [loyaltyPointValue, setLoyaltyPointValue] = useState(restaurant.loyaltyPointValue);
   const [loyaltyEarnPerCurrency, setLoyaltyEarnPerCurrency] = useState(
     String(restaurant.loyaltyEarnPerCurrency),
@@ -231,6 +232,7 @@ function GeneralSettingsForm({
         timezone,
         upiVpa: upiVpa.trim() || null,
         upiPayeeName: upiPayeeName.trim() || null,
+        receiptFooter: receiptFooter.trim() || null,
         loyaltyPointValue: Number(loyaltyPointValue) || 0,
         loyaltyEarnPerCurrency: Number(loyaltyEarnPerCurrency) || 1,
       },
@@ -427,6 +429,21 @@ function GeneralSettingsForm({
                 maxLength={60}
               />
             </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="r-footer">Bill footer</Label>
+            <Input
+              id="r-footer"
+              value={receiptFooter}
+              onChange={(e) => setReceiptFooter(e.target.value)}
+              placeholder="Thank you! Visit again."
+              maxLength={120}
+            />
+            <p className="text-xs text-muted-foreground">
+              The last line of every printed bill, e.g. &ldquo;Thanks! Connect with us @yourhandle&rdquo;. Bills with an
+              amount due also print a UPI Scan &amp; Pay QR when a UPI id is set.
+            </p>
           </div>
 
           <Button type="submit" disabled={updateRestaurant.isPending} className="self-start">

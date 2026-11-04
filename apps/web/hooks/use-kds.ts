@@ -75,7 +75,7 @@ export const NEXT_STATUS = KOT_NEXT_STATUS;
 export function useRejectKot(branchId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, reason, confirmStarted }: { id: string; reason: string; confirmStarted?: boolean }) =>
+    mutationFn: ({ id, reason, confirmStarted }: { id: string; reason?: string; confirmStarted?: boolean }) =>
       api.post(`/kds/tickets/${id}/reject?branchId=${branchId}`, { reason, confirmStarted }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["kds"] });
@@ -148,7 +148,7 @@ export function useAcceptPaidIncoming(branchId: string | null) {
 export function useDeclineIncoming(branchId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) =>
+    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) =>
       api.post(`/kds/incoming/${orderId}/reject?branchId=${branchId}`, { reason }),
     onSettled: () => invalidateAfterAnswer(queryClient, branchId),
   });
