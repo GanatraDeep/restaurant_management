@@ -127,6 +127,7 @@ export class OrdersService {
         customer: true,
         items: { include: { modifiers: true } },
         payments: true,
+        createdBy: { select: { name: true } },
         branch: { include: { restaurant: true } },
       },
     });
@@ -759,7 +760,7 @@ export class OrdersService {
     branchId: string,
     orderId: string,
     userId: string,
-    reason: string,
+    reason?: string,
   ) {
     return this.withdrawOrder(branchId, orderId, userId, {
       reason,
@@ -957,10 +958,7 @@ export class OrdersService {
           'The kitchen has already started this order. Confirm to cancel it anyway - the food in progress will be wasted.',
       });
     }
-    const pastNew = statuses.some((st) => st !== 'NEW' && st !== 'CANCELLED');
-    if (!reason && (pastNew || options.declineIncoming)) {
-      throw new BadRequestException('A reason is required');
-    }
+    // A reason is optional: staff often cancel on the spot with no time to type.
 
     await this.prisma.$transaction(async (tx) => {
       const flipped = await tx.order.updateMany({
@@ -1257,7 +1255,7 @@ export class OrdersService {
     orderId: string,
     itemId: string,
     userId: string,
-    reason: string,
+    reason?: string,
   ) {
     const order = await this.editableOrder(branchId, orderId);
     const item = order.items.find((i) => i.id === itemId);
@@ -2325,14 +2323,19 @@ export class OrdersService {
   ) {
     const stationLookup = await tx.menuItem.findMany({
       where: { id: { in: orderItems.map((i) => i.menuItemId) } },
-      select: { id: true, stationId: true },
+      select: { id: true, stationId: true, sendToKitchen: true },
     });
     const stationByMenuItem = new Map(
       stationLookup.map((m) => [m.id, m.stationId]),
     );
+    // Served straight from the counter (water, soft drinks): no KOT.
+    const counterOnly = new Set(
+      stationLookup.filter((m) => !m.sendToKitchen).map((m) => m.id),
+    );
 
     const itemsByStation = new Map<string | null, typeof orderItems>();
     for (const item of orderItems) {
+      if (counterOnly.has(item.menuItemId)) continue;
       const stationId = stationByMenuItem.get(item.menuItemId) ?? null;
       const bucket = itemsByStation.get(stationId) ?? [];
       bucket.push(item);
@@ -2343,12 +2346,30 @@ export class OrdersService {
     // a second time for a later round, and ticket numbers must stay unique
     // per order for kitchen staff to tell rounds apart.
     let ticketSeq = (await tx.kot.count({ where: { orderId } })) + 1;
+    if (itemsByStation.size === 0) return;
+    // "KOT - 23": the branch's tickets count up through the day, from 1 each
+    // morning (restaurant time).
+    const branch = await tx.branch.findUnique({
+      where: { id: branchId },
+      select: { restaurant: { select: { timezone: true } } },
+    });
+    const last = await tx.kot.aggregate({
+      where: {
+        order: { branchId },
+        createdAt: {
+          gte: startOfLocalDay(new Date(), branch?.restaurant.timezone),
+        },
+      },
+      _max: { kotNo: true },
+    });
+    let kotNo = (last._max.kotNo ?? 0) + 1;
     for (const [stationId, items] of itemsByStation) {
       const kot = await tx.kot.create({
         data: {
           orderId,
           stationId: stationId ?? undefined,
           ticketNumber: `${orderId.slice(-6)}-${ticketSeq++}`,
+          kotNo: kotNo++,
           ...(opts.accepted
             ? { status: 'ACCEPTED' as const, acceptedAt: new Date() }
             : {}),
@@ -2496,13 +2517,12 @@ export class OrdersService {
     kotId: string,
     userId: string,
     input: {
-      reason: string;
+      reason?: string;
       confirmStarted?: boolean;
       mayRejectStarted: boolean;
     },
   ) {
-    const reason = input.reason.trim();
-    if (!reason) throw new BadRequestException('A reason is required');
+    const reason = input.reason?.trim() || null;
     const kot = await this.prisma.kot.findFirst({
       where: { id: kotId, order: { branchId } },
       include: {
@@ -2665,4 +2685,26 @@ export class OrdersService {
     this.realtime.emitToBranch(branchId, 'kot.updated', updated);
     return updated;
   }
+}
+
+/** Midnight today in the given IANA time zone (the restaurant's), as an instant. */
+export function startOfLocalDay(now: Date, timeZone = 'Asia/Kolkata'): Date {
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(now);
+  } catch {
+    return startOfLocalDay(now, 'Asia/Kolkata');
+  }
+  const get = (t: string) =>
+    Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const sinceMidnight =
+    ((get('hour') * 60 + get('minute')) * 60 + get('second')) * 1000 +
+    now.getMilliseconds();
+  return new Date(now.getTime() - sinceMidnight);
 }

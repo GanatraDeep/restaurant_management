@@ -17,7 +17,7 @@ import { ApiError } from "@/lib/api";
 // A deliberate "are you sure, and why" step for refusing something. Used for
 // declining an incoming order and for the kitchen rejecting a ticket. It is a
 // real dialog (not window.confirm, which kiosk/PWA tablets suppress), the
-// buttons are tablet-sized, and nothing happens until a reason is entered.
+// buttons are tablet-sized; the reason is optional (quick picks or free text).
 export function ReasonDialog({
   open,
   onOpenChange,
@@ -55,7 +55,7 @@ export function ReasonDialog({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (pending || !reason.trim()) return;
+    if (pending) return;
     setPending(true);
     setError(null);
     try {
@@ -83,13 +83,12 @@ export function ReasonDialog({
             </p>
           )}
           <div className="flex flex-col gap-2">
-            <Label htmlFor="reason-input">Reason</Label>
+            <Label htmlFor="reason-input">Reason (optional)</Label>
             <Input
               id="reason-input"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={200}
-              required
               autoFocus
               className="h-11"
               placeholder="Why?"
@@ -111,7 +110,7 @@ export function ReasonDialog({
             <Button type="button" variant="outline" className="h-11" onClick={() => close(false)}>
               {keepLabel}
             </Button>
-            <Button type="submit" variant="destructive" className="h-11" disabled={pending || !reason.trim()}>
+            <Button type="submit" variant="destructive" className="h-11" disabled={pending}>
               {pending ? "Working…" : confirmLabel}
             </Button>
           </DialogFooter>

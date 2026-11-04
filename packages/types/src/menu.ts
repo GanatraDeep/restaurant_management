@@ -55,6 +55,8 @@ export const menuItemSchema = z.object({
   barcode: z.string().optional(),
   isActive: z.boolean().default(true),
   isFavorite: z.boolean().default(false),
+  // false = served from the counter (water, soft drinks): never on a KOT.
+  sendToKitchen: z.boolean().default(true),
   modifierGroupIds: z.array(z.string()).default([]),
 });
 export type MenuItemDto = z.infer<typeof menuItemSchema>;

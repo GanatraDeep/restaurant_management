@@ -48,7 +48,7 @@ export function CancelOrderDialog({
     cancel.mutate(
       {
         orderId,
-        reason: reason.trim(),
+        reason: reason.trim() || undefined,
         source: byGuest ? "CUSTOMER" : "STAFF",
         confirmStarted: startedWarning ? true : undefined,
       },
@@ -92,13 +92,12 @@ export function CancelOrderDialog({
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <Label htmlFor="cancel-reason">Reason</Label>
+            <Label htmlFor="cancel-reason">Reason (optional)</Label>
             <Input
               id="cancel-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={200}
-              required
               autoFocus
               placeholder="Why is this order cancelled?"
             />
@@ -137,7 +136,7 @@ export function CancelOrderDialog({
               type="submit"
               variant="destructive"
               className="h-11"
-              disabled={cancel.isPending || reason.trim().length === 0}
+              disabled={cancel.isPending}
             >
               {cancel.isPending ? "Cancelling…" : startedWarning ? "Cancel anyway" : "Cancel order"}
             </Button>

@@ -7,7 +7,6 @@ import { ResponsiveTabs } from "@/components/ui/nav-picker";
 import { QueryError } from "@/components/ui/query-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Floor, RestaurantTable } from "@/hooks/use-tables";
-import { Button } from "@/components/ui/button";
 import { TABLE_DISPLAY, tableDisplayOf } from "@/lib/table-colors";
 import { cn } from "@/lib/utils";
 import { TableLegend } from "@/components/tables/table-legend";
@@ -111,7 +110,7 @@ export function PosTablePicker({
                 {floor.name}
               </h3>
             )}
-            <div className="grid auto-rows-min grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] items-start gap-2 lg:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))]">
+            <div className="grid auto-rows-min grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] items-start gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))]">
               {[...floor.tables]
                 .sort((a, b) =>
                   a.number.localeCompare(b.number, undefined, {
@@ -124,21 +123,27 @@ export function PosTablePicker({
                     table.status !== "OUT_OF_SERVICE";
                   const occupied = table.status === "OCCUPIED";
                   return (
-                    <div key={table.id} className="flex flex-col gap-1.5">
+                    // Square tiles; KOT / Bill shortcuts sit inside the tile's bottom edge.
+                    <div
+                      key={table.id}
+                      className={cn(
+                        "relative aspect-square w-full overflow-hidden rounded-xl border-2 shadow-sm transition-transform",
+                        clickable && "hover:scale-[1.03] hover:shadow-md",
+                        TABLE_DISPLAY[tableDisplayOf(table)].tile,
+                      )}
+                    >
                       <button
                         type="button"
                         disabled={!clickable}
                         title={TABLE_DISPLAY[tableDisplayOf(table)].hint}
                         onClick={() => onSelect(table)}
                         className={cn(
-                          "flex h-16 w-full flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-1.5 text-xs font-medium shadow-sm transition-transform",
-                          clickable &&
-                            "cursor-pointer hover:scale-[1.03] hover:shadow-md",
-                          !clickable && "cursor-not-allowed",
-                          TABLE_DISPLAY[tableDisplayOf(table)].tile,
+                          "absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-1.5 text-xs font-medium",
+                          occupied && (onPrintKot || onViewBill) && "pb-7",
+                          clickable ? "cursor-pointer" : "cursor-not-allowed",
                         )}
                       >
-                        <span className="max-w-full truncate text-base font-semibold leading-tight">
+                        <span className="max-w-full truncate text-lg font-semibold leading-tight">
                           {table.name ??
                             (/^\d/.test(table.number)
                               ? `T${table.number}`
@@ -160,31 +165,28 @@ export function PosTablePicker({
                         </span>
                       </button>
                       {occupied && (onPrintKot || onViewBill) && (
-                        <div className="grid grid-cols-2 gap-1">
+                        <div className="absolute inset-x-1 bottom-1 flex justify-center gap-1">
                           {onPrintKot && (
-                            <Button
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 gap-1 px-1 text-[11px]"
+                              className="flex h-6 flex-1 items-center justify-center gap-0.5 rounded-md bg-background/90 text-[10px] font-medium text-foreground shadow-sm hover:bg-background"
                               title="Print KOT"
+                              aria-label={`Print KOT for ${table.name ?? table.number}`}
                               onClick={() => onPrintKot(table)}
                             >
-                              <ChefHat className="h-3.5 w-3.5 shrink-0" /> KOT
-                            </Button>
+                              <ChefHat className="h-3 w-3 shrink-0" /> KOT
+                            </button>
                           )}
                           {onViewBill && (
-                            <Button
+                            <button
                               type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 gap-1 px-1 text-[11px]"
+                              className="flex h-6 flex-1 items-center justify-center gap-0.5 rounded-md bg-background/90 text-[10px] font-medium text-foreground shadow-sm hover:bg-background"
                               title="View bill"
+                              aria-label={`View bill for ${table.name ?? table.number}`}
                               onClick={() => onViewBill(table)}
                             >
-                              <ClipboardList className="h-3.5 w-3.5 shrink-0" />{" "}
-                              Bill
-                            </Button>
+                              <ClipboardList className="h-3 w-3 shrink-0" /> Bill
+                            </button>
                           )}
                         </div>
                       )}

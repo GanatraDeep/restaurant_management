@@ -249,7 +249,7 @@ export function useAcceptOrder(branchId: string | null) {
 export function useRejectOrder(branchId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, reason }: { orderId: string; reason: string }) =>
+    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) =>
       api.post(`/orders/${orderId}/reject?branchId=${branchId}`, { reason }),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
@@ -322,7 +322,7 @@ export function useCancelOrder(branchId: string | null) {
       confirmStarted,
     }: {
       orderId: string;
-      reason: string;
+      reason?: string;
       source?: "STAFF" | "CUSTOMER";
       confirmStarted?: boolean;
     }) => api.post<CreatedOrder>(`/orders/${orderId}/cancel?branchId=${branchId}`, { reason, source, confirmStarted }),
@@ -351,7 +351,7 @@ export function useUpdateOrderItem(branchId: string | null) {
 export function useRemoveOrderItem(branchId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, itemId, reason }: { orderId: string; itemId: string; reason: string }) =>
+    mutationFn: ({ orderId, itemId, reason }: { orderId: string; itemId: string; reason?: string }) =>
       api.post<OrderDetail>(`/orders/${orderId}/items/${itemId}/remove?branchId=${branchId}`, { reason }),
     onSuccess: () => invalidateBillViews(queryClient, branchId),
   });

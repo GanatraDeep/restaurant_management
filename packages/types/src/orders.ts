@@ -260,12 +260,12 @@ export const updateOrderItemSchema = z.object({
 export type UpdateOrderItemDto = z.infer<typeof updateOrderItemSchema>;
 
 export const removeOrderItemSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required").max(200),
+  reason: z.string().trim().max(200).optional(),
 });
 export type RemoveOrderItemDto = z.infer<typeof removeOrderItemSchema>;
 
 export const cancelOrderSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required").max(200),
+  reason: z.string().trim().max(200).optional(),
   // Required to cancel once the kitchen has started cooking: an explicit
   // acknowledgement that food is already in progress.
   confirmStarted: z.boolean().optional(),
@@ -283,14 +283,14 @@ export const kotItemStatusUpdateSchema = z.object({
 export type KotItemStatusUpdateDto = z.infer<typeof kotItemStatusUpdateSchema>;
 
 export const rejectKotSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required").max(200),
+  reason: z.string().trim().max(200).optional(),
   // Needed once the kitchen has started cooking the ticket.
   confirmStarted: z.boolean().optional(),
 });
 export type RejectKotDto = z.infer<typeof rejectKotSchema>;
 
 export const rejectOrderSchema = z.object({
-  reason: z.string().trim().min(1, "A reason is required").max(200),
+  reason: z.string().trim().max(200).optional(),
 });
 export type RejectOrderDto = z.infer<typeof rejectOrderSchema>;
 

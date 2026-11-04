@@ -46,6 +46,7 @@ export function AddItemDialog({
   const [halfPrice, setHalfPrice] = useState("");
   const [taxRatePercent, setTaxRatePercent] = useState("5");
   const [isVeg, setIsVeg] = useState(true);
+  const [sendToKitchen, setSendToKitchen] = useState(true);
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,6 +65,7 @@ export function AddItemDialog({
     setPrice("");
     setTaxRatePercent("5");
     setIsVeg(true);
+    setSendToKitchen(true);
     setImageUrl(undefined);
     setImagePreview(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -105,6 +107,7 @@ export function AddItemDialog({
         allergens: [],
         isActive: true,
         isFavorite: false,
+        sendToKitchen,
         modifierGroupIds: [],
         imageUrl,
       },
@@ -276,6 +279,18 @@ export function AddItemDialog({
               Vegetarian
             </Label>
             <Switch id="is-veg" checked={isVeg} onCheckedChange={setIsVeg} />
+          </div>
+
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
+            <div>
+              <Label htmlFor="send-kot" className="cursor-pointer">
+                Send to kitchen (KOT)
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Turn off for items given straight from the counter, like cold drinks or water bottles.
+              </p>
+            </div>
+            <Switch id="send-kot" checked={sendToKitchen} onCheckedChange={setSendToKitchen} />
           </div>
 
           <DialogFooter>

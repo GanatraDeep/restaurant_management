@@ -159,7 +159,7 @@ export function EditBillDialog({
                         onSubmit={(e) => {
                           e.preventDefault();
                           removeItem.mutate(
-                            { orderId, itemId: item.id, reason: reason.trim() },
+                            { orderId, itemId: item.id, reason: reason.trim() || undefined },
                             {
                               onSuccess: () => {
                                 toast.success(`${item.nameSnapshot} removed from the bill`);
@@ -171,14 +171,13 @@ export function EditBillDialog({
                         }}
                       >
                         <Label htmlFor={`rm-${item.id}`} className="text-xs">
-                          Remove {item.quantity}× {item.nameSnapshot}? Reason
+                          Remove {item.quantity}× {item.nameSnapshot}? Reason (optional)
                         </Label>
                         <Input
                           id={`rm-${item.id}`}
                           value={reason}
                           onChange={(e) => setReason(e.target.value)}
                           maxLength={200}
-                          required
                           autoFocus
                           placeholder="e.g. guest changed their mind"
                         />
@@ -190,7 +189,7 @@ export function EditBillDialog({
                             type="submit"
                             size="sm"
                             variant="destructive"
-                            disabled={removeItem.isPending || reason.trim().length === 0}
+                            disabled={removeItem.isPending}
                           >
                             {removeItem.isPending ? "Removing…" : "Remove item"}
                           </Button>

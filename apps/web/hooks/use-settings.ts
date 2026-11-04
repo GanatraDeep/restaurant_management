@@ -18,6 +18,7 @@ export interface RestaurantSettings {
   timezone: string;
   upiVpa: string | null;
   upiPayeeName: string | null;
+  receiptFooter: string | null;
   loyaltyPointValue: string;
   loyaltyEarnPerCurrency: number;
 }

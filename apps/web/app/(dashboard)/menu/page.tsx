@@ -274,6 +274,11 @@ export default function MenuPage() {
                         {item.isVeg && <Leaf className="h-3.5 w-3.5 shrink-0 text-success" />}
                         <span className="min-w-0 break-words">{item.name}</span>
                         {favouriteButton(item)}
+                        {item.sendToKitchen === false && (
+                          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-medium" title="Not printed on the KOT — served from the counter">
+                            No KOT
+                          </Badge>
+                        )}
                       </p>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {item.category.name}
@@ -343,6 +348,11 @@ export default function MenuPage() {
                         {item.isVeg && <Leaf className="h-3.5 w-3.5 shrink-0 text-success" />}
                         {item.name}
                         {favouriteButton(item)}
+                        {item.sendToKitchen === false && (
+                          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-medium" title="Not printed on the KOT — served from the counter">
+                            No KOT
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{item.category.name}</TableCell>

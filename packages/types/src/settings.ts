@@ -23,6 +23,8 @@ export const restaurantSettingsSchema = z.object({
     .optional()
     .nullable(),
   upiPayeeName: z.string().trim().max(60).optional().nullable(),
+  // Last line printed on every bill.
+  receiptFooter: z.string().trim().max(120).optional().nullable(),
   loyaltyPointValue: z.coerce.number().min(0).optional(),
   loyaltyEarnPerCurrency: z.coerce.number().int().positive().optional(),
 });
