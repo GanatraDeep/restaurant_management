@@ -17,18 +17,21 @@ export function LiveStatus() {
   const [muted, toggleMute] = useNotificationMute();
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    // Phones: "contents" lets these join the page's control row, so Sound and
+    // Auto-print share one line and the one-time sound prompt goes last
+    // (it vanishes on the first tap; nothing else may move when it does).
+    <div className="flex flex-col items-end gap-2 max-sm:contents">
       {state === "offline" && (
-        <p role="status" className="flex items-center gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+        <p role="status" className="flex items-center gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning max-sm:basis-full">
           <WifiOff className="h-4 w-4 shrink-0" aria-hidden />
           Reconnecting — tickets still refresh every few seconds.
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 max-sm:contents">
         {!muted && !unlocked && (
           <Button
             type="button"
-            className="h-11"
+            className="h-11 max-sm:order-last max-sm:basis-full"
             onClick={() => {
               void unlockAudio().then((ok) => ok && playNotificationFeedback());
             }}

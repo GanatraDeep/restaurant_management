@@ -34,6 +34,8 @@ export interface PublicMenuResponse {
   logoUrl: string | null;
   branchName: string;
   tableName: string;
+  /** TAKEAWAY: the counter QR (no table, no waiter / bill buttons). */
+  mode?: "TABLE" | "TAKEAWAY";
   otpEnabled: boolean;
   payFirst: boolean;
   upi: { vpa: string; payeeName: string } | null;
@@ -49,6 +51,8 @@ export interface PublicStatus {
     payFirst: boolean;
     guestPaidAt: string | null;
     amountDue: number | null;
+    /** Token system: the number the counter will call. */
+    token?: number | null;
     items: { id: string; nameSnapshot: string; quantity: number; status: string }[];
   } | null;
   openRequests: ("WAITER" | "BILL")[];

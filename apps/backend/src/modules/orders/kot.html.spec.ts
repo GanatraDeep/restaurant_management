@@ -86,3 +86,63 @@ describe('daily KOT numbering', () => {
     ).toBe('2026-11-02T00:00:00.000Z');
   });
 });
+
+describe('token system', () => {
+  const order = {
+    orderNumber: '20261116-0007',
+    type: 'TAKEAWAY',
+    createdAt: new Date('2026-11-16T14:19:00Z'),
+    table: null,
+    customer: null,
+    items: [
+      {
+        nameSnapshot: 'Patodi (Butter)',
+        quantity: 1,
+        kitchenNote: null,
+        modifiers: [],
+      },
+    ],
+  };
+
+  it('stamps the token and adds the guest slip as a second page', () => {
+    const html = buildKotHtml({
+      branchName: 'Main',
+      order,
+      token: 7,
+      tokenSlip: { restaurantName: 'Shree Sai Omelet Center' },
+    });
+    expect(html).toContain('<div class="token">TOKEN<b>7</b></div>');
+    expect(html).toContain('<div class="slip">');
+    expect(html).toContain('<p class="num">7</p>');
+    expect(html).toContain('Shree Sai Omelet Center');
+  });
+
+  it('prints neither when the token system is off', () => {
+    const html = buildKotHtml({ branchName: 'Main', order });
+    expect(html).not.toContain('class="token"');
+    expect(html).not.toContain('class="slip"');
+  });
+});
+
+describe('58 mm paper', () => {
+  it('narrows the page and shrinks the type', () => {
+    const { fitPaper } =
+      jest.requireActual<typeof import('./paper')>('./paper');
+    const html = buildKotHtml({
+      branchName: 'Main',
+      order: {
+        orderNumber: '1',
+        type: 'DINE_IN',
+        createdAt: new Date(),
+        table: { label: 'T1' },
+        customer: null,
+        items: [],
+      },
+    });
+    const small = fitPaper(html, 58);
+    expect(small).toContain('@page { size: 58mm auto;');
+    expect(small).toContain('width: 48mm');
+    expect(small).not.toContain('80mm');
+    expect(fitPaper(html, 80)).toBe(html);
+  });
+});

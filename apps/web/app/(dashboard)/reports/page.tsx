@@ -12,6 +12,7 @@ import { useBranch } from "@/hooks/use-branch";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { SchedulesPanel } from "@/components/reports/schedules-panel";
+import { ReportChart } from "@/components/reports/report-chart";
 
 interface CatalogEntry {
   key: string;
@@ -25,7 +26,9 @@ interface ReportResult {
   rows: (string | number | null)[][];
 }
 
-const iso = (d: Date) => d.toISOString().slice(0, 10);
+// The device's own calendar day (toISOString is UTC: in India it says
+// "yesterday" until 05:30, hiding today's sales from the default range).
+const iso = (d: Date) => d.toLocaleDateString("en-CA");
 
 export default function ReportsPage() {
   const { branchId } = useBranch();
@@ -58,7 +61,7 @@ export default function ReportsPage() {
         <p className="text-sm text-muted-foreground">Filter by date, print, export to Excel, PDF or CSV, or email on a schedule</p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[220px_1fr] print:block">
         {/* Phones / tablets: one compact picker instead of a 20-item list
             that pushes the report itself below the fold. */}
         <label className="flex flex-col gap-1.5 lg:hidden print:hidden">
@@ -124,7 +127,7 @@ export default function ReportsPage() {
               ))}
           </div>
 
-          <Card className="p-4">
+          <Card className="p-4 print:border-0 print:p-0 print:shadow-none">
             <h2 className="mb-3 text-lg font-semibold text-foreground">{data?.title ?? catalog?.find((c) => c.key === key)?.title}</h2>
             <p className="mb-3 hidden text-xs text-muted-foreground print:block">
               {range.from} to {range.to}
@@ -134,6 +137,8 @@ export default function ReportsPage() {
             ) : error ? (
               <p className="text-sm text-destructive">{error instanceof ApiError ? error.message : "Could not load report"}</p>
             ) : data && data.rows.length > 0 ? (
+              <>
+              <ReportChart reportKey={key} columns={data.columns} rows={data.rows} />
               <div className="-mx-4 overflow-x-auto px-4">
               <table className="w-full text-sm">
                 <thead className="text-left text-xs text-muted-foreground">
@@ -154,17 +159,20 @@ export default function ReportsPage() {
                 </tbody>
               </table>
               </div>
+              </>
             ) : (
               <p className="py-8 text-center text-sm text-muted-foreground">No data for this period.</p>
             )}
           </Card>
 
           {canExport && (
+            <div className="print:hidden">
             <SchedulesPanel
               branchId={branchId}
               reportKey={key}
               titles={Object.fromEntries((catalog ?? []).map((c) => [c.key, c.title]))}
             />
+            </div>
           )}
         </div>
       </div>

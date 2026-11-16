@@ -1,3 +1,4 @@
+import { fitPaper, paperOf } from '../orders/paper';
 import {
   BadRequestException,
   Body,
@@ -193,7 +194,13 @@ export class KdsController {
     @Res() res: Response,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
-    res.type('html').send(await this.kdsService.ticketHtml(branchId, id));
+    res.type('html').send(
+      // ?paper=58 from the device's printing setting.
+      fitPaper(
+        await this.kdsService.ticketHtml(branchId, id),
+        paperOf(res.req.query.paper),
+      ),
+    );
   }
 
   // --- Auto-print (a per-device switch, on whichever screen has the printer).
@@ -234,7 +241,13 @@ export class KdsController {
     @Res() res: Response,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
-    res.type('html').send(await this.kdsService.ticketHtml(branchId, id, true));
+    res.type('html').send(
+      // ?paper=58 from the device's printing setting.
+      fitPaper(
+        await this.kdsService.ticketHtml(branchId, id, true),
+        paperOf(res.req.query.paper),
+      ),
+    );
   }
 
   // First print of a ticket (409 ALREADY_PRINTED if it already went out).

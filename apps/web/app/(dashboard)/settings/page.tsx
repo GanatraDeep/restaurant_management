@@ -73,6 +73,8 @@ export default function SettingsPage() {
 
       <NotificationSettingsCard />
 
+      {data && <TokenCard key={`token-${data.branch.id}`} branchId={branchId} enabled={data.branch.tokenEnabled} />}
+
       <PrintingCard />
     </div>
   );
@@ -146,6 +148,38 @@ function OnlineOrdersCard({
           checked={branch.qrPayFirst}
           disabled={update.isPending || (!hasUpi && !branch.qrPayFirst)}
           onCheckedChange={(v) => save({ qrPayFirst: v })}
+        />
+      </div>
+    </Card>
+  );
+}
+
+/** Token restaurants: a number per order, called out when the food is ready. */
+function TokenCard({ branchId, enabled }: { branchId: string | null; enabled: boolean }) {
+  const update = useUpdateBranchSettings(branchId);
+  return (
+    <Card className="flex flex-col gap-4 p-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-0.5">
+          <h2 className="text-[18px] font-medium text-foreground">Token system</h2>
+          <p className="text-sm text-muted-foreground">
+            Every order gets a token number for the day (1, 2, 3…). It is printed large on the KOT and the bill, and a
+            token slip for the guest prints together with the order&rsquo;s first KOT.
+          </p>
+        </div>
+        <Switch
+          aria-label="Token system"
+          checked={enabled}
+          disabled={update.isPending}
+          onCheckedChange={(v) =>
+            update.mutate(
+              { tokenEnabled: v },
+              {
+                onSuccess: () => toast.success(v ? "Token system on" : "Token system off"),
+                onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
+              },
+            )
+          }
         />
       </div>
     </Card>

@@ -12,7 +12,12 @@ import {
   parseNumber,
   safeCell,
 } from '../../common/sheets';
-import { brandFonts } from '../../common/pdf-fonts';
+import {
+  brandFonts,
+  mixedFonts,
+  mixedHeight,
+  mixedText,
+} from '../../common/pdf-fonts';
 
 export type SpiceLevel = 'NONE' | 'MILD' | 'MEDIUM' | 'HOT' | 'EXTRA_HOT';
 
@@ -731,7 +736,10 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const { regular, bold, rupee } = brandFonts(doc);
+    const { rupee } = brandFonts(doc);
+    // Menus are often written in Gujarati / Hindi: those runs get Noto fonts.
+    const fonts = mixedFonts(doc);
+    const { regular } = fonts;
     const symbol =
       input.currency === 'INR' ? (rupee ? '₹' : 'Rs. ') : `${input.currency} `;
     const money = (n: number) =>
@@ -754,21 +762,23 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
         // Unsupported image type (pdfkit reads PNG/JPEG only) — header without it.
       }
     }
-    doc
-      .font(bold)
-      .fontSize(22)
-      .fillColor('#111111')
-      .text(input.restaurantName, left, y, { width, align: 'center' });
+    doc.fontSize(22).fillColor('#111111');
+    mixedText(doc, fonts, input.restaurantName, left, y, {
+      width,
+      align: 'center',
+      bold: true,
+    });
     const sub = [input.address, input.phone].filter(Boolean).join('  ·  ');
-    if (sub)
-      doc
-        .font(regular)
-        .fontSize(9)
-        .fillColor('#666666')
-        .text(sub, { width, align: 'center' });
+    if (sub) {
+      doc.fontSize(9).fillColor('#666666');
+      mixedText(doc, fonts, sub, left, doc.y, {
+        width,
+        align: 'center',
+      });
+    }
     doc.moveDown(0.4);
     doc
-      .font(bold)
+      .font(fonts.bold)
       .fontSize(10)
       .fillColor(ACCENT)
       .text('MENU', { width, align: 'center', characterSpacing: 3 });
@@ -787,14 +797,12 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
     for (const cat of input.categories) {
       if (!cat.items.length) continue;
       if (doc.y > bottom() - 60) doc.addPage();
-      doc
-        .font(bold)
-        .fontSize(13)
-        .fillColor(ACCENT)
-        .text(cat.name.toUpperCase(), left, doc.y, {
-          width,
-          characterSpacing: 1,
-        });
+      doc.fontSize(13).fillColor(ACCENT);
+      mixedText(doc, fonts, cat.name.toUpperCase(), left, doc.y, {
+        width,
+        characterSpacing: 1,
+        bold: true,
+      });
       const lineY = doc.y + 2;
       doc
         .moveTo(left, lineY)
@@ -816,45 +824,50 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
           : it.halfPrice != null
             ? `${money(it.halfPrice)} / ${money(it.price)}`
             : money(it.price);
-        doc.font(bold).fontSize(10.5);
+        doc.font(fonts.bold).fontSize(10.5);
         const priceW = doc.widthOfString(priceText) + 4;
         const nameW = width - 16 - priceW - 12;
-        const nameH = doc.heightOfString(it.name, { width: nameW });
-        doc.font(regular).fontSize(8.5);
+        const nameH = mixedHeight(doc, fonts, it.name, {
+          width: nameW,
+          bold: true,
+        });
+        doc.fontSize(8.5);
         const descH =
           (it.description
-            ? doc.heightOfString(it.description, { width: nameW }) + 2
+            ? mixedHeight(doc, fonts, it.description, { width: nameW }) + 2
             : 0) +
           (variantLine
-            ? doc.heightOfString(variantLine, { width: width - 16 }) + 2
+            ? mixedHeight(doc, fonts, variantLine, {
+                width: width - 16,
+                bold: true,
+              }) + 2
             : 0);
         if (doc.y + nameH + descH > bottom()) doc.addPage();
 
         const top = doc.y;
         vegMark(left, top + 2.5, it.isVeg);
-        doc
-          .font(bold)
-          .fontSize(10.5)
-          .fillColor('#111111')
-          .text(it.name, left + 16, top, { width: nameW });
-        doc.text(priceText, left + width - priceW, top, {
+        doc.fontSize(10.5).fillColor('#111111');
+        mixedText(doc, fonts, it.name, left + 16, top, {
+          width: nameW,
+          bold: true,
+        });
+        doc.font(fonts.bold).text(priceText, left + width - priceW, top, {
           width: priceW,
           align: 'right',
         });
         doc.y = top + nameH;
         if (variantLine) {
-          doc
-            .font(bold)
-            .fontSize(8.5)
-            .fillColor('#333333')
-            .text(variantLine, left + 16, doc.y + 1, { width: width - 16 });
+          doc.fontSize(8.5).fillColor('#333333');
+          mixedText(doc, fonts, variantLine, left + 16, doc.y + 1, {
+            width: width - 16,
+            bold: true,
+          });
         }
         if (it.description) {
-          doc
-            .font(regular)
-            .fontSize(8.5)
-            .fillColor('#666666')
-            .text(it.description, left + 16, doc.y + 1, { width: nameW });
+          doc.fontSize(8.5).fillColor('#666666');
+          mixedText(doc, fonts, it.description, left + 16, doc.y + 1, {
+            width: nameW,
+          });
         }
         doc.y += 7;
       }

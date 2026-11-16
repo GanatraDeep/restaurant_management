@@ -37,6 +37,7 @@ export interface BranchSettings {
   autoConfirmOrders: boolean;
   autoConfirmReservations: boolean;
   qrPayFirst: boolean;
+  tokenEnabled: boolean;
   kioskToken: string | null;
   kioskDineInEnabled: boolean;
   kioskTakeawayEnabled: boolean;
@@ -56,6 +57,16 @@ export function useSettings(branchId: string | null) {
         `/settings?branchId=${branchId}`,
       ),
     enabled: !!branchId,
+  });
+}
+
+/** Branch switches every staff member's screens follow (GET /settings needs settings.manage). */
+export function useBranchFeatures(branchId: string | null) {
+  return useQuery({
+    queryKey: ["settings", "features", branchId],
+    queryFn: () => api.get<{ tokenEnabled: boolean }>(`/settings/features?branchId=${branchId}`),
+    enabled: !!branchId,
+    staleTime: 60_000,
   });
 }
 
@@ -91,7 +102,7 @@ export function useUpdateBranchSettings(branchId: string | null) {
   return useMutation({
     mutationFn: (dto: BranchSettingsDto) =>
       api.patch(`/settings/branch?branchId=${branchId}`, dto),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings", branchId] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
   });
 }
 

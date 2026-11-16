@@ -12,6 +12,8 @@ export interface QrTable {
   floor: string;
   seats: number;
   url: string;
+  /** The branch's takeaway QR: pick-up wording, no seat count. */
+  takeaway?: boolean;
 }
 
 export interface QrPdfInput {
@@ -280,7 +282,9 @@ export function buildTableQrPdf(input: QrPdfInput): Promise<Buffer> {
         '#333',
       );
       center(
-        `Your order comes straight to ${t.label}.`,
+        t.takeaway
+          ? 'Order and pay here, then collect it at the counter.'
+          : `Your order comes straight to ${t.label}.`,
         regular,
         8 * k,
         '#333',
@@ -307,11 +311,16 @@ export function buildTableQrPdf(input: QrPdfInput): Promise<Buffer> {
         .font(regular)
         .fontSize(7 * k)
         .fillColor('#777')
-        .text(`Seats ${t.seats}`, x + pad + iw * 0.6, footY + k, {
-          width: iw * 0.4,
-          align: 'right',
-          lineBreak: false,
-        });
+        .text(
+          t.takeaway ? '' : `Seats ${t.seats}`,
+          x + pad + iw * 0.6,
+          footY + k,
+          {
+            width: iw * 0.4,
+            align: 'right',
+            lineBreak: false,
+          },
+        );
     }
   });
 }

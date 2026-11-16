@@ -26,6 +26,7 @@ export const REPORT_CATALOG = [
   { key: 'payment-methods', title: 'Payment methods', group: 'Sales' },
   { key: 'discounts', title: 'Discounts & coupons', group: 'Sales' },
   { key: 'tax', title: 'Tax (GST) summary', group: 'Tax' },
+  { key: 'sales-by-hour', title: 'Sales by hour', group: 'Analytics' },
   { key: 'peak-hours', title: 'Peak hours', group: 'Analytics' },
   { key: 'food-cost', title: 'Food cost & margins', group: 'Analytics' },
   { key: 'customers', title: 'Top customers', group: 'Customers' },
@@ -55,6 +56,7 @@ export const SALES_REPORT_KEYS: ReadonlySet<string> = new Set([
   'discounts',
   'tax',
   'peak-hours',
+  'sales-by-hour',
   'food-cost',
   'customers',
   'retention',
@@ -311,6 +313,40 @@ export class ReportsService {
               round2(g.totalTaxable + g.totalTax),
             ],
           ],
+        );
+      }
+
+      // Every hour of the day across the chosen dates: when the money comes
+      // in. Hours with no sales between the first and last busy hour show 0,
+      // so the shape of the day reads straight down the table.
+      case 'sales-by-hour': {
+        const orders = await this.prisma.order.findMany({
+          where: { branchId, status: 'PAID', billedAt: range },
+          select: { createdAt: true, totalAmount: true, tipAmount: true },
+        });
+        const hours = Array.from({ length: 24 }, () => ({ n: 0, sales: 0 }));
+        for (const o of orders) {
+          const { minute } = localMinuteAndDay(o.createdAt, tz);
+          const h = hours[Math.floor(minute / 60)];
+          h.n++;
+          h.sales += Number(o.totalAmount) - Number(o.tipAmount);
+        }
+        const busy = hours.flatMap((h, i) => (h.n ? [i] : []));
+        const first = busy[0] ?? 0;
+        const last = busy[busy.length - 1] ?? -1;
+        const label = (h: number) =>
+          `${String(h).padStart(2, '0')}:00–${String((h + 1) % 24).padStart(2, '0')}:00`;
+        return out(
+          ['Hour', 'Orders', 'Sales (excl. tips)', 'Avg order'],
+          hours
+            .map((h, i) => ({ ...h, i }))
+            .filter((h) => h.i >= first && h.i <= last)
+            .map((h) => [
+              label(h.i),
+              h.n,
+              round2(h.sales),
+              h.n ? round2(h.sales / h.n) : 0,
+            ]),
         );
       }
 

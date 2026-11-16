@@ -13,7 +13,9 @@ import { NAV_ITEMS } from "./nav-items";
 // The screens staff jump between all shift long, in priority order. Whatever
 // the signed-in role can't open is skipped, so a kitchen-only login still gets
 // a full bar. Everything else lives behind "More" (the existing drawer).
-const PRIMARY_HREFS = ["/pos", "/orders", "/tables", "/kds", "/dashboard"];
+// Point of Sale — where orders are taken — sits raised in the centre.
+const CENTRE_HREF = "/pos";
+const SIDE_HREFS = ["/orders", "/tables", "/kds", "/dashboard"];
 const PRIMARY_COUNT = 4;
 
 // Thumb-reach navigation for phones. Hidden from lg up, where the sidebar takes over.
@@ -31,9 +33,12 @@ export function MobileBottomNav({
   const allowed = NAV_ITEMS.filter(
     (item) => !item.permission || hasPermission(user, item.permission),
   );
-  const primary = PRIMARY_HREFS.map((href) => allowed.find((i) => i.href === href))
+  const centre = allowed.find((i) => i.href === CENTRE_HREF);
+  const sides = SIDE_HREFS.map((href) => allowed.find((i) => i.href === href))
     .filter((i): i is (typeof allowed)[number] => !!i)
-    .slice(0, PRIMARY_COUNT);
+    .slice(0, centre ? PRIMARY_COUNT - 1 : PRIMARY_COUNT);
+  // [side, side, POS, side, More]: POS lands in the middle of the five.
+  const primary = centre ? [...sides.slice(0, 2), centre, ...sides.slice(2)] : sides;
 
   const itemClass =
     "relative flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors";
@@ -41,11 +46,33 @@ export function MobileBottomNav({
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 flex print:hidden border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
     >
       {primary.map((item) => {
         const isActive = pathname?.startsWith(item.href);
         const Icon = item.icon;
+        if (item.href === CENTRE_HREF) {
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              aria-label={t(item.labelKey)}
+              className={cn(itemClass, "h-16")}
+            >
+              <span
+                className={cn(
+                  "-mt-6 flex h-14 w-14 items-center justify-center rounded-full border-4 border-background text-primary-foreground shadow-lg transition-transform active:scale-95",
+                  isActive ? "bg-primary" : "bg-primary/90",
+                )}
+                style={{ backgroundImage: "var(--gradient-primary)" }}
+              >
+                <Icon className="h-6 w-6" strokeWidth={2.25} />
+              </span>
+              <span className={cn("max-w-full truncate px-1", isActive ? "text-primary" : "text-muted-foreground")}>POS</span>
+            </Link>
+          );
+        }
         return (
           <Link
             key={item.href}

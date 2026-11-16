@@ -98,8 +98,12 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
 
   // Live status of the table's tab, faster while a payment is being checked.
   const { data: status } = useQuery({
-    queryKey: ["public-status", qrToken],
-    queryFn: () => api.get<PublicStatus>(`/public/menu/${qrToken}/status`),
+    // The takeaway QR is shared, so guests pass their sign-in to see their own order.
+    queryKey: ["public-status", qrToken, session?.token ?? null],
+    queryFn: () =>
+      api.get<PublicStatus>(
+        `/public/menu/${qrToken}/status${session?.token ? `?guestToken=${encodeURIComponent(session.token)}` : ""}`,
+      ),
     refetchInterval: (q) => (q.state.data?.order?.payFirst && q.state.data.order.acceptance === "PENDING" ? 4000 : 8000),
     enabled: !!data,
   });
@@ -181,6 +185,12 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
         <p className="text-sm text-muted-foreground">
           {t("order.thanksMessage", { branch: data?.restaurantName ?? data?.branchName ?? t("order.theKitchen") })}
         </p>
+        {status?.order?.token && status.order.orderNumber === placed.orderNumber && (
+          <div className="rounded-2xl border-2 border-foreground px-6 py-3">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your token</p>
+            <p className="text-5xl font-bold tabular-nums text-foreground">{status.order.token}</p>
+          </div>
+        )}
         <p className="text-xs text-muted-foreground">
           {status?.order?.acceptance === "PENDING"
             ? `Order #${placed.orderNumber} · waiting for the restaurant to confirm`
@@ -255,6 +265,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
               <details className="group rounded-2xl border border-border p-4" open={order.items.length <= 4}>
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground">
                   <span>
+                    {order.token ? <span className="mr-1.5 rounded-md bg-foreground px-1.5 py-0.5 text-background">Token {order.token}</span> : null}
                     Your order #{order.orderNumber}
                     {order.acceptance === "PENDING" && <span className="font-normal text-muted-foreground"> — waiting for the restaurant to confirm</span>}
                   </span>
@@ -277,6 +288,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
 
         <GuestMenu categories={data.categories} quantityOf={quantityOf} onAdd={handleAdd} onRemove={removeOne} />
 
+        {data.mode !== "TAKEAWAY" && (
         <section className="mt-8 flex gap-3">
           <Button
             variant="outline"
@@ -299,6 +311,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
             </Button>
           )}
         </section>
+        )}
         <p className="py-6 text-center text-xs text-muted-foreground">{t("order.pricesIncludeTax")}</p>
       </main>
 

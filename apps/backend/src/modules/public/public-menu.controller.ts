@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, UsePipes } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UsePipes,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import {
@@ -67,9 +75,14 @@ export class PublicMenuController {
     return this.publicMenuService.markPaid(qrToken, guestToken, reference);
   }
 
+  // The takeaway QR is shared by every guest: they pass their sign-in token
+  // to see their own order (a table's status needs none).
   @Get('menu/:qrToken/status')
-  getStatus(@Param('qrToken') qrToken: string) {
-    return this.publicMenuService.getStatus(qrToken);
+  getStatus(
+    @Param('qrToken') qrToken: string,
+    @Query('guestToken') guestToken?: string,
+  ) {
+    return this.publicMenuService.getStatus(qrToken, guestToken);
   }
 
   @Throttle({ default: { limit: 6, ttl: 60_000 } })

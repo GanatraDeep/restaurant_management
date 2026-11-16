@@ -11,6 +11,7 @@ import { useAcceptIncoming, useAcceptPaidIncoming, useDeclineIncoming, type Inco
 import { ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { tokenOf } from "@/lib/token";
 
 const DECLINE_REASONS = ["Closing soon", "Out of stock", "Too busy", "Outside delivery area"];
 
@@ -21,7 +22,16 @@ function minutesSince(iso: string) {
 // An order that has come in but nobody has answered yet. It has no kitchen
 // ticket until it is accepted, so it lives here, above the ticket columns,
 // with a big Accept and a deliberate Decline.
-export function IncomingOrderCard({ order, branchId }: { order: IncomingOrder; branchId: string | null }) {
+export function IncomingOrderCard({
+  order,
+  branchId,
+  showToken = false,
+}: {
+  order: IncomingOrder;
+  branchId: string | null;
+  showToken?: boolean;
+}) {
+  const token = showToken ? tokenOf(order.orderNumber) : null;
   const accept = useAcceptIncoming(branchId);
   const acceptPaid = useAcceptPaidIncoming(branchId);
   const decline = useDeclineIncoming(branchId);
@@ -30,7 +40,7 @@ export function IncomingOrderCard({ order, branchId }: { order: IncomingOrder; b
   const who = order.guestName || order.customer?.name || null;
 
   return (
-    <Card className="flex w-[22rem] max-w-full shrink-0 flex-col gap-3 border-primary p-4 ring-2 ring-primary/30">
+    <Card className="flex w-[22rem] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col gap-3 border-primary p-4 ring-2 ring-primary/30">
       <StatusNote note={note} onClear={clear} />
       <ReasonDialog
         open={declineOpen}
@@ -44,13 +54,16 @@ export function IncomingOrderCard({ order, branchId }: { order: IncomingOrder; b
       />
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+          <p className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-foreground">
+            {token && (
+              <span className="rounded-md bg-foreground px-1.5 py-0.5 text-sm font-bold tabular-nums text-background">Token {token}</span>
+            )}
             #{order.orderNumber}
             {order.channel === "ONLINE" && <Globe className="h-3.5 w-3.5 text-muted-foreground" aria-label="Online order" />}
             <AggregatorBadge aggregator={order.aggregator} />
           </p>
           <p className="text-xs text-muted-foreground">
-            {order.table ? `Table ${order.table.number}` : order.type.replace("_", " ")}
+            {order.table ? `Table ${order.table.number}` : order.type === "TAKEAWAY" ? "Takeaway" : order.type === "DELIVERY" ? "Delivery" : order.type.replace("_", " ")}
             {who && ` · ${who}`}
             {order.customer?.phone && ` · ${order.customer.phone}`}
           </p>

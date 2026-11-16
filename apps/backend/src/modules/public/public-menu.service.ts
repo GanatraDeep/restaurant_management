@@ -9,6 +9,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { OrdersService } from '../orders/orders.service';
+import { tokenOf } from '../orders/token';
 import { GuestVerificationService } from './guest-verification.service';
 
 @Injectable()
@@ -22,7 +23,19 @@ export class PublicMenuService {
     private readonly config: ConfigService,
   ) {}
 
-  private async resolveTable(qrToken: string) {
+  private static readonly RESTAURANT_SELECT = {
+    name: true,
+    logoUrl: true,
+    upiVpa: true,
+    upiPayeeName: true,
+  } as const;
+
+  /**
+   * A guest QR is either a table's (orders land on that table) or the
+   * branch's takeaway QR (orders are takeaway, no table). Both are opaque
+   * tokens — never guessable ids.
+   */
+  private async resolveScan(qrToken: string) {
     const table = await this.prisma.table.findUnique({
       where: { qrToken },
       include: {
@@ -30,35 +43,45 @@ export class PublicMenuService {
           include: {
             branch: {
               include: {
-                restaurant: {
-                  select: {
-                    name: true,
-                    logoUrl: true,
-                    upiVpa: true,
-                    upiPayeeName: true,
-                  },
-                },
+                restaurant: { select: PublicMenuService.RESTAURANT_SELECT },
               },
             },
           },
         },
       },
     });
-    if (!table) throw new NotFoundException('This QR code is not recognized');
-    return table;
+    if (table) {
+      return {
+        branch: table.floor.branch,
+        table,
+        label: table.name ?? `Table ${table.number}`,
+      };
+    }
+    const branch = qrToken
+      ? await this.prisma.branch.findUnique({
+          where: { takeawayQrToken: qrToken },
+          include: {
+            restaurant: { select: PublicMenuService.RESTAURANT_SELECT },
+          },
+        })
+      : null;
+    if (branch) return { branch, table: null, label: 'Takeaway' };
+    throw new NotFoundException('This QR code is not recognized');
   }
 
   async getMenuByQrToken(qrToken: string) {
-    const table = await this.resolveTable(qrToken);
-    const branch = table.floor.branch;
+    const scan = await this.resolveScan(qrToken);
+    const { branch } = scan;
     const categories = await this.menuCategoriesForBranch(branch.id);
-    const payFirst = this.payFirst(table);
+    const payFirst = this.payFirst(scan);
     return {
       // The restaurant's own branding leads the guest page.
       restaurantName: branch.restaurant.name,
       logoUrl: branch.restaurant.logoUrl ?? null,
       branchName: branch.name,
-      tableName: table.name ?? `Table ${table.number}`,
+      tableName: scan.label,
+      // TAKEAWAY: the counter QR — no table, no waiter / bill buttons.
+      mode: scan.table ? ('TABLE' as const) : ('TAKEAWAY' as const),
       // Whether a new number gets a WhatsApp code (false when not set up).
       otpEnabled: !!(
         this.config.get<string>('WHATSAPP_API_URL') &&
@@ -77,26 +100,19 @@ export class PublicMenuService {
 
   /** "Pay first" only works with somewhere to pay: the restaurant's UPI ID. */
   private payFirst(
-    table: Awaited<ReturnType<PublicMenuService['resolveTable']>>,
+    scan: Awaited<ReturnType<PublicMenuService['resolveScan']>>,
   ) {
-    return (
-      table.floor.branch.qrPayFirst && !!table.floor.branch.restaurant.upiVpa
-    );
+    return scan.branch.qrPayFirst && !!scan.branch.restaurant.upiVpa;
   }
 
   async verifyStart(qrToken: string, name: string, phone: string) {
-    const table = await this.resolveTable(qrToken);
-    return this.guests.start(
-      table.floor.branchId,
-      table.floor.branch.restaurant.name,
-      name,
-      phone,
-    );
+    const { branch } = await this.resolveScan(qrToken);
+    return this.guests.start(branch.id, branch.restaurant.name, name, phone);
   }
 
   async verifyCheck(qrToken: string, phone: string, code: string) {
-    const table = await this.resolveTable(qrToken);
-    return this.guests.check(table.floor.branchId, phone, code);
+    const { branch } = await this.resolveScan(qrToken);
+    return this.guests.check(branch.id, phone, code);
   }
 
   /** Customer-visible menu tree, shared by the table-QR page and the kiosk. */
@@ -167,10 +183,26 @@ export class PublicMenuService {
   }
 
   async createOrder(qrToken: string, items: CartItemDto[], guestToken: string) {
-    const table = await this.resolveTable(qrToken);
-    const branchId = table.floor.branchId;
+    const scan = await this.resolveScan(qrToken);
+    const { table } = scan;
+    const branchId = scan.branch.id;
     const guest = await this.guests.verify(guestToken, branchId);
-    const payFirst = this.payFirst(table);
+    const payFirst = this.payFirst(scan);
+
+    // Takeaway QR: every order stands alone, picked up at the counter.
+    if (!table) {
+      return this.ordersService.createOrder(
+        branchId,
+        await this.receivingStaff(branchId, null),
+        {
+          type: 'TAKEAWAY',
+          guestName: guest.name,
+          customerId: guest.customerId,
+          items,
+        },
+        { channel: 'ONLINE', requireAcceptance: true, payFirst },
+      );
+    }
 
     // A guest who already ordered once this visit and scans again to add
     // more (e.g. drinks now, food later) should land on the same tab, not
@@ -186,7 +218,7 @@ export class PublicMenuService {
       return this.ordersService.addItems(branchId, openOrder.id, items, {
         enforceModifierLimits: true,
         websiteOnly: true,
-        autoAccept: table.floor.branch.autoConfirmOrders,
+        autoAccept: scan.branch.autoConfirmOrders,
       });
     }
 
@@ -195,23 +227,9 @@ export class PublicMenuService {
     // this table (assigned waiter), falling back to any staff member linked
     // to the branch (every branch has at least its owner) so this never
     // fails for lack of a "system user" that doesn't otherwise exist.
-    const createdById =
-      table.assignedWaiterId ??
-      (
-        await this.prisma.userBranch.findFirst({
-          where: { branchId },
-          orderBy: { userId: 'asc' },
-        })
-      )?.userId;
-    if (!createdById) {
-      throw new NotFoundException(
-        'This branch has no staff to receive the order',
-      );
-    }
-
     return this.ordersService.createOrder(
       branchId,
-      createdById,
+      await this.receivingStaff(branchId, table.assignedWaiterId),
       {
         type: 'QR_ORDER',
         tableId: table.id,
@@ -226,11 +244,31 @@ export class PublicMenuService {
   }
 
   /** Live status of the table's current tab, for the guest's QR page. */
-  async getStatus(qrToken: string) {
-    const table = await this.resolveTable(qrToken);
+  async getStatus(qrToken: string, guestToken?: string) {
+    const scan = await this.resolveScan(qrToken);
+    const { table } = scan;
+    // A table shares one tab; the takeaway QR is shared by every guest, so
+    // each sees only their own latest order (and nothing before signing in).
+    let mine: { customerId: string } | null = null;
+    if (!table) {
+      if (!guestToken) return { order: null, openRequests: [] };
+      try {
+        const guest = await this.guests.verify(guestToken, scan.branch.id);
+        mine = { customerId: guest.customerId };
+      } catch {
+        return { order: null, openRequests: [] };
+      }
+    }
     const order = await this.prisma.order.findFirst({
       where: {
-        tableId: table.id,
+        ...(table
+          ? { tableId: table.id }
+          : {
+              branchId: scan.branch.id,
+              type: 'TAKEAWAY',
+              customerId: mine!.customerId,
+              createdAt: { gt: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+            }),
         OR: [
           { status: { in: ['OPEN', 'BILLED'] } },
           // A pay-first order is settled before it's cooked: keep showing it
@@ -261,16 +299,18 @@ export class PublicMenuService {
         },
       },
     });
-    const requests = await this.prisma.tableRequest.findMany({
-      where: { tableId: table.id, resolvedAt: null },
-      select: { type: true },
-    });
+    const requests = table
+      ? await this.prisma.tableRequest.findMany({
+          where: { tableId: table.id, resolvedAt: null },
+          select: { type: true },
+        })
+      : [];
     // What the guest still has to pay on a pay-first order (the bill may
     // carry an automatic promotion, so not simply totalAmount).
     let amountDue: number | null = null;
     if (order?.payFirst && order.status === 'OPEN') {
       const bill = await this.ordersService.previewBill(
-        table.floor.branchId,
+        scan.branch.id,
         order.id,
         {},
       );
@@ -287,6 +327,8 @@ export class PublicMenuService {
           guestPaidAt: order.guestPaidAt,
           items: order.items,
           amountDue,
+          // Token system: the number the counter will call.
+          token: scan.branch.tokenEnabled ? tokenOf(order.orderNumber) : null,
         }
       : null;
     return { order: visible, openRequests: requests.map((r) => r.type) };
@@ -294,12 +336,14 @@ export class PublicMenuService {
 
   /** Pay-first: the guest says they've paid (staff still check before accepting). */
   async markPaid(qrToken: string, guestToken: string, reference?: string) {
-    const table = await this.resolveTable(qrToken);
-    const branchId = table.floor.branchId;
+    const scan = await this.resolveScan(qrToken);
+    const branchId = scan.branch.id;
     const guest = await this.guests.verify(guestToken, branchId);
     const order = await this.prisma.order.findFirst({
       where: {
-        tableId: table.id,
+        ...(scan.table
+          ? { tableId: scan.table.id }
+          : { branchId, type: 'TAKEAWAY' }),
         customerId: guest.customerId,
         payFirst: true,
         status: 'OPEN',
@@ -318,7 +362,7 @@ export class PublicMenuService {
     try {
       await this.notifications.notifyByPermission(branchId, 'orders.accept', {
         type: 'order.pending',
-        title: `${table.name ?? `Table ${table.number}`} says they've paid`,
+        title: `${scan.table ? scan.label : `Takeaway (${guest.name})`} says they've paid`,
         body: `Order ${order.orderNumber} · ₹${Number(order.totalAmount)}${reference ? ` · UPI ref ${reference}` : ''} — check your UPI app, then accept`,
         entity: 'Order',
         entityId: order.id,
@@ -331,8 +375,11 @@ export class PublicMenuService {
 
   /** "Call waiter" / "Bring the bill". One open request per type per table. */
   async createRequest(qrToken: string, type: 'WAITER' | 'BILL') {
-    const table = await this.resolveTable(qrToken);
-    const branchId = table.floor.branchId;
+    const { table, branch } = await this.resolveScan(qrToken);
+    if (!table) {
+      throw new BadRequestException('Not available on the takeaway QR');
+    }
+    const branchId = branch.id;
     const existing = await this.prisma.tableRequest.findFirst({
       where: { tableId: table.id, type, resolvedAt: null },
     });
@@ -358,5 +405,31 @@ export class PublicMenuService {
       // Best-effort: the request row and live event already exist.
     }
     return { ok: true, alreadyRequested: false };
+  }
+
+  /**
+   * A guest has no staff account, but Order.createdById is a required FK —
+   * attribute the order to whoever is on the floor for the table (assigned
+   * waiter), falling back to any staff member linked to the branch (every
+   * branch has at least its owner).
+   */
+  private async receivingStaff(
+    branchId: string,
+    waiterId: string | null,
+  ): Promise<string> {
+    const id =
+      waiterId ??
+      (
+        await this.prisma.userBranch.findFirst({
+          where: { branchId },
+          orderBy: { userId: 'asc' },
+        })
+      )?.userId;
+    if (!id) {
+      throw new NotFoundException(
+        'This branch has no staff to receive the order',
+      );
+    }
+    return id;
   }
 }

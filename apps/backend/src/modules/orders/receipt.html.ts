@@ -90,6 +90,8 @@ export function buildReceiptHtml({
   upi,
   footer,
   timeZone,
+  paper = 80,
+  token,
 }: {
   restaurantName: string;
   branch: {
@@ -109,9 +111,14 @@ export function buildReceiptHtml({
   /** The restaurant's own last line, e.g. "Thanks! Connect with us @bsc.chai_wala". */
   footer?: string | null;
   timeZone?: string;
+  /** 58 mm rolls: item prices without the currency sign, to fit the columns. */
+  paper?: 58 | 80;
+  /** Token system: printed large under the bill number. */
+  token?: number | null;
 }): string {
   const sym = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
   const money = (n: number) => `${sym}${Number(n).toFixed(2)}`;
+  const cell = (n: number) => (paper === 58 ? Number(n).toFixed(2) : money(n));
   const [datePart, timePart] = kotDateTime(
     new Date(order.createdAt),
     timeZone,
@@ -155,8 +162,8 @@ export function buildReceiptHtml({
               : ''
           }</td>
           <td class="q">${item.quantity}</td>
-          <td class="num">${money(item.unitPriceSnapshot)}</td>
-          <td class="num">${money(item.lineTotal)}</td>
+          <td class="num">${cell(item.unitPriceSnapshot)}</td>
+          <td class="num">${cell(item.lineTotal)}</td>
         </tr>`;
     })
     .join('');
@@ -296,6 +303,7 @@ export function buildReceiptHtml({
     <tr><td>Date: ${esc(datePart)}</td><td class="r"><strong>${esc(service)}</strong></td></tr>
     <tr><td>${esc(timePart)}</td><td></td></tr>
     <tr><td>Cashier: ${esc(order.cashier ?? '')}</td><td class="r">Bill No.: ${esc(order.orderNumber)}</td></tr>
+    ${token ? `<tr><td colspan="2" style="text-align:center;font-size:18px;font-weight:800;padding-top:3px">Token No: ${token}</td></tr>` : ''}
   </table>
   <hr class="rule">
   <table class="items">

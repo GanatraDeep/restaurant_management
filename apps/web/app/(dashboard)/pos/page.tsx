@@ -30,6 +30,8 @@ import { api, ApiError } from "@/lib/api";
 import { openKotPrint, openReceiptPrint } from "@/lib/print";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { tokenOf } from "@/lib/token";
+import { useBranchFeatures } from "@/hooks/use-settings";
 
 export default function PosPage() {
   return (
@@ -169,6 +171,11 @@ function PosPageInner() {
   const removeLine = (key: string) => setLines((prev) => prev.filter((l) => l.key !== key));
 
   const [submittingPrint, setSubmittingPrint] = useState(false);
+  const { data: features } = useBranchFeatures(branchId);
+  const tokenText = (o: { orderNumber: string }) => {
+    const t = features?.tokenEnabled ? tokenOf(o.orderNumber) : null;
+    return t ? ` · Token ${t}` : "";
+  };
   const handleSubmit = (print: boolean) => {
     if (checkingTable) return;
     setSubmittingPrint(print);
@@ -184,11 +191,11 @@ function PosPageInner() {
       }
       if (orderType === "DINE_IN") {
         const t = tables.find((x) => x.id === sentTableId);
-        toast.success(`${verb} #${order.orderNumber}${t ? ` · ${t.name ?? `T${t.number}`}` : ""}`);
+        toast.success(`${verb} #${order.orderNumber}${t ? ` · ${t.name ?? `T${t.number}`}` : ""}${tokenText(order)}`);
         goToTables(true);
         return;
       }
-      toast.success(`${verb} #${order.orderNumber}`);
+      toast.success(`${verb} #${order.orderNumber}${tokenText(order)}`);
       setActiveCustomer(null);
       setActiveOrder(order);
       setCartOpen(true);
@@ -305,7 +312,13 @@ function PosPageInner() {
   const showTablePicker = orderType === "DINE_IN" && !tableId && !activeOrder;
 
   return (
-    <div className="flex h-[calc(100dvh-10rem)] flex-col gap-4 lg:h-[calc(100dvh-8rem)]">
+    <div
+      className={cn(
+        "flex flex-col gap-4 lg:h-[calc(100dvh-8rem)]",
+        // Phones: the table grid scrolls with the page; the menu + cart keep a fixed frame.
+        !showTablePicker && "h-[calc(100dvh-10rem)]",
+      )}
+    >
       <StatusNote note={note} onClear={clearNote} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -315,7 +328,7 @@ function PosPageInner() {
           href="/customer-display"
           target="_blank"
           rel="noreferrer"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="hidden shrink-0 items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium sm:inline-flex text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           title="Opens the customer-facing screen in a new window — drag it to the second monitor"
         >
           <MonitorSmartphone className="h-3.5 w-3.5" />
@@ -326,17 +339,17 @@ function PosPageInner() {
       <BranchNotice />
 
       {showTablePicker ? (
-        <Card className="flex flex-1 flex-col gap-3 overflow-hidden p-5">
+        <Card className="flex flex-col gap-3 p-5 max-lg:overflow-visible max-lg:rounded-none max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none max-lg:ring-0 lg:flex-1 lg:overflow-hidden">
           {/* Orders without a table start here too. */}
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" className="h-10 gap-1.5" onClick={() => setOrderType("TAKEAWAY")}>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button type="button" variant="outline" className="h-11 gap-1.5 sm:h-10" onClick={() => setOrderType("TAKEAWAY")}>
               <ShoppingBag className="h-4 w-4" /> Takeaway order
             </Button>
-            <Button type="button" variant="outline" className="h-10 gap-1.5" onClick={() => setOrderType("DELIVERY")}>
+            <Button type="button" variant="outline" className="h-11 gap-1.5 sm:h-10" onClick={() => setOrderType("DELIVERY")}>
               <Bike className="h-4 w-4" /> Delivery order
             </Button>
           </div>
-          <div className="min-h-0 flex-1">
+          <div className="lg:min-h-0 lg:flex-1">
           <PosTablePicker
             floors={floors ?? []}
             onSelect={handleTablePick}
@@ -352,7 +365,11 @@ function PosPageInner() {
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
           <Card className="min-h-0 overflow-hidden p-3 sm:p-5">
-            <ProductGrid branchId={branchId} onSelect={handleSelect} />
+            <ProductGrid
+              branchId={branchId}
+              onSelect={handleSelect}
+              quantityOf={(id) => lines.filter((l) => l.menuItemId === id).reduce((n, l) => n + l.quantity, 0)}
+            />
           </Card>
 
           <Card

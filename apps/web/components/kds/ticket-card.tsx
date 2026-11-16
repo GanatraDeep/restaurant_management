@@ -18,6 +18,7 @@ import {
   type KotTicket,
 } from "@/hooks/use-kds";
 import { openTicketPrint } from "@/lib/print";
+import { tokenOf } from "@/lib/token";
 import { cn } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -52,7 +53,17 @@ function customerPhone(order: KotTicket["order"]) {
   return order.customer?.phone || null;
 }
 
-export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: string | null }) {
+export function TicketCard({
+  ticket,
+  branchId,
+  showToken = false,
+}: {
+  ticket: KotTicket;
+  branchId: string | null;
+  /** Token system on: the order's token leads the card. */
+  showToken?: boolean;
+}) {
+  const token = showToken ? tokenOf(ticket.order.orderNumber) : null;
   const elapsed = useElapsedMinutes(ticket.createdAt);
   const updateStatus = useUpdateKotStatus(branchId);
   const setPriority = useSetKotPriority(branchId);
@@ -119,6 +130,11 @@ export function TicketCard({ ticket, branchId }: { ticket: KotTicket; branchId: 
       >
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-lg font-bold capitalize leading-tight text-foreground">
+            {token && (
+              <span className="rounded-md bg-foreground px-1.5 py-0.5 text-sm font-bold normal-case tabular-nums text-background">
+                Token {token}
+              </span>
+            )}
             {where}
             {ticket.isPriority && <Star className="h-4 w-4 shrink-0 fill-warning text-warning" aria-label="Priority" />}
           </p>

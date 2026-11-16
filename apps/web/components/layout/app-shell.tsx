@@ -100,9 +100,9 @@ export function AppShell({
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background print:block print:min-h-0 print:bg-white">
       {/* Desktop sidebar */}
-      <aside className={cn("hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar", desktopOpen && "lg:flex")}>
+      <aside className={cn("hidden w-64 shrink-0 flex-col print:!hidden border-r border-sidebar-border bg-sidebar", desktopOpen && "lg:flex")}>
         <div className="flex h-16 items-center gap-2 px-5">
           <RestaurantBrand />
         </div>
@@ -133,7 +133,7 @@ export function AppShell({
       </Sheet>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between print:hidden border-b border-border bg-background/80 px-4 backdrop-blur sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -157,7 +157,7 @@ export function AppShell({
             <UserMenu user={user} />
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 sm:pb-24 lg:p-8 print:overflow-visible print:p-0">{children}</main>
         <EntityDialogHost />
       </div>
       <MobileBottomNav user={user} onMore={() => setMobileOpen(true)} />

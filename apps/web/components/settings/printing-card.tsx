@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { AutoPrintToggle } from "@/components/kds/auto-print-toggle";
 import { Card } from "@/components/ui/card";
 import { useBranch } from "@/hooks/use-branch";
-import { hasSilentPrinting, openSampleKotPrint } from "@/lib/print";
+import { getPaperWidth, hasSilentPrinting, openSampleKotPrint, setPaperWidth } from "@/lib/print";
+import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
 const STEPS = [
   "Install your receipt printer on this computer or tablet with its own driver, and print the printer's self-test once to check it works.",
-  'In the driver settings, set the paper to 80 mm (or 58 mm) roll and turn "Darkness" / "Density" up if the print is light.',
+  'In the driver settings, set the paper to your roll (80 mm or 58 mm — and pick the same below) and turn "Darkness" / "Density" up if the print is light.',
   "Press Print a test KOT. In the print dialog pick the receipt printer, set Margins to None and Scale to 100% (Default), and turn off Headers and footers.",
   "The browser remembers these choices, so later KOTs and bills only need one click on Print.",
 ];
@@ -20,8 +21,12 @@ export function PrintingCard() {
   const { branchId } = useBranch();
   // Only known in the browser (the desktop app adds its bridge to window).
   const [desktop, setDesktop] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setDesktop(hasSilentPrinting()), []);
+  const [paper, setPaper] = useState<58 | 80>(80);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDesktop(hasSilentPrinting());
+    setPaper(getPaperWidth());
+  }, []);
   return (
     <Card className="flex flex-col gap-4 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -47,6 +52,36 @@ export function PrintingCard() {
           </li>
         ))}
       </ol>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-foreground">Paper width on this device</p>
+          <p className="text-xs text-muted-foreground">
+            Pick 58 mm for small &ldquo;2 inch&rdquo; printers (EZO and most Bluetooth ones) so nothing is cut off on the
+            right. Saved on this device only.
+          </p>
+        </div>
+        <div role="radiogroup" aria-label="Paper width" className="flex shrink-0 rounded-lg border border-border p-0.5">
+          {([80, 58] as const).map((w) => (
+            <button
+              key={w}
+              type="button"
+              role="radio"
+              aria-checked={paper === w}
+              onClick={() => {
+                setPaperWidth(w);
+                setPaper(w);
+              }}
+              className={cn(
+                "h-9 rounded-md px-4 text-sm font-medium transition-colors",
+                paper === w ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              {w} mm
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-2 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
