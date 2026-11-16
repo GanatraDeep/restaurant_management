@@ -23,6 +23,8 @@ export interface PickerItem {
   // Items with a halfPrice get a Half / Full (/ Custom) section; price is the full portion.
   price?: string;
   halfPrice?: string | null;
+  // Dosa: Plain / Butter / Oil. When set these replace the Half / Full section.
+  variants?: { name: string; price: number | string }[];
   modifierGroups: {
     modifierGroup: {
       id: string;
@@ -58,7 +60,13 @@ function ModifierPickerBody({
   allowCustom: boolean;
   onConfirm: (modifierIds: string[], modifierLabel: string, portion?: Portion) => void;
 }) {
-  const hasPortions = item.halfPrice != null;
+  const variants = item.variants ?? [];
+  const hasVariants = variants.length > 0;
+  const hasPortions = !hasVariants && item.halfPrice != null;
+  // Index of the chosen variant, or "CUSTOM" (staff only).
+  const [variantChoice, setVariantChoice] = useState<number | "CUSTOM">(0);
+  const [variantPrices, setVariantPrices] = useState<string[]>(() => variants.map((v) => String(v.price)));
+  const [variantCustomPrice, setVariantCustomPrice] = useState("");
   const [portionKind, setPortionKind] = useState<PortionKind>("FULL");
   const [customLabel, setCustomLabel] = useState("");
   // Editable price per portion, pre-filled from the menu; staff can overwrite any of them.
@@ -66,6 +74,7 @@ function ModifierPickerBody({
     HALF: item.halfPrice ?? "",
     FULL: item.price ?? "",
     CUSTOM: "",
+    VARIANT: "",
   });
   const customPrice = prices[portionKind];
   const [selected, setSelected] = useState<Record<string, Set<string>>>(() => defaultSelection(item));
@@ -88,7 +97,18 @@ function ModifierPickerBody({
 
   const handleConfirm = () => {
     let portion: Portion | undefined;
-    if (hasPortions) {
+    if (hasVariants) {
+      const raw = variantChoice === "CUSTOM" ? variantCustomPrice : variantPrices[variantChoice];
+      const price = Number(raw);
+      if (raw.trim() === "" || !Number.isFinite(price) || price < 0) {
+        toast.error("Enter a price");
+        return;
+      }
+      portion =
+        variantChoice === "CUSTOM"
+          ? { kind: "CUSTOM", customLabel: customLabel.trim() || undefined, customPrice: price }
+          : { kind: "VARIANT", customLabel: variants[variantChoice].name, customPrice: price };
+    } else if (hasPortions) {
       const price = Number(customPrice);
       if (customPrice.trim() === "" || !Number.isFinite(price) || price < 0) {
         toast.error(`Enter a price for the ${portionKind.toLowerCase()} portion`);
@@ -122,6 +142,61 @@ function ModifierPickerBody({
       </DialogHeader>
 
       <div className="flex flex-col gap-5 py-2">
+        {hasVariants && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-foreground">Choose one</h3>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {[...variants.map((v, i) => ({ key: i as number | "CUSTOM", label: v.name, price: variantPrices[i] })), ...(allowCustom ? [{ key: "CUSTOM" as const, label: "Custom", price: "" }] : [])].map((opt) => (
+                <button
+                  key={String(opt.key)}
+                  type="button"
+                  aria-pressed={variantChoice === opt.key}
+                  onClick={() => setVariantChoice(opt.key)}
+                  className={cn(
+                    "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors",
+                    variantChoice === opt.key
+                      ? "border-primary bg-accent text-accent-foreground"
+                      : "border-border hover:bg-secondary",
+                  )}
+                >
+                  <span className="text-center leading-tight">{opt.label}</span>
+                  {opt.price !== "" && (
+                    <span className="text-xs font-normal tabular-nums text-muted-foreground">{formatCurrency(opt.price)}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {/* Staff can change the rate for this one order, as for Half / Full. */}
+            {allowCustom && <p className="text-xs text-muted-foreground">Rate for this order (change it if needed)</p>}
+            {allowCustom && (
+              <div className={cn("grid gap-2", variantChoice === "CUSTOM" ? "grid-cols-[1fr_7rem]" : "grid-cols-1")}>
+                {variantChoice === "CUSTOM" && (
+                  <Input
+                    placeholder="Label, e.g. Ghee"
+                    maxLength={40}
+                    value={customLabel}
+                    onChange={(e) => setCustomLabel(e.target.value)}
+                    aria-label="Custom label"
+                  />
+                )}
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  placeholder="Price"
+                  value={variantChoice === "CUSTOM" ? variantCustomPrice : variantPrices[variantChoice]}
+                  onChange={(e) =>
+                    variantChoice === "CUSTOM"
+                      ? setVariantCustomPrice(e.target.value)
+                      : setVariantPrices((p) => p.map((x, i) => (i === variantChoice ? e.target.value : x)))
+                  }
+                  aria-label="Price"
+                />
+              </div>
+            )}
+          </div>
+        )}
         {hasPortions && (
           <div className="flex flex-col gap-2">
             <h3 className="text-sm font-medium text-foreground">Portion</h3>

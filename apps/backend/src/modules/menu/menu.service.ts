@@ -3,10 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type {
-  MenuCategoryDto,
-  MenuItemDto,
-  ModifierGroupDto,
+import {
+  menuItemVariantsSchema,
+  type MenuCategoryDto,
+  type MenuItemDto,
+  type ModifierGroupDto,
 } from '@nodedr-restaurant/types';
 import { AuditService } from '../../audit/audit.service';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -104,7 +105,7 @@ export class MenuService {
   }
 
   async createItem(branchId: string, dto: MenuItemDto) {
-    const { modifierGroupIds, ...rest } = dto;
+    const { modifierGroupIds, ...rest } = withVariantPrice(dto);
     await this.assertModifierGroupsInBranch(branchId, modifierGroupIds);
     return this.prisma.menuItem.create({
       data: {
@@ -128,7 +129,7 @@ export class MenuService {
     dto: Partial<MenuItemDto>,
   ) {
     const existing = await this.getItem(branchId, id);
-    const { modifierGroupIds, ...rest } = dto;
+    const { modifierGroupIds, ...rest } = withVariantPrice(dto);
     if (modifierGroupIds) {
       await this.assertModifierGroupsInBranch(branchId, modifierGroupIds);
     }
@@ -297,4 +298,23 @@ export class MenuService {
       },
     });
   }
+}
+
+/**
+ * Validates `variants` (the PATCH body is not schema-checked as a whole) and
+ * keeps `price` equal to the first variant's, so lists, the POS tile and
+ * channels that send no variant all show and charge that first rate.
+ */
+export function withVariantPrice<T extends Partial<MenuItemDto>>(dto: T): T {
+  if (dto.variants === undefined) return dto;
+  const parsed = menuItemVariantsSchema.safeParse(dto.variants);
+  if (!parsed.success) {
+    throw new BadRequestException(
+      parsed.error.issues[0]?.message ?? 'Invalid variants',
+    );
+  }
+  const variants = parsed.data;
+  return variants.length > 0
+    ? { ...dto, variants, price: variants[0].price }
+    : { ...dto, variants };
 }

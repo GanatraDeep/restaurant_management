@@ -29,6 +29,21 @@ export const modifierGroupSchema = z.object({
 });
 export type ModifierGroupDto = z.infer<typeof modifierGroupSchema>;
 
+// One rate of a dish sold several ways (Dosa: Plain / Butter / Oil). The
+// order line is priced from here on the server, never from the client.
+export const menuItemVariantSchema = z.object({
+  name: z.string().trim().min(1, "Variant name is required").max(40),
+  price: z.coerce.number().nonnegative().max(1_000_000),
+});
+export const menuItemVariantsSchema = z
+  .array(menuItemVariantSchema)
+  .max(20, "Up to 20 variants per item")
+  .refine(
+    (vs) => new Set(vs.map((v) => v.name.toLowerCase())).size === vs.length,
+    "Each variant needs a different name",
+  );
+export type MenuItemVariant = z.infer<typeof menuItemVariantSchema>;
+
 export const menuItemSchema = z.object({
   categoryId: z.string(),
   stationId: z.string().optional(),
@@ -39,6 +54,8 @@ export const menuItemSchema = z.object({
   price: z.coerce.number().nonnegative(),
   // Set to enable the Half / Full / Custom portion picker; `price` is the full portion.
   halfPrice: z.number().nonnegative().nullable().optional(),
+  // Different rates for the same dish; when set, `price` is the first variant's.
+  variants: menuItemVariantsSchema.default([]),
   taxRatePercent: z.coerce.number().min(0).max(100).default(0),
   costPrice: z.coerce.number().nonnegative().optional(),
   prepTimeMinutes: z.number().int().nonnegative().optional(),

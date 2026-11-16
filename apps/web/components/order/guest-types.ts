@@ -7,6 +7,8 @@ export interface PublicMenuItem {
   imageUrl: string | null;
   price: string;
   halfPrice: string | null;
+  /** Plain / Butter / Oil — the guest picks one; priced on the server. */
+  variants?: { name: string; price: number }[];
   isVeg: boolean;
   spiceLevel: "NONE" | "MILD" | "MEDIUM" | "HOT" | "EXTRA_HOT";
   modifierGroups: {
@@ -59,6 +61,8 @@ export interface CartLine {
   menuItemId: string;
   modifierIds: string[];
   portion?: "HALF" | "FULL";
+  /** Chosen variant name, e.g. "Butter". */
+  variant?: string;
   label: string;
   name: string;
   unitPrice: number;

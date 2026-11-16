@@ -1102,6 +1102,9 @@ model MenuItem {
 
   // Price of a half portion; null = item has no portion picker. `price` is the full portion.
   halfPrice Decimal? @db.Decimal(12, 2)
+  // Rates for kinds of the same dish, e.g. Plain 60 / Butter 80 / Oil 70:
+  // [{ "name": "Plain", "price": 60 }, ...]. Empty = one price.
+  variants       Json     @default("[]")
 
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())

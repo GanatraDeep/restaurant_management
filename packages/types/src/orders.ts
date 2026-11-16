@@ -50,6 +50,8 @@ export const cartItemSchema = z.object({
   portion: z.enum(["HALF", "FULL", "CUSTOM"]).optional(),
   customPrice: z.number().nonnegative().max(1_000_000).optional(),
   customLabel: z.string().trim().max(40).optional(),
+  // Name of one of the item's variants (e.g. "Butter"); priced on the server.
+  variant: z.string().trim().max(40).optional(),
 });
 export type CartItemDto = z.infer<typeof cartItemSchema>;
 

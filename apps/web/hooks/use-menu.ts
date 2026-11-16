@@ -42,6 +42,8 @@ export interface MenuItem {
   imageUrl: string | null;
   price: string;
   halfPrice: string | null;
+  /** Rates for kinds of the same dish (Plain / Butter / Oil); empty = one price. */
+  variants: { name: string; price: number }[];
   taxRatePercent: string;
   isVeg: boolean;
   isActive: boolean;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, MonitorSmartphone, ShoppingCart } from "lucide-react";
+import { Bike, ChevronLeft, MonitorSmartphone, ShoppingBag, ShoppingCart } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { StatusNote, useNoteToast } from "@/components/ui/status-note";
@@ -129,7 +129,7 @@ function PosPageInner() {
   };
 
   const handleSelect = (item: MenuItem) => {
-    if (item.modifierGroups.length > 0 || item.halfPrice != null) {
+    if (item.modifierGroups.length > 0 || item.halfPrice != null || item.variants?.length > 0) {
       setPickerItem(item);
       return;
     }
@@ -197,7 +197,9 @@ function PosPageInner() {
       menuItemId: l.menuItemId,
       quantity: l.quantity,
       modifierIds: l.modifierIds,
-      ...(l.portion
+      ...(l.portion?.kind === "VARIANT"
+        ? { variant: l.portion.customLabel, customPrice: l.portion.customPrice }
+        : l.portion
         ? {
             portion: l.portion.kind,
             customPrice: l.portion.customPrice,
@@ -324,7 +326,17 @@ function PosPageInner() {
       <BranchNotice />
 
       {showTablePicker ? (
-        <Card className="flex-1 overflow-hidden p-5">
+        <Card className="flex flex-1 flex-col gap-3 overflow-hidden p-5">
+          {/* Orders without a table start here too. */}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" className="h-10 gap-1.5" onClick={() => setOrderType("TAKEAWAY")}>
+              <ShoppingBag className="h-4 w-4" /> Takeaway order
+            </Button>
+            <Button type="button" variant="outline" className="h-10 gap-1.5" onClick={() => setOrderType("DELIVERY")}>
+              <Bike className="h-4 w-4" /> Delivery order
+            </Button>
+          </div>
+          <div className="min-h-0 flex-1">
           <PosTablePicker
             floors={floors ?? []}
             onSelect={handleTablePick}
@@ -335,6 +347,7 @@ function PosPageInner() {
             onRetry={() => void floorsQuery.refetch()}
             retrying={floorsQuery.isFetching}
           />
+          </div>
         </Card>
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 overflow-hidden lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">

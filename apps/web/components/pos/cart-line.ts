@@ -11,7 +11,8 @@ export interface CartLine {
   toKitchen?: boolean;
 }
 
-export type PortionKind = "HALF" | "FULL" | "CUSTOM";
+// VARIANT: one of the item's variants (Plain / Butter / Oil); its name is in customLabel.
+export type PortionKind = "HALF" | "FULL" | "CUSTOM" | "VARIANT";
 
 export interface Portion {
   kind: PortionKind;
@@ -24,6 +25,7 @@ export function portionText(p?: Portion): string {
   if (!p) return "";
   if (p.kind === "HALF") return "Half";
   if (p.kind === "FULL") return "Full";
+  if (p.kind === "VARIANT") return p.customLabel ?? "";
   return p.customLabel || "Custom";
 }
 

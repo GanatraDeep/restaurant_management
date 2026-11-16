@@ -120,7 +120,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
     mutationFn: () =>
       api.post<{ orderNumber: string }>(`/public/menu/${qrToken}/order`, {
         guestToken: session?.token,
-        items: cart.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity, modifierIds: l.modifierIds, ...(l.portion ? { portion: l.portion } : {}) })),
+        items: cart.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity, modifierIds: l.modifierIds, ...(l.portion ? { portion: l.portion } : {}), ...(l.variant ? { variant: l.variant } : {}) })),
       }),
     onSuccess: (order) => {
       setCart([]);
@@ -139,19 +139,20 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
   const cartTotal = cart.reduce((sum, l) => sum + l.unitPrice * l.quantity, 0);
   const quantityOf = (itemId: string) => cart.filter((l) => l.menuItemId === itemId).reduce((sum, l) => sum + l.quantity, 0);
 
-  const addLine = (item: PublicMenuItem, modifierIds: string[], label: string, extra: number, portion?: "HALF" | "FULL") => {
-    const key = `${item.id}:${portion ?? ""}:${[...modifierIds].sort().join(",")}`;
-    const base = portion === "HALF" && item.halfPrice ? Number(item.halfPrice) : Number(item.price);
+  const addLine = (item: PublicMenuItem, modifierIds: string[], label: string, extra: number, portion?: "HALF" | "FULL", variant?: string) => {
+    const key = `${item.id}:${portion ?? ""}:${variant ?? ""}:${[...modifierIds].sort().join(",")}`;
+    const v = variant ? item.variants?.find((x) => x.name === variant) : undefined;
+    const base = v ? Number(v.price) : portion === "HALF" && item.halfPrice ? Number(item.halfPrice) : Number(item.price);
     setCart((prev) => {
       const existing = prev.find((l) => l.key === key);
       if (existing) return prev.map((l) => (l.key === key ? { ...l, quantity: l.quantity + 1 } : l));
-      return [...prev, { key, menuItemId: item.id, modifierIds, portion, label, name: item.name, unitPrice: base + extra, quantity: 1 }];
+      return [...prev, { key, menuItemId: item.id, modifierIds, portion, variant, label, name: item.name, unitPrice: base + extra, quantity: 1 }];
     });
   };
   const changeLine = (key: string, delta: number) =>
     setCart((prev) => prev.map((l) => (l.key === key ? { ...l, quantity: l.quantity + delta } : l)).filter((l) => l.quantity > 0));
   const handleAdd = (item: PublicMenuItem) => {
-    if (item.modifierGroups.length > 0 || item.halfPrice) setPickerItem(item);
+    if (item.modifierGroups.length > 0 || item.halfPrice || item.variants?.length) setPickerItem(item);
     else addLine(item, [], "", 0);
   };
   const removeOne = (item: PublicMenuItem) => {
@@ -312,7 +313,8 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
             return sum + (m ? Number(m.priceAdjustment) : 0);
           }, 0);
           const kind = portion?.kind === "HALF" || portion?.kind === "FULL" ? portion.kind : undefined;
-          addLine(pickerItem, ids, [kind === "HALF" ? "Half" : kind === "FULL" ? "Full" : "", label].filter(Boolean).join(" · "), extra, kind);
+          const variant = portion?.kind === "VARIANT" ? portion.customLabel : undefined;
+          addLine(pickerItem, ids, [variant ?? (kind === "HALF" ? "Half" : kind === "FULL" ? "Full" : ""), label].filter(Boolean).join(" · "), extra, kind, variant);
         }}
       />
 

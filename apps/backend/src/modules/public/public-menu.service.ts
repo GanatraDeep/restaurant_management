@@ -115,6 +115,7 @@ export class PublicMenuService {
             imageUrl: true,
             price: true,
             halfPrice: true,
+            variants: true,
             taxRatePercent: true,
             isVeg: true,
             isFavorite: true,

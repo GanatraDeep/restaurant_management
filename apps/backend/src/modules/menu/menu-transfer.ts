@@ -29,6 +29,7 @@ type ColumnKey =
   | 'name'
   | 'price'
   | 'halfPrice'
+  | 'variants'
   | 'taxRatePercent'
   | 'isVeg'
   | 'description'
@@ -83,6 +84,13 @@ export const MENU_COLUMNS: Column[] = [
     aliases: ['half'],
     width: 11,
     help: 'Optional. Fill it to offer a half portion.',
+  },
+  {
+    key: 'variants',
+    header: 'Variants',
+    aliases: ['variant', 'options', 'types', 'sizes', 'rates'],
+    width: 30,
+    help: 'Optional. Different rates for the same item, as Name=Price separated by ";", e.g. Plain=60; Butter=80; Oil=70. Price can then be left empty (the first variant\'s rate is used). Write "none" to remove variants.',
   },
   {
     key: 'taxRatePercent',
@@ -178,6 +186,8 @@ export interface MenuRow {
   name: string;
   price: number;
   halfPrice?: number | null;
+  /** [] clears the item's variants; undefined leaves them as they are. */
+  variants?: { name: string; price: number }[];
   taxRatePercent?: number;
   isVeg?: boolean;
   description?: string | null;
@@ -260,6 +270,20 @@ export async function buildMenuWorkbook(
           isActive: true,
         },
         {
+          category: 'South Indian',
+          name: 'Dosa',
+          price: 60,
+          taxRatePercent: 5,
+          isVeg: true,
+          sku: 'SI01',
+          variants: [
+            { name: 'Plain', price: 60 },
+            { name: 'Butter', price: 80 },
+            { name: 'Oil', price: 70 },
+          ],
+          isActive: true,
+        },
+        {
           category: 'Beverages',
           name: 'Masala Chaas',
           price: 60,
@@ -286,6 +310,7 @@ export async function buildMenuWorkbook(
       name: safeCell(r.name),
       price: r.price,
       halfPrice: r.halfPrice ?? null,
+      variants: formatVariants(r.variants),
       taxRatePercent: r.taxRatePercent ?? 0,
       isVeg: yesNo(r.isVeg),
       description: safeCell(r.description),
@@ -471,7 +496,16 @@ export async function parseMenuFile(
       }
       return opts.int ? n : Math.round(n * 100) / 100;
     };
-    const price = num('price', 'Price');
+    const variantsText = get('variants');
+    const parsedVariants = variantsText ? parseVariants(variantsText) : null;
+    if (parsedVariants && 'error' in parsedVariants)
+      problems.push(parsedVariants.error);
+    const variants =
+      parsedVariants && 'variants' in parsedVariants
+        ? parsedVariants.variants
+        : undefined;
+    // With variants the item's price is the first variant's rate.
+    const price = variants?.length ? variants[0].price : num('price', 'Price');
     if (price === null && !problems.some((p) => p.startsWith('Price')))
       problems.push('Price is empty');
     const halfPrice = num('halfPrice', 'Half price');
@@ -515,6 +549,7 @@ export async function parseMenuFile(
       name,
       price: price!,
       halfPrice: halfPrice ?? undefined,
+      variants,
       taxRatePercent: taxRatePercent ?? undefined,
       isVeg: isVeg ?? undefined,
       description: opt('description', 1000),
@@ -675,6 +710,7 @@ export interface CatalogueInput {
       description: string | null;
       price: number;
       halfPrice: number | null;
+      variants?: { name: string; price: number }[];
       isVeg: boolean;
     }[];
   }[];
@@ -769,8 +805,15 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
       doc.y = lineY + 8;
 
       for (const it of cat.items) {
-        const priceText =
-          it.halfPrice != null
+        // Variants: "from ₹60" on the right, every rate on a line below.
+        const variantLine = it.variants?.length
+          ? it.variants
+              .map((v) => `${v.name} ${money(v.price)}`)
+              .join('   ·   ')
+          : '';
+        const priceText = it.variants?.length
+          ? `from ${money(Math.min(...it.variants.map((v) => v.price)))}`
+          : it.halfPrice != null
             ? `${money(it.halfPrice)} / ${money(it.price)}`
             : money(it.price);
         doc.font(bold).fontSize(10.5);
@@ -778,9 +821,13 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
         const nameW = width - 16 - priceW - 12;
         const nameH = doc.heightOfString(it.name, { width: nameW });
         doc.font(regular).fontSize(8.5);
-        const descH = it.description
-          ? doc.heightOfString(it.description, { width: nameW }) + 2
-          : 0;
+        const descH =
+          (it.description
+            ? doc.heightOfString(it.description, { width: nameW }) + 2
+            : 0) +
+          (variantLine
+            ? doc.heightOfString(variantLine, { width: width - 16 }) + 2
+            : 0);
         if (doc.y + nameH + descH > bottom()) doc.addPage();
 
         const top = doc.y;
@@ -795,6 +842,13 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
           align: 'right',
         });
         doc.y = top + nameH;
+        if (variantLine) {
+          doc
+            .font(bold)
+            .fontSize(8.5)
+            .fillColor('#333333')
+            .text(variantLine, left + 16, doc.y + 1, { width: width - 16 });
+        }
         if (it.description) {
           doc
             .font(regular)
@@ -839,4 +893,51 @@ export function buildCataloguePdf(input: CatalogueInput): Promise<Buffer> {
     }
     doc.end();
   });
+}
+
+/** "Plain=60; Butter=80" — how variants are written in the sheet. */
+export function formatVariants(
+  variants?: { name: string; price: number }[],
+): string {
+  return (variants ?? []).map((v) => `${v.name}=${v.price}`).join('; ');
+}
+
+/**
+ * Reads a Variants cell: "Plain=60; Butter=80; Oil=70". Also accepts ":",
+ * "-" or a space before the rate, "," / "|" / new lines between entries,
+ * and ₹ / Rs / "/-" around the number. "none" (or "-") clears them.
+ */
+export function parseVariants(
+  text: string,
+): { variants: { name: string; price: number }[] } | { error: string } {
+  const t = text.trim();
+  if (/^(none|no|-|nil)$/i.test(t)) return { variants: [] };
+  // A comma is a separator unless it is a thousands comma (1,120).
+  const parts = t
+    .split(/;|\||\n|,(?!\d{3}(?!\d))/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const out: { name: string; price: number }[] = [];
+  for (const part of parts) {
+    const m = part.match(
+      /^(.*?)\s*(?:=|:|-|–|@)?\s*((?:rs\.?|inr|₹)?\s*\d[\d,]*(?:\.\d+)?\s*(?:\/-)?)$/i,
+    );
+    const name = m?.[1]
+      .trim()
+      .replace(/[=:\-–@]$/, '')
+      .trim();
+    const price = m ? parseNumber(m[2]) : null;
+    if (!m || !name || price === null || Number.isNaN(price) || price < 0) {
+      return {
+        error: `Variant "${part}" should look like Name=Price, e.g. Butter=80`,
+      };
+    }
+    if (name.length > 40)
+      return { error: `Variant name "${name}" is longer than 40 characters` };
+    if (out.some((v) => v.name.toLowerCase() === name.toLowerCase()))
+      return { error: `Variant "${name}" is listed twice` };
+    out.push({ name, price: Math.round(price * 100) / 100 });
+  }
+  if (out.length > 20) return { error: 'Up to 20 variants per item' };
+  return { variants: out };
 }
