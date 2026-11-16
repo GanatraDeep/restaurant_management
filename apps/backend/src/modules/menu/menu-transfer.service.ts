@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { localUploadPath } from '../../common/upload/image-upload.config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { itemVariants } from './menu-variants';
 import {
   buildCataloguePdf,
   buildMenuWorkbook,
@@ -77,6 +78,7 @@ export class MenuTransferService {
       name: i.name,
       price: Number(i.price),
       halfPrice: num(i.halfPrice),
+      variants: itemVariants(i.variants),
       taxRatePercent: Number(i.taxRatePercent),
       isVeg: i.isVeg,
       description: i.description,
@@ -108,6 +110,7 @@ export class MenuTransferService {
             description: true,
             price: true,
             halfPrice: true,
+            variants: true,
             isVeg: true,
           },
         },
@@ -127,6 +130,7 @@ export class MenuTransferService {
           description: i.description,
           price: Number(i.price),
           halfPrice: num(i.halfPrice),
+          variants: itemVariants(i.variants),
           isVeg: i.isVeg,
         })),
       })),

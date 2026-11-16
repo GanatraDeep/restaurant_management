@@ -44,6 +44,7 @@ import {
 } from './settlement';
 import type { TaxMode } from '@nodedr-restaurant/types';
 import { VerifactuService } from '../verifactu/verifactu.service';
+import { itemVariants } from '../menu/menu-variants';
 import {
   AggregatorStatusService,
   KOT_TO_AGGREGATOR_STATUS,
@@ -2128,7 +2129,28 @@ export class OrdersService {
     // snapshot, so KOTs, receipts, KDS and reports all show "(Half)" etc.
     let portionBase = Number(menuItem.price);
     let portionSuffix = '';
-    if (cartItem.portion === 'HALF' || cartItem.portion === 'FULL') {
+    const variants = itemVariants(menuItem.variants);
+    if (variants.length > 0 && cartItem.portion !== 'CUSTOM') {
+      // Dosa: Plain / Butter / Oil. The rate comes from the menu; a channel
+      // that sends no variant (an aggregator, an old app) gets the first one.
+      const wanted = cartItem.variant?.toLowerCase();
+      const variant = wanted
+        ? variants.find((v) => v.name.toLowerCase() === wanted)
+        : variants[0];
+      if (!variant) {
+        throw new BadRequestException(
+          `${menuItem.name} has no "${cartItem.variant}" option`,
+        );
+      }
+      portionBase = variant.price;
+      // Staff may type their own price, as for Half/Full.
+      if (allowCustomPortion && cartItem.customPrice != null) {
+        portionBase = cartItem.customPrice;
+      }
+      portionSuffix = ` (${variant.name})`;
+    } else if (cartItem.variant) {
+      throw new BadRequestException(`${menuItem.name} has no variants`);
+    } else if (cartItem.portion === 'HALF' || cartItem.portion === 'FULL') {
       if (menuItem.halfPrice == null) {
         throw new BadRequestException(
           `${menuItem.name} has no half/full portions`,

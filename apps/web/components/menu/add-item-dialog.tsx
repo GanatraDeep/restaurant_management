@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { draftsToVariants, VariantsEditor, type VariantDraft } from "@/components/menu/variants-editor";
 import {
   useCreateMenuItem,
   useStations,
@@ -44,6 +45,8 @@ export function AddItemDialog({
   const [stationId, setStationId] = useState<string>("");
   const [price, setPrice] = useState("");
   const [halfPrice, setHalfPrice] = useState("");
+  const [variants, setVariants] = useState<VariantDraft[]>([]);
+  const hasVariants = variants.length > 0;
   const [taxRatePercent, setTaxRatePercent] = useState("5");
   const [isVeg, setIsVeg] = useState(true);
   const [sendToKitchen, setSendToKitchen] = useState(true);
@@ -63,6 +66,8 @@ export function AddItemDialog({
     setCategoryId("");
     setStationId("");
     setPrice("");
+    setHalfPrice("");
+    setVariants([]);
     setTaxRatePercent("5");
     setIsVeg(true);
     setSendToKitchen(true);
@@ -90,13 +95,20 @@ export function AddItemDialog({
       toast.error("Choose a category");
       return;
     }
+    const v = draftsToVariants(variants);
+    if ("error" in v) {
+      toast.error(v.error);
+      return;
+    }
     createItem.mutate(
       {
         name,
         categoryId,
         stationId: stationId || undefined,
-        price: Number(price),
-        halfPrice: halfPrice.trim() === "" ? undefined : Number(halfPrice),
+        // With variants the first one's rate is the item's price.
+        price: v.variants.length ? v.variants[0].price : Number(price),
+        halfPrice: v.variants.length || halfPrice.trim() === "" ? undefined : Number(halfPrice),
+        variants: v.variants,
         taxRatePercent: Number(taxRatePercent),
         isVeg,
         isVegan: false,
@@ -202,7 +214,9 @@ export function AddItemDialog({
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category">
+                  {(value: string | null) => categories.find((c) => c.id === value)?.name ?? "Select category"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
@@ -215,6 +229,12 @@ export function AddItemDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
+            {hasVariants ? (
+              <div className="flex flex-col gap-2">
+                <Label>Price</Label>
+                <p className="flex h-9 items-center text-sm text-muted-foreground">Set for each variant below</p>
+              </div>
+            ) : (
             <div className="flex flex-col gap-2">
               <Label htmlFor="price">{priceLabel}</Label>
               <Input
@@ -224,9 +244,10 @@ export function AddItemDialog({
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                required
+                required={!hasVariants}
               />
             </div>
+            )}
             <div className="flex flex-col gap-2">
               <Label htmlFor="tax">Tax rate %</Label>
               <Input
@@ -242,6 +263,7 @@ export function AddItemDialog({
             </div>
           </div>
 
+          {!hasVariants && (
           <div className="flex flex-col gap-2">
             <Label htmlFor="add-half">Half portion price (optional)</Label>
             <Input
@@ -257,12 +279,17 @@ export function AddItemDialog({
               When set, the POS asks Half / Full / Custom. The price above is the Full portion.
             </p>
           </div>
+          )}
+
+          <VariantsEditor idPrefix="add" value={variants} onChange={setVariants} />
 
           <div className="flex flex-col gap-2">
             <Label>Kitchen station</Label>
             <Select value={stationId} onValueChange={(v) => setStationId(v ?? "")}>
               <SelectTrigger>
-                <SelectValue placeholder="None" />
+                <SelectValue placeholder="None">
+                  {(value: string | null) => stations?.find((st) => st.id === value)?.name ?? "None"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {stations?.map((s) => (

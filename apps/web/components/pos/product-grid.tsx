@@ -122,7 +122,9 @@ export function ProductGrid({
                 <span className="line-clamp-2 pr-4 text-[13px] font-medium leading-tight text-foreground">{item.name}</span>
                 <span className="flex items-baseline justify-between gap-1">
                   <span className="text-xs font-semibold tabular-nums text-muted-foreground">{formatCurrency(item.price)}</span>
-                  {item.halfPrice != null && (
+                  {item.variants?.length > 0 ? (
+                    <span className="text-[10px] font-medium text-primary">{item.variants.length} options</span>
+                  ) : item.halfPrice != null && (
                     <span className="hidden text-[10px] tabular-nums text-muted-foreground xl:inline">Half {formatCurrency(item.halfPrice)}</span>
                   )}
                 </span>

@@ -285,6 +285,11 @@ export default function MenuPage() {
                         {item.station ? ` · ${item.station.name}` : ""}
                         {` · ${Number(item.taxRatePercent)}% tax`}
                       </p>
+                      {item.variants?.length > 0 && (
+                        <p className="mt-0.5 text-xs text-foreground">
+                          {item.variants.map((v) => `${v.name} ${formatCurrency(v.price)}`).join(" · ")}
+                        </p>
+                      )}
                     </div>
                     <p className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatCurrency(item.price)}</p>
                   </div>
@@ -366,7 +371,17 @@ export default function MenuPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
-                      {formatCurrency(item.price)}
+                      {item.variants?.length > 0 ? (
+                        <div className="flex flex-col items-end gap-0.5">
+                          {item.variants.map((v) => (
+                            <span key={v.name} className="whitespace-nowrap text-xs">
+                              <span className="text-muted-foreground">{v.name}</span> {formatCurrency(v.price)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        formatCurrency(item.price)
+                      )}
                     </TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">
                       {Number(item.taxRatePercent)}%

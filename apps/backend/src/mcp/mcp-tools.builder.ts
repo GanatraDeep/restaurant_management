@@ -1021,6 +1021,7 @@ export class McpToolsBuilder {
               isActive: true,
               isFavorite: false,
               sendToKitchen: true,
+              variants: [],
               modifierGroupIds: [],
             }),
           );

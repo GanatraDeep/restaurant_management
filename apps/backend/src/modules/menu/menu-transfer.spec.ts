@@ -3,6 +3,7 @@ import {
   buildCataloguePdf,
   buildMenuWorkbook,
   parseMenuFile,
+  parseVariants,
   planMenuImport,
   type MenuRow,
 } from './menu-transfer';
@@ -78,8 +79,14 @@ describe('menu import parsing', () => {
     expect(rows.map((r) => r.name)).toEqual([
       'Paneer Tikka',
       'Chicken 65',
+      'Dosa',
       'Masala Chaas',
       'Water Bottle',
+    ]);
+    expect(rows.find((r) => r.name === 'Dosa')?.variants).toEqual([
+      { name: 'Plain', price: 60 },
+      { name: 'Butter', price: 80 },
+      { name: 'Oil', price: 70 },
     ]);
     expect(rows.find((r) => r.name === 'Water Bottle')?.sendToKitchen).toBe(
       false,
@@ -255,5 +262,82 @@ describe('menu catalogue PDF', () => {
     });
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.length).toBeGreaterThan(5000);
+  });
+});
+
+describe('menu variants', () => {
+  it('reads the usual ways of writing rates', () => {
+    expect(parseVariants('Plain=60; Butter=80; Oil=70')).toEqual({
+      variants: [
+        { name: 'Plain', price: 60 },
+        { name: 'Butter', price: 80 },
+        { name: 'Oil', price: 70 },
+      ],
+    });
+    expect(parseVariants('Regular: ₹120, Large - Rs.1,150/-')).toEqual({
+      variants: [
+        { name: 'Regular', price: 120 },
+        { name: 'Large', price: 1150 },
+      ],
+    });
+    expect(parseVariants('Cheese Masala 90 | Mysore 85.5')).toEqual({
+      variants: [
+        { name: 'Cheese Masala', price: 90 },
+        { name: 'Mysore', price: 85.5 },
+      ],
+    });
+    expect(parseVariants('none')).toEqual({ variants: [] });
+  });
+
+  it('rejects a rate it cannot read or a name twice', () => {
+    expect(parseVariants('Plain=60; Butter')).toEqual({
+      error: 'Variant "Butter" should look like Name=Price, e.g. Butter=80',
+    });
+    expect(parseVariants('Plain=60; plain=70')).toEqual({
+      error: 'Variant "plain" is listed twice',
+    });
+  });
+
+  it('imports a Variants column with the price left empty', async () => {
+    const buf = await sheet([
+      ['Category', 'Item name', 'Price', 'Variants'],
+      ['South Indian', 'Dosa', null, 'Plain=60; Butter=80; Oil=70'],
+      ['South Indian', 'Idli', 40, null],
+      ['South Indian', 'Uttapam', null, 'Onion=x'],
+    ]);
+    const { rows, errors } = await parseMenuFile(buf, 'm.xlsx');
+    expect(rows.map((r) => [r.name, r.price, r.variants?.length])).toEqual([
+      ['Dosa', 60, 3],
+      ['Idli', 40, undefined],
+    ]);
+    expect(errors).toEqual([
+      {
+        row: 4,
+        message:
+          'Variant "Onion=x" should look like Name=Price, e.g. Butter=80; Price is empty',
+      },
+    ]);
+  });
+
+  it('exports variants as Name=Price', async () => {
+    const buf = await buildMenuWorkbook(
+      [
+        {
+          category: 'South Indian',
+          name: 'Dosa',
+          price: 60,
+          variants: [
+            { name: 'Plain', price: 60 },
+            { name: 'Butter', price: 80 },
+          ],
+        },
+      ],
+      { restaurantName: 'T' },
+    );
+    const { rows } = await parseMenuFile(buf, 'm.xlsx');
+    expect(rows[0].variants).toEqual([
+      { name: 'Plain', price: 60 },
+      { name: 'Butter', price: 80 },
+    ]);
   });
 });

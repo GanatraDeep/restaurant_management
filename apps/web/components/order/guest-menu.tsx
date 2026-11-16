@@ -77,7 +77,16 @@ function ItemCard({
         </div>
         <h3 className="mt-1.5 text-base font-semibold leading-snug text-foreground">{item.name}</h3>
         <p className="mt-1 text-sm font-medium tabular-nums text-foreground">
-          {item.halfPrice ? (
+          {item.variants?.length ? (
+            <>
+              {item.variants.map((v, i) => (
+                <span key={v.name} className="whitespace-nowrap">
+                  {i > 0 && <span className="mx-1.5 text-muted-foreground">·</span>}
+                  <span className="text-xs font-normal text-muted-foreground">{v.name}</span> {formatCurrency(v.price)}
+                </span>
+              ))}
+            </>
+          ) : item.halfPrice ? (
             <>
               {formatCurrency(item.halfPrice)} <span className="text-xs font-normal text-muted-foreground">half</span>
               <span className="mx-1.5 text-muted-foreground">·</span>
