@@ -12,7 +12,9 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   loginSchema,
   pinLoginSchema,
+  registerOtpSchema,
   registerSchema,
+  type RegisterOtpDto,
   twoFactorCodeSchema,
   twoFactorDisableSchema,
   type SessionUser,
@@ -52,6 +54,17 @@ export class AuthController {
   // Tighter than the app-wide default — unauthenticated and creates a full
   // restaurant + owner account, a more attractive abuse target than login.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  // Step 1 of signing up: a 6-digit code to the owner's WhatsApp. Tight
+  // limits — this sends messages. { required: false } when WhatsApp isn't
+  // set up on this server (the code step is then skipped).
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('register/otp')
+  @UsePipes(new ZodValidationPipe(registerOtpSchema))
+  registerOtp(@Body() body: unknown) {
+    const { phone, ownerName } = body as RegisterOtpDto;
+    return this.authService.sendSignupOtp(phone, ownerName);
+  }
+
   @Post('register')
   @UsePipes(new ZodValidationPipe(registerSchema))
   async register(

@@ -119,6 +119,9 @@ export interface OpenOrder {
   totalAmount: string;
   status: string;
   customer: Customer | null;
+  guestName?: string | null;
+  acceptance?: string;
+  createdAt?: string;
   /** What the table has ordered so far (GET /orders?tableId=). */
   items?: {
     id: string;
@@ -276,6 +279,19 @@ export function useOpenOrdersForTable(branchId: string | null, tableId: string |
     // A table's bills change from other terminals; never trust a cached list.
     staleTime: 0,
     refetchOnMount: "always",
+  });
+}
+
+/** Running takeaway / delivery orders (no table): billed and settled from the POS. */
+export function useOpenOrdersWithoutTable(branchId: string | null) {
+  return useQuery({
+    queryKey: ["orders", "open", branchId, "no-table"],
+    queryFn: async () =>
+      (await api.get<OpenOrder[]>(`/orders?branchId=${branchId}`)).filter(
+        (o) => !o.tableId && o.acceptance !== "PENDING",
+      ),
+    enabled: !!branchId,
+    refetchInterval: 15_000,
   });
 }
 

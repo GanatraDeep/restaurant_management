@@ -2609,3 +2609,18 @@ model GuestOtp {
   @@index([branchId, phone, createdAt])
   @@map("guest_otps")
 }
+
+// One-time WhatsApp codes for signing up a new restaurant: the owner's
+// mobile number is verified before the account is created. Short-lived;
+// only the hash of the code is kept.
+model SignupOtp {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+  @@map("signup_otps")
+}

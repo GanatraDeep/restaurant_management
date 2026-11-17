@@ -2,7 +2,7 @@
 
 import { Bike, ChevronLeft, MonitorSmartphone, ShoppingBag, ShoppingCart } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { StatusNote, useNoteToast } from "@/components/ui/status-note";
 import { publishDisplay } from "@/lib/customer-display";
 import { BranchNotice } from "@/components/layout/branch-notice";
@@ -13,6 +13,7 @@ import { CheckoutPanel } from "@/components/pos/checkout-panel";
 import { KitchenProgressWidget } from "@/components/pos/kitchen-progress-widget";
 import { ModifierPickerDialog } from "@/components/pos/modifier-picker-dialog";
 import { PosTablePicker } from "@/components/pos/pos-table-picker";
+import { RunningOrders } from "@/components/pos/running-orders";
 import { ProductGrid } from "@/components/pos/product-grid";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import {
   useAddOrderItems,
   useCreateOrder,
   useOpenOrdersForTable,
+  useOpenOrdersWithoutTable,
   type CreatedOrder,
   type OpenOrder,
 } from "@/hooks/use-orders";
@@ -47,7 +49,10 @@ function PosPageInner() {
   const floorsQuery = useFloors(branchId);
   const floors = floorsQuery.data;
   const tables = floors?.flatMap((f) => f.tables) ?? [];
-  const preselectedTableId = useSearchParams().get("tableId") ?? "";
+  const searchParams = useSearchParams();
+  const preselectedTableId = searchParams.get("tableId") ?? "";
+  // /pos?orderId=…: straight to payment (from Orders → Take payment).
+  const preselectedOrderId = searchParams.get("orderId") ?? "";
 
   const [lines, setLines] = useState<CartLine[]>([]);
   const [orderType, setOrderType] = useState<PosOrderType>("DINE_IN");
@@ -281,6 +286,32 @@ function PosPageInner() {
 
   const handleTablePick = (table: RestaurantTable) => setTableId(table.id);
 
+  const runningQuery = useOpenOrdersWithoutTable(branchId);
+  const openForPayment = (order: OpenOrder) => {
+    if (order.type === "TAKEAWAY" || order.type === "DELIVERY") setOrderType(order.type);
+    setActiveCustomer(order.customer);
+    setActiveOrder(order);
+    setCartOpen(true);
+  };
+  // Opened once per link, not on every re-render.
+  const seenOrderId = useRef("");
+  useEffect(() => {
+    if (!preselectedOrderId || preselectedOrderId === seenOrderId.current || !branchId) return;
+    seenOrderId.current = preselectedOrderId;
+    api
+      .get<OpenOrder>(`/orders/${preselectedOrderId}?branchId=${branchId}`)
+      .then((o) => {
+        if (o.status !== "OPEN") {
+          toast.error(`Order #${o.orderNumber} is already ${o.status.toLowerCase()}`);
+          return;
+        }
+        if (o.tableId) setTableIdRaw(o.tableId);
+        openForPayment(o);
+      })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : "Could not open the order"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectedOrderId, branchId]);
+
   // Shortcuts from the table grid: act on the table's open bill directly.
   const tableShortcut = async (table: RestaurantTable, action: "kot" | "bill") => {
     if (!branchId) return;
@@ -349,6 +380,12 @@ function PosPageInner() {
               <Bike className="h-4 w-4" /> Delivery order
             </Button>
           </div>
+          <RunningOrders
+            orders={runningQuery.data ?? []}
+            showToken={!!features?.tokenEnabled}
+            onPrintBill={(o) => branchId && openReceiptPrint(o.id, branchId)}
+            onPay={openForPayment}
+          />
           <div className="lg:min-h-0 lg:flex-1">
           <PosTablePicker
             floors={floors ?? []}
@@ -388,7 +425,7 @@ function PosPageInner() {
               <ChevronLeft className="h-4 w-4" />
               Back to menu
             </button>
-            {activeOrder && orderType === "DINE_IN" && (
+            {activeOrder && (
               <Button type="button" variant="outline" size="sm" className="mb-3 h-9 gap-1 pl-2" onClick={() => goToTables()}>
                 <ChevronLeft className="h-4 w-4" /> All tables
               </Button>

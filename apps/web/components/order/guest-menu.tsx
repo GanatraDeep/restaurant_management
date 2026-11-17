@@ -45,20 +45,38 @@ function ItemCard({
   const [expanded, setExpanded] = useState(false);
   const spice = SPICE[item.spiceLevel] ?? 0;
   const long = (item.description?.length ?? 0) > 90;
+  // Over a photo the control must stand out from any picture: solid brand
+  // colour, a white ring and a shadow. Without a photo the lighter style fits.
+  const onImage = !!item.imageUrl;
   const stepper =
     quantity > 0 ? (
-      <div className="flex h-9 items-center overflow-hidden rounded-lg border border-primary bg-background text-primary shadow-sm">
-        <button type="button" aria-label={`Remove one ${item.name}`} className="flex h-full w-9 items-center justify-center hover:bg-primary/10" onClick={onRemove}>
+      <div
+        className={cn(
+          "flex h-9 items-center overflow-hidden rounded-lg border border-primary",
+          onImage ? "bg-primary text-primary-foreground shadow-lg ring-2 ring-background" : "bg-background text-primary shadow-sm",
+        )}
+      >
+        <button type="button" aria-label={`Remove one ${item.name}`} className={cn("flex h-full w-9 items-center justify-center", onImage ? "hover:bg-black/10" : "hover:bg-primary/10")} onClick={onRemove}>
           <Minus className="h-4 w-4" />
         </button>
         <span className="w-6 text-center text-sm font-semibold tabular-nums">{quantity}</span>
-        <button type="button" aria-label={`Add one more ${item.name}`} className="flex h-full w-9 items-center justify-center hover:bg-primary/10" onClick={onAdd}>
+        <button type="button" aria-label={`Add one more ${item.name}`} className={cn("flex h-full w-9 items-center justify-center", onImage ? "hover:bg-black/10" : "hover:bg-primary/10")} onClick={onAdd}>
           <Plus className="h-4 w-4" />
         </button>
       </div>
     ) : (
-      <Button type="button" variant="outline" className="h-9 w-24 border-primary bg-background font-semibold text-primary shadow-sm hover:bg-primary/10 hover:text-primary" onClick={onAdd}>
-        ADD
+      <Button
+        type="button"
+        variant="outline"
+        className={cn(
+          "h-9 w-24 border-primary font-bold",
+          onImage
+            ? "bg-primary text-primary-foreground shadow-lg ring-2 ring-background hover:bg-primary/90 hover:text-primary-foreground"
+            : "bg-background text-primary shadow-sm hover:bg-primary/10 hover:text-primary",
+        )}
+        onClick={onAdd}
+      >
+        <Plus className="h-4 w-4" /> ADD
       </Button>
     );
 

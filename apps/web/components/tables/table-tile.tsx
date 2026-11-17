@@ -160,10 +160,12 @@ export function TableTile({
             <div className="grid grid-cols-2 gap-1.5">
               <Button variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs sm:px-2" aria-label="Print KOT" title="Print KOT" onClick={() => printForTable("kot")}>
                 <ChefHat className="h-3.5 w-3.5" />
+                <span className="sm:hidden">KOT</span>
                 <span className="hidden sm:inline">Print KOT</span>
               </Button>
               <Button variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs sm:px-2" aria-label="View bill" title="View bill" onClick={() => setBillOpen(true)}>
                 <ClipboardList className="h-3.5 w-3.5" />
+                <span className="sm:hidden">Bill</span>
                 <span className="hidden sm:inline">View bill</span>
               </Button>
             </div>
