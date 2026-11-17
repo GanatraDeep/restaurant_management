@@ -12,6 +12,7 @@ import {
 } from "@nodedr-restaurant/types";
 import { KioskCard } from "@/components/settings/kiosk-card";
 import { PrintingCard } from "@/components/settings/printing-card";
+import { AppsCard } from "@/components/settings/apps-card";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -76,6 +77,8 @@ export default function SettingsPage() {
       {data && <TokenCard key={`token-${data.branch.id}`} branchId={branchId} enabled={data.branch.tokenEnabled} />}
 
       <PrintingCard />
+
+      <AppsCard />
     </div>
   );
 }

@@ -45,8 +45,22 @@ export const adminUpdateSubscriptionSchema = z.discriminatedUnion("action", [
 ]);
 export type AdminUpdateSubscriptionDto = z.infer<typeof adminUpdateSubscriptionSchema>;
 
+const downloadUrl = z
+  .string()
+  .trim()
+  .max(500)
+  .refine((u) => u === "" || /^https:\/\//.test(u), "Use an https:// link")
+  .transform((u) => u || null)
+  .nullable()
+  .optional();
+
 export const platformSettingsSchema = z.object({
-  requireSubscription: z.boolean(),
+  requireSubscription: z.boolean().optional(),
+  // App downloads offered to restaurant owners (Settings -> Apps): an
+  // Android APK and the Windows desktop app, e.g. Google Drive share links.
+  androidApkUrl: downloadUrl,
+  desktopAppUrl: downloadUrl,
+  desktopAppVersion: z.string().trim().max(20).transform((v) => v || null).nullable().optional(),
 });
 export type PlatformSettingsDto = z.infer<typeof platformSettingsSchema>;
 

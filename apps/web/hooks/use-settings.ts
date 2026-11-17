@@ -60,6 +60,22 @@ export function useSettings(branchId: string | null) {
   });
 }
 
+export interface AppDownloads {
+  androidApkUrl: string | null;
+  desktopAppUrl: string | null;
+  desktopAppVersion: string | null;
+}
+
+/** Android / desktop app download links (owner only; the server checks too). */
+export function useAppDownloads(enabled: boolean) {
+  return useQuery({
+    queryKey: ["settings", "apps"],
+    queryFn: () => api.get<AppDownloads>("/settings/apps"),
+    enabled,
+    staleTime: 5 * 60_000,
+  });
+}
+
 /** Branch switches every staff member's screens follow (GET /settings needs settings.manage). */
 export function useBranchFeatures(branchId: string | null) {
   return useQuery({

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ForbiddenException,
   Controller,
   Get,
   Param,
@@ -45,6 +46,16 @@ export class SettingsController {
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     return this.settingsService.get(user.restaurantId, branchId);
+  }
+
+  // The Android / desktop app downloads: for the restaurant's owner only.
+  @Auth()
+  @Get('apps')
+  async apps(@CurrentUser() user: SessionUser) {
+    if (user.roleName !== 'OWNER' && !user.isSuperAdmin) {
+      throw new ForbiddenException('Only the owner can download the apps');
+    }
+    return this.settingsService.appDownloads();
   }
 
   // Any signed-in user of the branch: switches that change what the POS and

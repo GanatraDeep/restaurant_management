@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { AutoPrintToggle } from "@/components/kds/auto-print-toggle";
 import { Card } from "@/components/ui/card";
 import { useBranch } from "@/hooks/use-branch";
-import { getPaperWidth, hasSilentPrinting, openSampleKotPrint, setPaperWidth } from "@/lib/print";
+import { getPaperWidth, openSampleKotPrint, setPaperWidth } from "@/lib/print";
+import { DesktopPrinters } from "@/components/settings/desktop-printers";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
 
@@ -20,11 +21,9 @@ const STEPS = [
 export function PrintingCard() {
   const { branchId } = useBranch();
   // Only known in the browser (the desktop app adds its bridge to window).
-  const [desktop, setDesktop] = useState(false);
   const [paper, setPaper] = useState<58 | 80>(80);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDesktop(hasSilentPrinting());
     setPaper(getPaperWidth());
   }, []);
   return (
@@ -95,18 +94,7 @@ export function PrintingCard() {
         <AutoPrintToggle branchId={branchId} />
       </div>
 
-      {desktop ? (
-        <p className="rounded-lg bg-success/10 px-3 py-2 text-xs text-foreground">
-          You&rsquo;re in the F Cartel desktop app: KOTs, bills and receipts print straight to the printer chosen in the
-          app&rsquo;s menu (press Alt → Printing → Printer), with no dialog.
-        </p>
-      ) : (
-        <p className="rounded-lg bg-secondary/60 px-3 py-2 text-xs text-muted-foreground">
-          Want KOTs to print without the dialog each time? Use the F Cartel desktop app, or on a dedicated PC start Google
-          Chrome with the <code className="rounded bg-background px-1 py-0.5 text-[11px] text-foreground">--kiosk-printing</code>{" "}
-          option (add it to the shortcut&rsquo;s Target) — it then prints straight to the default printer.
-        </p>
-      )}
+      <DesktopPrinters />
     </Card>
   );
 }

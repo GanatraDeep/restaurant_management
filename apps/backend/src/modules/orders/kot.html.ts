@@ -118,7 +118,7 @@ export function buildKotHtml({
      are heavy enough to survive the print head. */
   * { box-sizing: border-box; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html { margin: 0; }
-  body { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; margin: 0; padding: 3mm 4mm 6mm; color: #000; background: #fff; width: 80mm; font-weight: 600; -webkit-font-smoothing: none; text-rendering: geometricPrecision; }
+  body { font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; margin: 0; padding: 3mm 2mm 6mm; color: #000; background: #fff; width: 72mm; font-weight: 600; -webkit-font-smoothing: none; text-rendering: geometricPrecision; }
   p { margin: 0; }
   .head { text-align: center; line-height: 1.35; }
   .when { font-size: 14px; }
@@ -145,9 +145,11 @@ export function buildKotHtml({
   .note { font-size: 13px; padding: 4px 4px 0; }
   .qty, th.qty { text-align: right; white-space: nowrap; width: 1%; }
   td.qty { font-size: 16px; font-weight: 800; }
+  /* An 80 mm roll prints only ~72 mm, starting at its left edge: the page
+     is 72 mm wide so the right-hand column is never cut off. */
   @page { size: 80mm auto; margin: 0; }
   @media print {
-    html, body { width: 80mm; }
+    html, body { width: 72mm; }
   }
 </style>
 </head>

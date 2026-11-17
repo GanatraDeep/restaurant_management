@@ -27,6 +27,9 @@ export interface AdminOverview {
 
 export interface AdminPlatformSettings {
   requireSubscription: boolean;
+  androidApkUrl: string | null;
+  desktopAppUrl: string | null;
+  desktopAppVersion: string | null;
   razorpayConfigured: boolean;
   razorpayKeyId: string | null;
   razorpayWebhookConfigured: boolean;
