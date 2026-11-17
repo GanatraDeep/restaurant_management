@@ -144,5 +144,8 @@ describe('58 mm paper', () => {
     expect(small).toContain('width: 48mm');
     expect(small).not.toContain('80mm');
     expect(fitPaper(html, 80)).toBe(html);
+    // 80 mm rolls print ~72 mm from the left edge: nothing wider.
+    expect(html).toContain('width: 72mm');
+    expect(html).not.toMatch(/width:\s*80mm/);
   });
 });

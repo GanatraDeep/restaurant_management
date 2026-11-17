@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AppDownloadsCard } from "@/components/admin/app-downloads-card";
 import { WhatsAppCard } from "@/components/admin/whatsapp-card";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -114,6 +115,8 @@ export default function AdminOverviewPage() {
           </>
         )}
       </Card>
+
+      <AppDownloadsCard />
 
       <WhatsAppCard />
     </div>

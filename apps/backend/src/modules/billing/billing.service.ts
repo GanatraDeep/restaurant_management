@@ -427,6 +427,7 @@ export class BillingService {
     const config = razorpayConfig();
     return {
       requireSubscription: s?.requireSubscription ?? false,
+      ...appDownloadsOf(s),
       razorpayConfigured: !!config,
       razorpayKeyId: config?.keyId ?? null,
       razorpayWebhookConfigured: !!config?.webhookSecret,
@@ -685,4 +686,23 @@ export class BillingService {
       },
     });
   }
+}
+
+/** The F Cartel Android app (a WebView wrapper) until a super admin sets another link. */
+export const DEFAULT_ANDROID_APK_URL =
+  'https://drive.google.com/file/d/1FxFWZLr3NCtogFA0g631ZbPxBNuZ6ak1/view?usp=sharing';
+
+/** Download links owners see under Settings -> Apps. */
+export function appDownloadsOf(
+  s: {
+    androidApkUrl: string | null;
+    desktopAppUrl: string | null;
+    desktopAppVersion: string | null;
+  } | null,
+) {
+  return {
+    androidApkUrl: s?.androidApkUrl ?? DEFAULT_ANDROID_APK_URL,
+    desktopAppUrl: s?.desktopAppUrl ?? null,
+    desktopAppVersion: s?.desktopAppVersion ?? null,
+  };
 }

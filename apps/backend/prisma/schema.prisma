@@ -2443,6 +2443,10 @@ model PlatformSettings {
   // Off by default so existing self-hosted installs keep working unchanged;
   // when on, a restaurant needs an active trial or paid period to use the app.
   requireSubscription Boolean @default(false)
+  // Downloads restaurant owners get under Settings -> Apps (Drive links etc.).
+  androidApkUrl       String?
+  desktopAppUrl       String?
+  desktopAppVersion   String?
 
   updatedAt DateTime @updatedAt
 

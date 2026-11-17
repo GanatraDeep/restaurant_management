@@ -10,6 +10,7 @@ import {
   type RestaurantSettingsDto,
 } from '@nodedr-restaurant/types';
 import { AuditService } from '../../audit/audit.service';
+import { appDownloadsOf } from '../billing/billing.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 @Injectable()
@@ -35,6 +36,14 @@ export class SettingsService {
   // Just the restaurant's public-facing branding — safe for every signed-in
   // staff member (the app shell header), unlike get() which also returns
   // payment/tax/printer config and is gated on settings.manage.
+  /** App download links (set by the platform's super admin). */
+  async appDownloads() {
+    const s = await this.prisma.platformSettings.findUnique({
+      where: { id: 'default' },
+    });
+    return appDownloadsOf(s);
+  }
+
   async branchFeatures(branchId: string) {
     const b = await this.prisma.branch.findUnique({
       where: { id: branchId },
