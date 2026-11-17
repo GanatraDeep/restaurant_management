@@ -1,6 +1,8 @@
 "use client";
 
-import { Check, MessageCircle, Pencil, Phone, X } from "lucide-react";
+import { Check, CreditCard, MessageCircle, Pencil, Phone, Printer, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { openReceiptPrint } from "@/lib/print";
 import { useState } from "react";
 import { StatusNote, useNoteToast } from "@/components/ui/status-note";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +44,8 @@ export function OrderDetailDialog({
   const { data: me } = useCurrentUser();
   const canEditRole = hasPermission(me?.user, "orders.edit");
   const canAnswer = hasPermission(me?.user, "orders.accept");
+  const canPay = hasPermission(me?.user, "bills.print");
+  const router = useRouter();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [declineOpen, setDeclineOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -197,6 +201,30 @@ export function OrderDetailDialog({
               <p className="rounded-lg bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
                 This bill is paid. To correct it, issue a refund from the Dashboard — paid bills are never edited in place.
               </p>
+            )}
+            {/* Takeaway / delivery have no table to tap: bill and settle from here. */}
+            {canCancel && branchId && (
+              <div className="flex gap-2">
+                <Button variant="outline" className="h-11 flex-1" onClick={() => openReceiptPrint(order.id, branchId)}>
+                  <Printer className="mr-1.5 h-4 w-4" /> Print bill
+                </Button>
+                {canPay && (
+                  <Button
+                    className="h-11 flex-1"
+                    onClick={() => {
+                      onOpenChange(false);
+                      router.push(`/pos?orderId=${order.id}`);
+                    }}
+                  >
+                    <CreditCard className="mr-1.5 h-4 w-4" /> Take payment
+                  </Button>
+                )}
+              </div>
+            )}
+            {order.status === "PAID" && branchId && (
+              <Button variant="outline" className="h-10" onClick={() => openReceiptPrint(order.id, branchId)}>
+                <Printer className="mr-1.5 h-4 w-4" /> Print receipt
+              </Button>
             )}
             {canCancel && (
               <div className="flex gap-2">

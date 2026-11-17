@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { LayoutGrid, Plus } from "lucide-react";
+import { Check, Pencil, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AddFloorDialog } from "@/components/tables/add-floor-dialog";
 import { EditableTableTile } from "@/components/tables/editable-table-tile";
@@ -117,7 +117,7 @@ export default function TablesPage() {
               title={editMode ? "Done editing" : "Edit floor plan"}
               onClick={() => setEditMode((v) => !v)}
             >
-              <LayoutGrid className="h-4 w-4" />
+              {editMode ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
               <span className="hidden sm:inline">{editMode ? "Done editing" : "Edit floor plan"}</span>
             </Button>
           </div>

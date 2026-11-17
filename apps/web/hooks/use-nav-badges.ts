@@ -40,6 +40,9 @@ export function useNavBadges(): NavBadges {
 
   for (const n of notifications?.data ?? []) {
     if (n.readAt) continue;
+    // Orders rung up at the POS don't need anyone's attention on Orders;
+    // QR, website and aggregator orders do.
+    if (n.type === "order.pos") continue;
     const href = n.entity ? ENTITY_TO_NAV[n.entity] : undefined;
     if (href) nav[href] = true;
     if (n.entity === "Backup" || n.entity === "BackupConfig") {

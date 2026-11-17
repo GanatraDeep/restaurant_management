@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type RegisterDto } from "@nodedr-restaurant/types";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, MessageCircle, X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,14 @@ import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { Logo } from "@/components/layout/logo";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +80,54 @@ export default function SignupPage() {
     if (logoInputRef.current) logoInputRef.current.value = "";
   };
 
+  // WhatsApp verification: the form's data waits here while the owner
+  // confirms the number and types the code.
+  const [pendingDto, setPendingDto] = useState<RegisterDto | null>(null);
+  const [step, setStep] = useState<"confirm" | "code" | null>(null);
+  const [code, setCode] = useState("");
+  const [sending, setSending] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
   const onSubmit = (dto: RegisterDto) => {
+    setPendingDto(dto);
+    setCode("");
+    setCodeError(null);
+    setStep("confirm");
+  };
+
+  const sendCode = async () => {
+    if (!pendingDto) return;
+    setSending(true);
+    setCodeError(null);
+    try {
+      const res = await api.post<{ required: boolean; resendAfterSeconds?: number }>("/auth/register/otp", {
+        phone: pendingDto.phone,
+        ownerName: pendingDto.ownerName,
+      });
+      if (!res.required) {
+        // WhatsApp isn't set up on this server: nothing to verify.
+        setStep(null);
+        createAccount(pendingDto);
+        return;
+      }
+      setStep("code");
+      setResendIn(res.resendAfterSeconds ?? 30);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Could not send the code";
+      if (step === "code") setCodeError(msg);
+      else toast.error(msg);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const createAccount = (dto: RegisterDto) => {
     register.mutate(dto, {
       onSuccess: async () => {
         if (logo) {
@@ -86,7 +141,9 @@ export default function SignupPage() {
         router.push("/dashboard");
       },
       onError: (err) => {
-        toast.error(err instanceof ApiError ? err.message : "Something went wrong");
+        const msg = err instanceof ApiError ? err.message : "Something went wrong";
+        if (dto.otpCode) setCodeError(msg);
+        else toast.error(msg);
       },
     });
   };
@@ -218,6 +275,31 @@ export default function SignupPage() {
           </div>
 
           <div className="flex flex-col gap-2">
+            <Label htmlFor="phone">WhatsApp number</Label>
+            <div className="flex">
+              <span className="flex h-9 items-center rounded-l-lg border border-r-0 border-input bg-secondary px-3 text-sm text-muted-foreground">
+                +91
+              </span>
+              <Input
+                id="phone"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel-national"
+                placeholder="98765 43210"
+                className="rounded-l-none"
+                {...field("phone")}
+              />
+            </div>
+            {/* The note the owner must see before typing a number. */}
+            <p className="flex items-start gap-2 rounded-lg border border-[#25D366]/40 bg-[#25D366]/10 px-3 py-2 text-xs text-foreground">
+              <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#1DA851]" aria-hidden />
+              Use a number that is on WhatsApp — a one-time code is sent there to verify it before your account is
+              created.
+            </p>
+            {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+          </div>
+
+          <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -250,6 +332,77 @@ export default function SignupPage() {
                 : "Create account"}
           </Button>
         </form>
+
+        <Dialog open={step !== null} onOpenChange={(o) => !o && !sending && !register.isPending && setStep(null)}>
+          <DialogContent className="sm:max-w-sm">
+            {step === "confirm" ? (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <MessageCircle className="h-5 w-5 text-[#1DA851]" /> Verify your WhatsApp
+                  </DialogTitle>
+                  <DialogDescription>
+                    We&rsquo;ll send a one-time code to{" "}
+                    <strong className="text-foreground">+91 {pendingDto?.phone.replace(/(\d{5})(\d{5})/, "$1 $2")}</strong> on WhatsApp. Make
+                    sure this number uses WhatsApp — you&rsquo;ll need the code to finish signing up.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setStep(null)} disabled={sending}>
+                    Change number
+                  </Button>
+                  <Button onClick={() => void sendCode()} disabled={sending}>
+                    {sending ? "Sending…" : "Send code"}
+                  </Button>
+                </DialogFooter>
+              </>
+            ) : (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!pendingDto || code.length !== 6) return;
+                  setCodeError(null);
+                  createAccount({ ...pendingDto, otpCode: code });
+                }}
+                className="flex flex-col gap-4"
+              >
+                <DialogHeader>
+                  <DialogTitle>Enter the code</DialogTitle>
+                  <DialogDescription>
+                    Sent to WhatsApp +91 {pendingDto?.phone.replace(/(\d{5})(\d{5})/, "$1 $2")}. It expires in 10 minutes.
+                  </DialogDescription>
+                </DialogHeader>
+                <Input
+                  autoFocus
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  aria-label="6-digit code"
+                  placeholder="••••••"
+                  className="h-12 text-center text-2xl tracking-[0.5em]"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                />
+                {codeError && (
+                  <p role="alert" className="rounded-lg bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    {codeError}
+                  </p>
+                )}
+                <Button type="submit" className="h-11" disabled={code.length !== 6 || busy}>
+                  {savingLogo ? "Adding your logo…" : register.isPending ? "Creating your account…" : "Verify & create account"}
+                </Button>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:no-underline disabled:opacity-60"
+                  disabled={resendIn > 0 || sending}
+                  onClick={() => void sendCode()}
+                >
+                  {resendIn > 0 ? `Resend code in ${resendIn}s` : sending ? "Sending…" : "Resend code"}
+                </button>
+              </form>
+            )}
+          </DialogContent>
+        </Dialog>
 
         <p className="mt-4 text-center text-xs text-muted-foreground">
           By creating an account you agree to the{" "}

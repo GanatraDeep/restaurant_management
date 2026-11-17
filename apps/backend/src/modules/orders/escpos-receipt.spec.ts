@@ -304,7 +304,7 @@ describe('VERI*FACTU QR on the receipt', () => {
       restaurantName: 'Casa Ñandú',
       currency: 'EUR',
       branch,
-      order: { ...o, verifactu } as never,
+      order: { ...o, verifactu },
       profile: resolveProfile({ paperWidthMm: 80 }),
       ...fmt,
     });

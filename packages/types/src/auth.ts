@@ -10,13 +10,29 @@ export const loginSchema = z.object({
 });
 export type LoginDto = z.infer<typeof loginSchema>;
 
+// Indian mobile, as typed: spaces, +91 or a leading 0 are fine.
+const ownerPhoneSchema = z
+  .string()
+  .transform((v) => v.replace(/\D/g, "").replace(/^(91|0)(?=\d{10}$)/, ""))
+  .refine((v) => /^[6-9]\d{9}$/.test(v), "Enter a valid 10-digit WhatsApp number");
+
 export const registerSchema = z.object({
   restaurantName: z.string().min(1),
   branchName: z.string().min(1).default("Main Branch"),
   ownerName: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
+  // The owner's WhatsApp number, verified with a one-time code
+  // (POST /auth/register/otp) when WhatsApp is set up on the server.
+  phone: ownerPhoneSchema,
+  otpCode: z.string().regex(/^\d{6}$/, "Enter the 6-digit code").optional(),
 });
+
+export const registerOtpSchema = z.object({
+  phone: ownerPhoneSchema,
+  ownerName: z.string().trim().max(60).optional(),
+});
+export type RegisterOtpDto = z.infer<typeof registerOtpSchema>;
 export type RegisterDto = z.infer<typeof registerSchema>;
 
 export const pinLoginSchema = z.object({

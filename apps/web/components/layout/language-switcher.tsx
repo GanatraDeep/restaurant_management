@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { LOCALES, LOCALE_LABELS, useI18n, type Locale } from "@/lib/i18n/context";
+import { ENABLED_LOCALES, LOCALE_LABELS, useI18n, type Locale } from "@/lib/i18n/context";
 
 /** Small reusable language picker — used in the staff sidebar and on the
  * guest-facing QR ordering page. Swapping the locale only changes strings
@@ -16,6 +16,8 @@ import { LOCALES, LOCALE_LABELS, useI18n, type Locale } from "@/lib/i18n/context
  * translated too (see lib/i18n/context.tsx). */
 export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
   const { locale, setLocale, t } = useI18n();
+  // Nothing to choose between: no picker at all.
+  if (ENABLED_LOCALES.length < 2) return null;
 
   return (
     <Select value={locale} onValueChange={(v) => v && setLocale(v as Locale)}>
@@ -27,7 +29,7 @@ export function LanguageSwitcher({ compact = false }: { compact?: boolean }) {
         <SelectValue>{compact ? locale.toUpperCase() : LOCALE_LABELS[locale]}</SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {LOCALES.map((code) => (
+        {ENABLED_LOCALES.map((code) => (
           <SelectItem key={code} value={code}>
             {LOCALE_LABELS[code]}
           </SelectItem>

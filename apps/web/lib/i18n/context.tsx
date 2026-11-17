@@ -12,7 +12,7 @@
 // app/order/[qrToken]/page.tsx for the two places this is wired up so far.
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_LOCALE, isLocale, type Locale } from "./locales";
+import { DEFAULT_LOCALE, isEnabledLocale, type Locale } from "./locales";
 import en from "./dictionaries/en.json";
 import es from "./dictionaries/es.json";
 import fr from "./dictionaries/fr.json";
@@ -24,7 +24,7 @@ function detectBrowserLocale(): Locale {
   if (typeof navigator === "undefined") return DEFAULT_LOCALE;
   for (const lang of navigator.languages ?? [navigator.language]) {
     const short = lang.slice(0, 2).toLowerCase();
-    if (isLocale(short)) return short;
+    if (isEnabledLocale(short)) return short;
   }
   return DEFAULT_LOCALE;
 }
@@ -59,8 +59,9 @@ export function I18nProvider({
   useEffect(() => {
     if (fixedLocale) return;
     const saved = localStorage.getItem(STORAGE_KEY);
+    // A language that has since been switched off falls back to English.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setLocaleState(isLocale(saved) ? saved : detectBrowserLocale());
+    setLocaleState(isEnabledLocale(saved) ? saved : detectBrowserLocale());
   }, [fixedLocale]);
 
   const setLocale = useCallback(
@@ -94,5 +95,5 @@ export function useI18n(): I18nContextValue {
   return ctx;
 }
 
-export { LOCALES, LOCALE_LABELS } from "./locales";
+export { ENABLED_LOCALES, LOCALES, LOCALE_LABELS } from "./locales";
 export type { Locale } from "./locales";

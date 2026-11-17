@@ -152,7 +152,7 @@ export function PosTablePicker({
                     <div
                       key={table.id}
                       className={cn(
-                        "relative aspect-square w-full overflow-hidden rounded-xl border-2 shadow-sm transition-transform",
+                        "relative flex aspect-square w-full flex-col overflow-hidden rounded-xl border-2 shadow-sm transition-transform",
                         clickable && "hover:scale-[1.03] hover:shadow-md",
                         TABLE_DISPLAY[tableDisplayOf(table)].tile,
                       )}
@@ -163,8 +163,7 @@ export function PosTablePicker({
                         title={TABLE_DISPLAY[tableDisplayOf(table)].hint}
                         onClick={() => onSelect(table)}
                         className={cn(
-                          "absolute inset-0 flex flex-col items-center justify-center gap-0.5 px-1.5 text-xs font-medium",
-                          occupied && (onPrintKot || onViewBill) && "pb-7",
+                          "flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 px-1.5 text-xs font-medium",
                           clickable ? "cursor-pointer" : "cursor-not-allowed",
                         )}
                       >
@@ -190,7 +189,8 @@ export function PosTablePicker({
                         </span>
                       </button>
                       {occupied && (onPrintKot || onViewBill) && (
-                        <div className="absolute inset-x-1 bottom-1 flex justify-center gap-1">
+                        // In the flow under the name, never on top of it.
+                        <div className="flex shrink-0 justify-center gap-1 px-1 pb-1">
                           {onPrintKot && (
                             <button
                               type="button"

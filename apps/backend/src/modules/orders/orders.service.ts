@@ -453,7 +453,9 @@ export class OrdersService {
         });
       } else {
         await this.notifications.notifyByPermission(branchId, 'kds.manage', {
-          type: 'order.new',
+          // Rung up at the POS: the kitchen still hears of it, but it is not
+          // an "attention" order (no dot on Orders) — staff entered it.
+          type: channel === 'ONLINE' ? 'order.new' : 'order.pos',
           title: channel === 'ONLINE' ? 'New online order' : 'New order',
           body: full.table
             ? `Order ${full.orderNumber} — Table ${full.table.number}`

@@ -13,7 +13,7 @@ import {
   LayoutGrid,
   Package,
   Settings,
-  ShoppingCart,
+  HandPlatter,
   UsersRound,
   UtensilsCrossed,
   type LucideIcon,
@@ -28,7 +28,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { labelKey: "nav.dashboard", href: "/dashboard", icon: LayoutDashboard, permission: "dashboard.sales.view" },
-  { labelKey: "nav.pos", href: "/pos", icon: ShoppingCart, permission: "orders.create" },
+  { labelKey: "nav.pos", href: "/pos", icon: HandPlatter, permission: "orders.create" },
   { labelKey: "nav.orders", href: "/orders", icon: ClipboardList, permission: "orders.create" },
   { labelKey: "nav.tables", href: "/tables", icon: LayoutGrid, permission: "tables.view" },
   {

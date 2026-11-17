@@ -16,6 +16,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwoFactorService } from './two-factor.service';
+import { SignupOtpService } from './signup-otp.service';
 import { isSuperAdminUser } from '../common/super-admin';
 
 /** How long "Remember me" keeps someone signed in on that device. */
@@ -27,6 +28,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly twoFactor: TwoFactorService,
+    private readonly signupOtp: SignupOtpService,
   ) {}
 
   private toSessionUser(user: {
@@ -84,6 +86,18 @@ export class AuthService {
         'An account with this email already exists',
       );
     }
+    const phoneTaken = await this.prisma.user.findFirst({
+      where: { phone: dto.phone, role: { name: 'OWNER' } },
+      select: { id: true },
+    });
+    if (phoneTaken) {
+      throw new BadRequestException(
+        'A restaurant is already registered with this mobile number — sign in instead',
+      );
+    }
+    // The owner's WhatsApp number must be theirs (skipped when WhatsApp
+    // isn't set up on this server).
+    await this.signupOtp.consume(dto.phone, dto.otpCode);
 
     // Permissions are global, not per-tenant — upsert (idempotent) outside
     // the transaction below rather than re-creating them per restaurant.
@@ -104,7 +118,12 @@ export class AuthService {
         data: { name: dto.restaurantName },
       });
       const branch = await tx.branch.create({
-        data: { restaurantId: restaurant.id, name: dto.branchName },
+        // The verified number doubles as the branch's phone on bills.
+        data: {
+          restaurantId: restaurant.id,
+          name: dto.branchName,
+          phone: dto.phone,
+        },
       });
 
       let ownerRoleId = '';
@@ -136,6 +155,7 @@ export class AuthService {
           roleId: ownerRoleId,
           name: dto.ownerName,
           email: dto.email,
+          phone: dto.phone,
           passwordHash,
         },
         include: {
@@ -151,6 +171,10 @@ export class AuthService {
     });
 
     return this.issueSession(owner);
+  }
+
+  sendSignupOtp(phone: string, ownerName?: string) {
+    return this.signupOtp.send(phone, ownerName);
   }
 
   async hasAnyRestaurant(): Promise<boolean> {
