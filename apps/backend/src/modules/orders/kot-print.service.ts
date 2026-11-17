@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
 import { buildKotEscPosJob, resolveProfile } from './escpos-receipt';
 import { buildKotHtml } from './kot.html';
+import { tokenOf } from './token';
 import { PrinterNotFoundError } from './escpos-usb';
 import { sendToBranchPrinter } from './printer-transport';
 
@@ -45,7 +46,11 @@ export class KotPrintService {
           include: {
             table: true,
             customer: true,
-            branch: { include: { restaurant: { select: { timezone: true } } } },
+            branch: {
+              include: {
+                restaurant: { select: { timezone: true, name: true } },
+              },
+            },
           },
         },
         items: {
@@ -77,6 +82,14 @@ export class KotPrintService {
     if (!kot) throw new NotFoundException('KOT not found');
     // An auto-print claim (claimFirstPrint) already counted this copy.
     const alreadyCounted = opts.claimed && kot.printedCount === 1;
+    const firstCopy = alreadyCounted || kot.printedCount === 0;
+    // Token slip: with the first copy of the order's first ticket only.
+    const slip =
+      firstCopy &&
+      kot.order.branch.tokenEnabled &&
+      (await this.prisma.kot.count({
+        where: { orderId: kot.orderId, createdAt: { lt: kot.createdAt } },
+      })) === 0;
     if (!alreadyCounted) {
       const updated = await this.prisma.kot.update({
         where: { id: kot.id },
@@ -92,6 +105,7 @@ export class KotPrintService {
       });
     }
     return kotPage([kot], {
+      slip,
       ticket: {
         number: kot.ticketNumber,
         station: kot.station?.name ?? null,
@@ -116,6 +130,9 @@ export class KotPrintService {
     // Only counter items (cold drinks, water): a page that tells the
     // browser not to print, rather than an error slip on the printer.
     if (kots.length === 0) return NO_KOT_PAGE;
+    // Nothing on the order printed yet: this is its first KOT, so the guest's
+    // token slip comes out with it.
+    const slip = all.every((k) => k.printedCount === 0);
     await this.prisma.kot.updateMany({
       where: { id: { in: kots.map((k) => k.id) } },
       data: { printedCount: { increment: 1 }, printedAt: new Date() },
@@ -123,7 +140,7 @@ export class KotPrintService {
     for (const k of kots) {
       this.realtime.emitToBranch(branchId, 'kot.reprinted', { id: k.id });
     }
-    return kotPage(kots);
+    return kotPage(kots, { slip });
   }
 
   /**
@@ -308,13 +325,23 @@ export function tableLabel(t: { name: string | null; number: string }): string {
 /** One KOT page for one or more tickets of the same order. */
 function kotPage(
   kots: LoadedKot[],
-  extra: { ticket?: Parameters<typeof buildKotHtml>[0]['ticket'] } = {},
+  {
+    slip = false,
+    ...extra
+  }: {
+    ticket?: Parameters<typeof buildKotHtml>[0]['ticket'];
+    slip?: boolean;
+  } = {},
 ): string {
   const { order } = kots[0];
+  const token = order.branch.tokenEnabled ? tokenOf(order.orderNumber) : null;
   return buildKotHtml({
     branchName: order.branch.name,
     timeZone: order.branch.restaurant.timezone,
     kotNos: kots.map((k) => k.kotNo ?? 0),
+    token,
+    tokenSlip:
+      token && slip ? { restaurantName: order.branch.restaurant.name } : null,
     ...extra,
     order: {
       orderNumber: order.orderNumber,

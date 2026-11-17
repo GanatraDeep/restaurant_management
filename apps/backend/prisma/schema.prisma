@@ -132,6 +132,12 @@ model Branch {
   autoConfirmReservations Boolean @default(false)
   // Table-QR orders must be paid (UPI) before staff accept them.
   qrPayFirst              Boolean @default(false)
+  // Token system: every order gets a daily token number (the order's daily
+  // sequence), stamped on the KOT and bill, with a token slip for the guest.
+  tokenEnabled            Boolean @default(false)
+  // Branch-level QR for takeaway: guests scan it at the counter and order
+  // without a table. Opaque like Table.qrToken; null = not created yet.
+  takeawayQrToken         String? @unique
 
   // Self-service kiosk (2026-10-17). kioskToken is the opaque, unguessable
   // credential in the public /kiosk/<token> URL (same idea as

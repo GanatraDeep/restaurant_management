@@ -700,7 +700,7 @@ export class McpToolsBuilder {
         name: 'run_report',
         title: 'Run a report',
         description:
-          'Run a catalog report (sales-daily, sales-by-item, popular-items, slow-movers, payment-methods, discounts, tax, peak-hours, food-cost, customers, retention, staff-sales, table-turnover, reservations, delivery, waste, inventory-valuation) for a location between two dates (YYYY-MM-DD). Returns columns and rows.',
+          'Run a catalog report (sales-daily, sales-by-item, popular-items, slow-movers, payment-methods, discounts, tax, sales-by-hour, peak-hours, food-cost, customers, retention, staff-sales, table-turnover, reservations, delivery, waste, inventory-valuation) for a location between two dates (YYYY-MM-DD). Returns columns and rows.',
         inputSchema: {
           type: 'object',
           properties: {

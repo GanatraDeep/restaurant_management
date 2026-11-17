@@ -18,6 +18,7 @@ import { localUploadPath } from '../../common/upload/image-upload.config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { buildTableQrPdf, type QrLayout } from './table-qr-pdf';
 import { RealtimeGateway } from '../../realtime/realtime.gateway';
+import { finishKitchenTickets } from '../kds/finish-kitchen';
 
 @Injectable()
 export class TablesService {
@@ -182,15 +183,40 @@ export class TablesService {
         );
       }
     }
-    const table = await this.prisma.table.update({
-      where: { id },
-      data: {
-        status,
-        statusSince: new Date(),
-        ...(assignedWaiterId ? { assignedWaiterId } : {}),
-      },
+    const { table, finished } = await this.prisma.$transaction(async (tx) => {
+      const table = await tx.table.update({
+        where: { id },
+        data: {
+          status,
+          statusSince: new Date(),
+          ...(assignedWaiterId ? { assignedWaiterId } : {}),
+        },
+      });
+      // Clearing a table whose bill is already paid (pay-first, or paid and
+      // kept seated): close its kitchen tickets too.
+      let finished = 0;
+      if (status !== 'OCCUPIED') {
+        const paid = await tx.order.findMany({
+          where: {
+            tableId: id,
+            status: 'PAID',
+            kots: {
+              some: {
+                status: { in: ['NEW', 'ACCEPTED', 'PREPARING', 'READY'] },
+              },
+            },
+          },
+          select: { id: true },
+        });
+        finished = await finishKitchenTickets(
+          tx,
+          paid.map((o) => o.id),
+        );
+      }
+      return { table, finished };
     });
     this.realtime.emitToBranch(branchId, 'table.updated', table);
+    if (finished > 0) this.realtime.emitToBranch(branchId, 'kot.updated', {});
     return table;
   }
 
@@ -261,6 +287,52 @@ export class TablesService {
         seats: t.capacity,
         url: `${opts.origin}/order/${t.qrToken}`,
       })),
+    });
+  }
+
+  // --- Takeaway QR: one per branch, for guests ordering at the counter.
+
+  async takeawayQr(branchId: string) {
+    const b = await this.prisma.branch.findUniqueOrThrow({
+      where: { id: branchId },
+      select: { takeawayQrToken: true },
+    });
+    return { token: b.takeawayQrToken };
+  }
+
+  /** Creates the takeaway QR, or replaces it (old printed codes stop working). */
+  async rotateTakeawayQr(branchId: string) {
+    const token = randomBytes(16).toString('hex');
+    await this.prisma.branch.update({
+      where: { id: branchId },
+      data: { takeawayQrToken: token },
+    });
+    return { token };
+  }
+
+  async takeawayQrPdf(branchId: string, origin: string) {
+    let { token } = await this.takeawayQr(branchId);
+    if (!token) token = (await this.rotateTakeawayQr(branchId)).token;
+    const branch = await this.prisma.branch.findUniqueOrThrow({
+      where: { id: branchId },
+      select: {
+        name: true,
+        restaurant: { select: { name: true, logoUrl: true } },
+      },
+    });
+    return buildTableQrPdf({
+      restaurantName: branch.restaurant.name,
+      logoPath: localUploadPath(branch.restaurant.logoUrl),
+      layout: 'pages',
+      tables: [
+        {
+          label: 'Takeaway',
+          floor: branch.name,
+          seats: 0,
+          url: `${origin}/order/${token}`,
+          takeaway: true,
+        },
+      ],
     });
   }
 

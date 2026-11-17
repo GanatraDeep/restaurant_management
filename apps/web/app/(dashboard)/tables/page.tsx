@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { LayoutGrid, Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AddFloorDialog } from "@/components/tables/add-floor-dialog";
@@ -95,7 +96,7 @@ export default function TablesPage() {
   return (
     <div className="flex flex-col gap-6">
       <TableRequestsBar branchId={branchId} />
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="flex items-start justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Tables</h1>
           <p className="text-sm text-muted-foreground">
@@ -105,11 +106,19 @@ export default function TablesPage() {
           </p>
         </div>
         {canManage && floors && floors.length > 0 && (
-          <div className="flex flex-col gap-2 sm:flex-row">
-            {branchId && allTables.length > 0 && <QrExportButton branchId={branchId} floors={floors} />}
-            <Button variant={editMode ? "default" : "outline"} size="sm" className="h-11 w-full sm:h-8 sm:w-auto" onClick={() => setEditMode((v) => !v)}>
+          <div className="flex shrink-0 gap-2">
+            {branchId && <QrExportButton branchId={branchId} floors={floors} />}
+            {/* Phones: small square icon buttons; the words come back from sm up. */}
+            <Button
+              variant={editMode ? "default" : "outline"}
+              size="sm"
+              className="h-10 w-10 p-0 sm:h-8 sm:w-auto sm:px-3"
+              aria-label={editMode ? "Done editing" : "Edit floor plan"}
+              title={editMode ? "Done editing" : "Edit floor plan"}
+              onClick={() => setEditMode((v) => !v)}
+            >
               <LayoutGrid className="h-4 w-4" />
-              {editMode ? "Done editing" : "Edit floor plan"}
+              <span className="hidden sm:inline">{editMode ? "Done editing" : "Edit floor plan"}</span>
             </Button>
           </div>
         )}
@@ -130,8 +139,29 @@ export default function TablesPage() {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_320px]">
           <div className="flex flex-col gap-4">
             <div className="flex min-w-0 flex-wrap items-center gap-2 [&_button]:max-sm:min-h-10">
+              {/* Phones: floors as chips, every one a tap away (no dropdown). */}
+              <div className="-mx-4 flex w-[calc(100%+2rem)] gap-2 overflow-x-auto px-4 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Floor">
+                {[...(editMode ? [] : [{ id: ALL, label: "All tables" }]), ...floors.map((f) => ({ id: f.id, label: f.name }))].map((c) => {
+                  const on = (showAll ? ALL : (activeFloor?.id ?? floors[0].id)) === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      onClick={() => setActiveFloorId(c.id)}
+                      className={cn(
+                        "flex h-10 shrink-0 items-center rounded-full border px-4 text-sm font-medium transition-colors",
+                        on ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
+                      )}
+                    >
+                      {c.label}
+                    </button>
+                  );
+                })}
+              </div>
               <ResponsiveTabs
-                className="max-lg:w-full"
+                className="hidden lg:block"
                 label="Floor"
                 value={showAll ? ALL : (activeFloor?.id ?? floors[0].id)}
                 onChange={setActiveFloorId}
@@ -158,7 +188,7 @@ export default function TablesPage() {
             </div>
 
             {showAll ? (
-              <Card className="flex flex-col gap-6 p-3 sm:p-6">
+              <Card className="flex flex-col gap-6 p-3 max-sm:overflow-visible max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent max-sm:p-0 max-sm:shadow-none max-sm:ring-0 sm:p-6">
                 {floors.map((floor) => (
                   <section key={floor.id} className="flex flex-col gap-3">
                     {floors.length > 1 && (
@@ -167,7 +197,7 @@ export default function TablesPage() {
                       </h2>
                     )}
                     {floor.tables.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))]">
+                      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] sm:gap-3">
                         {[...floor.tables]
                           .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
                           .map((table) => (

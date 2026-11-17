@@ -12,6 +12,7 @@ import { QueryError } from "@/components/ui/query-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import { useBranch } from "@/hooks/use-branch";
+import { useBranchFeatures } from "@/hooks/use-settings";
 import { useKdsSound } from "@/hooks/use-kds-sound";
 import { useKdsIncoming, useKdsStations, useKdsTickets, type KotTicket } from "@/hooks/use-kds";
 import { useKdsStationPreference } from "@/hooks/use-kds-station";
@@ -28,6 +29,7 @@ const COLUMNS: { status: KotStatusDto; label: string; dot: string }[] = [
 
 export default function KdsPage() {
   const { branchId } = useBranch();
+  const tokenOn = useBranchFeatures(branchId).data?.tokenEnabled ?? false;
   const { data: me } = useCurrentUser();
   const canAnswer = hasPermission(me?.user, "orders.accept");
   const { data: stations, isError: stationsFailed } = useKdsStations(branchId);
@@ -57,7 +59,7 @@ export default function KdsPage() {
         {/* The sound button disappears on the first tap anywhere (it unlocks
             audio); keeping the switch last in this right-aligned row means
             that never shifts it mid-click. */}
-        <div className="flex flex-wrap items-start justify-end gap-2">
+        <div className="flex flex-wrap items-start gap-2 max-sm:w-full sm:justify-end">
           <LiveStatus />
           <AutoPrintToggle branchId={branchId} />
         </div>
@@ -103,9 +105,12 @@ export default function KdsPage() {
             Incoming - needs a decision{" "}
             <span className="ml-1 rounded-full bg-destructive px-2 py-0.5 text-xs text-white">{pendingOrders.length}</span>
           </h2>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          {/* Padding inside the scroller so the cards' highlight ring isn't
+              clipped; items-start so a short order doesn't stretch to the
+              height of a long one. */}
+          <div className="-mx-1 flex items-start gap-3 overflow-x-auto px-1 pb-2 pt-1">
             {pendingOrders.map((order) => (
-              <IncomingOrderCard key={order.id} order={order} branchId={branchId} />
+              <IncomingOrderCard key={order.id} order={order} branchId={branchId} showToken={tokenOn} />
             ))}
           </div>
         </section>
@@ -142,7 +147,7 @@ export default function KdsPage() {
                     <Skeleton key={i} className="h-32 rounded-2xl" />
                   ))}
                 {byStatus(col.status).map((ticket) => (
-                  <TicketCard key={ticket.id} ticket={ticket} branchId={branchId} />
+                  <TicketCard key={ticket.id} ticket={ticket} branchId={branchId} showToken={tokenOn} />
                 ))}
                 {canFetch && !tickets.isLoading && byStatus(col.status).length === 0 && (
                   <p className="py-6 text-center text-xs text-muted-foreground">No tickets</p>

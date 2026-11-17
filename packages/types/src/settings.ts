@@ -49,6 +49,8 @@ export const branchSettingsSchema = z.object({
   autoConfirmReservations: z.boolean().optional(),
   // Table-QR orders are paid by UPI first and accepted once the money arrives.
   qrPayFirst: z.boolean().optional(),
+  // Token number on every order: big on the KOT, on the bill, plus a token slip.
+  tokenEnabled: z.boolean().optional(),
   // Self-service kiosk: which service-mode buttons the start screen offers.
   kioskDineInEnabled: z.boolean().optional(),
   kioskTakeawayEnabled: z.boolean().optional(),

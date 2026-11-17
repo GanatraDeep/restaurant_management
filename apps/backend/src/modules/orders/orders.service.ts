@@ -45,6 +45,7 @@ import {
 import type { TaxMode } from '@nodedr-restaurant/types';
 import { VerifactuService } from '../verifactu/verifactu.service';
 import { itemVariants } from '../menu/menu-variants';
+import { finishKitchenTickets } from '../kds/finish-kitchen';
 import {
   AggregatorStatusService,
   KOT_TO_AGGREGATOR_STATUS,
@@ -1600,6 +1601,7 @@ export class OrdersService {
       dto.discountFlat ?? 0,
     );
 
+    let kitchenFinished = 0;
     let stockSkipped: { menuItemId: string; name: string; reason: string }[] =
       [];
     let settlement!: ReturnType<typeof settlePayments>;
@@ -1745,6 +1747,10 @@ export class OrdersService {
 
         if (!opts.keepTable) {
           await this.releaseTableIfIdle(tx, order.tableId, orderId);
+          // Paid and the table freed: the food has gone out, whether or not
+          // anyone tapped the stages on the Kitchen Display.
+          if (order.tableId)
+            kitchenFinished = await finishKitchenTickets(tx, [orderId]);
         }
 
         // Loyalty earn on net spend (excluding tip), only once the sale is
@@ -1847,6 +1853,11 @@ export class OrdersService {
       if (order.tableId) {
         this.realtime.emitToBranch(branchId, 'table.updated', {
           id: order.tableId,
+        });
+      }
+      if (kitchenFinished > 0) {
+        this.realtime.emitToBranch(branchId, 'kot.updated', {
+          orderId: updated.id,
         });
       }
       void this.webhooks.emitForBranch(branchId, 'order.paid', {

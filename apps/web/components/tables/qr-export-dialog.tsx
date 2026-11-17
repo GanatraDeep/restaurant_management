@@ -1,13 +1,13 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { QrCode } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Copy, QrCode, RefreshCw, ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Floor } from "@/hooks/use-tables";
-import { ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { downloadFile } from "@/lib/download";
 import { cn } from "@/lib/utils";
 
@@ -21,9 +21,16 @@ export function QrExportButton({ branchId, floors }: { branchId: string; floors:
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" size="sm" className="h-11 w-full sm:h-8 sm:w-auto" onClick={() => setOpen(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-10 w-10 p-0 sm:h-8 sm:w-auto sm:px-3"
+        aria-label="Print QR codes"
+        title="Print QR codes"
+        onClick={() => setOpen(true)}
+      >
         <QrCode className="h-4 w-4" />
-        Print QR codes
+        <span className="hidden sm:inline">Print QR codes</span>
       </Button>
       {open && <QrExportDialog branchId={branchId} floors={floors} onClose={() => setOpen(false)} />}
     </>
@@ -106,6 +113,8 @@ function QrExportDialog({ branchId, floors, onClose }: { branchId: string; floor
           </label>
         )}
 
+        <TakeawayQr branchId={branchId} />
+
         <p className="text-xs text-muted-foreground">
           {count} {count === 1 ? "card" : "cards"}.
           {missing > 0 && ` ${missing} ${missing === 1 ? "table has" : "tables have"} no code yet — one will be created.`}
@@ -117,10 +126,95 @@ function QrExportDialog({ branchId, floors, onClose }: { branchId: string; floor
             Cancel
           </Button>
           <Button disabled={busy || count === 0} onClick={download}>
-            {busy ? "Preparing…" : "Download PDF"}
+            {busy ? "Preparing…" : "Download table QRs"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * One QR for the whole branch: guests at the counter scan it, order and pay
+ * on their phone, and the order arrives as takeaway (no table).
+ */
+function TakeawayQr({ branchId }: { branchId: string }) {
+  const queryClient = useQueryClient();
+  const key = ["takeaway-qr", branchId];
+  const { data } = useQuery({
+    queryKey: key,
+    queryFn: () => api.get<{ token: string | null }>(`/tables/takeaway-qr?branchId=${branchId}`),
+  });
+  const rotate = useMutation({
+    mutationFn: () => api.post<{ token: string }>(`/tables/takeaway-qr?branchId=${branchId}`, {}),
+    onSuccess: (res) => {
+      queryClient.setQueryData(key, res);
+      toast.success("New takeaway QR made — print it again; the old one no longer works");
+    },
+    onError: (err) => toast.error(err instanceof ApiError ? err.message : "Could not make a new code"),
+  });
+  const [busy, setBusy] = useState(false);
+  const link = data?.token ? `${typeof window === "undefined" ? "" : window.location.origin}/order/${data.token}` : null;
+
+  const download = async () => {
+    setBusy(true);
+    try {
+      await downloadFile(`/tables/takeaway-qr/export?branchId=${branchId}`, "takeaway-qr.pdf", {
+        origin: window.location.origin,
+      });
+      await queryClient.invalidateQueries({ queryKey: key });
+      toast.success("Takeaway QR downloaded");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Could not create the takeaway QR");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2 rounded-lg border border-border p-3">
+      <div className="flex items-start gap-2">
+        <ShoppingBag className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+        <div>
+          <p className="text-sm font-medium text-foreground">Takeaway QR</p>
+          <p className="text-xs text-muted-foreground">
+            One code for the counter: guests scan it, order on their phone and collect at the counter. Orders arrive as
+            takeaway, not on a table.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={download}>
+          <QrCode className="h-4 w-4" />
+          {busy ? "Preparing…" : "Download takeaway QR"}
+        </Button>
+        {link && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              void navigator.clipboard?.writeText(link);
+              toast.success("Link copied");
+            }}
+          >
+            <Copy className="h-4 w-4" /> Copy link
+          </Button>
+        )}
+        {link && (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={rotate.isPending}
+            onClick={() => {
+              if (confirm("Make a new takeaway QR? The printed one will stop working.")) rotate.mutate();
+            }}
+          >
+            <RefreshCw className="h-4 w-4" /> New code
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

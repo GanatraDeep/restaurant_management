@@ -78,10 +78,35 @@ export function PosTablePicker({
   }
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-col gap-4 lg:h-full">
+      {/* Phones: every floor one tap away as chips — no dropdown to open. */}
+      {floors.length > 1 && (
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Floor">
+          {[
+            { id: ALL, label: "All tables", free: floors.flatMap((f) => f.tables).filter((t) => t.status === "AVAILABLE").length },
+            ...floors.map((f) => ({ id: f.id, label: f.name, free: f.tables.filter((t) => t.status === "AVAILABLE").length })),
+          ].map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              role="tab"
+              aria-selected={activeFloorId === c.id}
+              onClick={() => setActiveFloorId(c.id)}
+              className={cn(
+                "flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors",
+                activeFloorId === c.id ? "border-foreground bg-foreground text-background" : "border-border bg-card text-foreground",
+              )}
+            >
+              {c.label}
+              <span className={cn("text-xs tabular-nums", activeFloorId === c.id ? "opacity-70" : "text-muted-foreground")}>{c.free} free</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {floors.length > 1 && (
           <ResponsiveTabs
+            className="hidden lg:block"
             label="Floor"
             value={activeFloorId}
             onChange={setActiveFloorId}
@@ -102,7 +127,7 @@ export function PosTablePicker({
         <TableLegend />
       </div>
 
-      <div className="flex flex-1 flex-col gap-5 overflow-y-auto pb-2">
+      <div className="flex flex-col gap-5 pb-2 lg:flex-1 lg:overflow-y-auto">
         {shown.map((floor) => (
           <section key={floor.id} className="flex flex-col gap-2">
             {shown.length > 1 && (

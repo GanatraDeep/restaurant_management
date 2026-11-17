@@ -35,6 +35,14 @@ export class SettingsService {
   // Just the restaurant's public-facing branding — safe for every signed-in
   // staff member (the app shell header), unlike get() which also returns
   // payment/tax/printer config and is gated on settings.manage.
+  async branchFeatures(branchId: string) {
+    const b = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+      select: { tokenEnabled: true },
+    });
+    return { tokenEnabled: b?.tokenEnabled ?? false };
+  }
+
   async getBranding(restaurantId: string) {
     const restaurant = await this.prisma.restaurant.findUnique({
       where: { id: restaurantId },

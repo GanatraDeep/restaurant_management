@@ -337,3 +337,16 @@
     transition: none !important;
   }
 }
+
+/* Printing a page (reports): only the page itself — no toasts, dev
+   overlays or floating widgets, and the table can run across pages. */
+@media print {
+  [data-sonner-toaster],
+  nextjs-portal {
+    display: none !important;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+}

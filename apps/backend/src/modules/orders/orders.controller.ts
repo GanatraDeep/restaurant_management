@@ -1,3 +1,5 @@
+import { tokenOf } from './token';
+import { fitPaper, paperOf } from './paper';
 import {
   Body,
   Controller,
@@ -418,6 +420,8 @@ export class OrdersController {
       await this.ordersService.recordBillPrinted(branchId, id, user.id);
     }
     const html = buildReceiptHtml({
+      paper: paperOf(res.req.query.paper),
+      token: order.branch.tokenEnabled ? tokenOf(order.orderNumber) : null,
       restaurantName: order.branch.restaurant.name,
       currency: order.branch.restaurant.currency,
       branch: {
@@ -448,7 +452,10 @@ export class OrdersController {
           : await this.verifactu.qrForOrder(order.id),
       },
     });
-    res.type('html').send(html);
+    res.type('html').send(
+      // ?paper=58 from the device's printing setting.
+      fitPaper(html, paperOf(res.req.query.paper)),
+    );
   }
 
   @Auth('orders.create')
@@ -467,7 +474,10 @@ export class OrdersController {
       id,
       onlyNew === '1',
     );
-    res.type('html').send(html);
+    res.type('html').send(
+      // ?paper=58 from the device's printing setting.
+      fitPaper(html, paperOf(res.req.query.paper)),
+    );
   }
 
   // --- Direct-USB thermal printing (ESC/POS) ---------------------------------
@@ -567,7 +577,10 @@ export class OrdersController {
         ],
       },
     });
-    res.type('html').send(html);
+    res.type('html').send(
+      // ?paper=58 from the device's printing setting.
+      fitPaper(html, paperOf(res.req.query.paper)),
+    );
   }
 
   // Test slip. kind=kot prints a sample kitchen ticket so the kitchen printer

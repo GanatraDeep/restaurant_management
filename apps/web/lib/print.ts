@@ -63,8 +63,28 @@ export function hasSilentPrinting(): boolean {
  * once printing is done (or the dialog closes), so callers can print several
  * in turn.
  */
+const PAPER_KEY = "fc.paperWidth";
+
+/** Roll width of this device's receipt printer: 80 mm (default) or 58 mm. */
+export function getPaperWidth(): 58 | 80 {
+  try {
+    return localStorage.getItem(PAPER_KEY) === "58" ? 58 : 80;
+  } catch {
+    return 80;
+  }
+}
+
+export function setPaperWidth(w: 58 | 80) {
+  try {
+    localStorage.setItem(PAPER_KEY, String(w));
+  } catch {
+    /* private mode: stays 80 mm */
+  }
+}
+
 function printPage(src: string): Promise<void> {
-  const url = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}`;
+  const paper = getPaperWidth() === 58 ? "&paper=58" : "";
+  const url = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}${paper}`;
   const bridge = desktopBridge();
   if (typeof bridge?.printUrl === "function") {
     return bridge

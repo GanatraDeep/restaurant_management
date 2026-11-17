@@ -47,6 +47,18 @@ export class SettingsController {
     return this.settingsService.get(user.restaurantId, branchId);
   }
 
+  // Any signed-in user of the branch: switches that change what the POS and
+  // Kitchen Display show (e.g. token numbers). Nothing sensitive.
+  @Auth()
+  @Get('features')
+  async features(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.settingsService.branchFeatures(branchId);
+  }
+
   // Any signed-in user — drives the restaurant name/logo in the app shell.
   @Auth()
   @SkipSubscription()

@@ -67,6 +67,8 @@ export function buildKotHtml({
   ticket,
   kotNos,
   timeZone,
+  token,
+  tokenSlip,
 }: {
   branchName: string;
   order: KotOrder;
@@ -80,6 +82,10 @@ export function buildKotHtml({
   /** Daily KOT numbers this print covers (the whole order's, or one round's). */
   kotNos?: number[];
   timeZone?: string;
+  /** Token system: the order's token number, stamped large on the KOT. */
+  token?: number | null;
+  /** Prints the guest's token slip as a second page of the same job. */
+  tokenSlip?: { restaurantName: string } | null;
 }): string {
   const nos = ticket?.kotNo ? [ticket.kotNo] : (kotNos ?? []).filter(Boolean);
   const kotLabel = nos.length ? `KOT - ${nos.join(', ')}` : 'KOT';
@@ -120,6 +126,16 @@ export function buildKotHtml({
   .service { font-size: 16px; font-weight: 800; }
   .table { font-size: 18px; font-weight: 800; }
   .station, .guest { font-size: 13px; }
+  .token { font-size: 15px; font-weight: 800; border: 3px solid #000; border-radius: 6px; padding: 2px 4px; margin: 4px auto; text-align: center; width: 70%; }
+  .token b { display: block; font-size: 34px; line-height: 1.05; }
+  .slip { page-break-before: always; break-before: page; text-align: center; padding-top: 2mm; }
+  .slip .rname { font-size: 16px; font-weight: 800; text-transform: uppercase; }
+  .slip .lbl { font-size: 15px; font-weight: 800; letter-spacing: 3px; margin-top: 6px; }
+  .slip .num { font-size: 64px; font-weight: 800; line-height: 1; margin: 2px 0 4px; }
+  .slip .meta { font-size: 13px; }
+  .slip table { margin-top: 4px; text-align: left; }
+  .slip td { font-size: 13px; padding: 1px 0; }
+  .slip .hint { font-size: 12px; margin-top: 6px; }
   .reprint { font-size: 15px; font-weight: 800; border: 2px solid #000; padding: 2px; margin: 4px 0; text-align: center; }
   .rule { border: none; border-top: 2px dashed #000; margin: 5px 0; }
   table { width: 100%; border-collapse: collapse; }
@@ -139,6 +155,7 @@ export function buildKotHtml({
   <script>
     window.addEventListener('message', function (e) { if (e.data === 'print') window.print(); });
   </script>
+  ${token ? `<div class="token">TOKEN<b>${token}</b></div>` : ''}
   <div class="head">
     <p class="when">${esc(kotDateTime(new Date(order.createdAt), timeZone))}</p>
     <p class="kot">${esc(kotLabel)}</p>
@@ -155,6 +172,20 @@ export function buildKotHtml({
   </table>
   <hr class="rule">
   <p class="guest" style="text-align:center">#${esc(order.orderNumber)} · ${esc(branchName)}</p>
+  ${
+    token && tokenSlip
+      ? `<div class="slip">
+    <p class="rname">${esc(tokenSlip.restaurantName)}</p>
+    <p class="lbl">TOKEN NO.</p>
+    <p class="num">${token}</p>
+    <p class="meta">${esc(kotDateTime(new Date(order.createdAt), timeZone))} · ${esc(service)}${order.table ? ` · ${esc(order.table.label)}` : ''}</p>
+    <hr class="rule">
+    <table>${order.items.map((i) => `<tr><td>${esc(i.nameSnapshot)}</td><td class="qty">${i.quantity}</td></tr>`).join('')}</table>
+    <hr class="rule">
+    <p class="hint">Please collect your order when this number is called.</p>
+  </div>`
+      : ''
+  }
 </body>
 </html>`;
 }

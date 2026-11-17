@@ -4,7 +4,6 @@ import { Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { QueryError } from "@/components/ui/query-error";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ResponsiveTabs } from "@/components/ui/nav-picker";
 import { useCategories, useMenuItems, type MenuItem } from "@/hooks/use-menu";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -18,9 +17,12 @@ const ALL = "all";
 export function ProductGrid({
   branchId,
   onSelect,
+  quantityOf,
 }: {
   branchId: string | null;
   onSelect: (item: MenuItem) => void;
+  /** Units of each item already in the cart, shown as a badge on its tile. */
+  quantityOf?: (itemId: string) => number;
 }) {
   const { data: categories } = useCategories(branchId);
   // All items once; switching category is then instant.
@@ -90,17 +92,31 @@ export function ProductGrid({
           />
         </div>
 
-        <ResponsiveTabs
-          mobileOnly
-          className="sm:hidden"
-          label="Category"
-          value={active}
-          onChange={(id) => {
-            setPicked(id);
-            setSearch("");
-          }}
-          items={nav.map((c) => ({ id: c.id, label: c.id === FAV ? `★ ${c.name}` : c.name, hint: c.count }))}
-        />
+        {/* Phones: categories as a swipeable chip row, one tap each. */}
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 [scrollbar-width:none] sm:hidden [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Category">
+          {nav.map((c) => {
+            const isActive = !search && c.id === active;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                onClick={() => {
+                  setPicked(c.id);
+                  setSearch("");
+                }}
+                className={cn(
+                  "flex h-9 shrink-0 items-center gap-1 rounded-full border px-3.5 text-sm font-medium transition-colors",
+                  isActive ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground",
+                )}
+              >
+                {c.id === FAV && <Star className={cn("h-3.5 w-3.5", isActive ? "fill-current" : "fill-warning text-warning")} />}
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
 
         {isError && !items ? (
           <QueryError error={error} what="the menu" onRetry={() => void refetch()} retrying={isFetching} />
@@ -128,7 +144,13 @@ export function ProductGrid({
                     <span className="hidden text-[10px] tabular-nums text-muted-foreground xl:inline">Half {formatCurrency(item.halfPrice)}</span>
                   )}
                 </span>
-                {item.isFavorite && <Star className="absolute right-1.5 top-1.5 h-3 w-3 fill-warning text-warning" aria-label="Favourite" />}
+                {(quantityOf?.(item.id) ?? 0) > 0 ? (
+                  <span className="absolute right-1 top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold tabular-nums text-primary-foreground shadow" aria-label={`${quantityOf!(item.id)} in cart`}>
+                    {quantityOf!(item.id)}
+                  </span>
+                ) : (
+                  item.isFavorite && <Star className="absolute right-1.5 top-1.5 h-3 w-3 fill-warning text-warning" aria-label="Favourite" />
+                )}
                 {!item.isActive && (
                   <span className="absolute bottom-1.5 right-1.5 rounded-full bg-secondary px-1.5 py-0.5 text-[9px] font-semibold uppercase text-muted-foreground">
                     Off

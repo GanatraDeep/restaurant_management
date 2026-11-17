@@ -78,7 +78,7 @@ export function TableTile({
           style={style}
           className={cn(
             "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 text-xs font-medium shadow-sm transition-transform",
-            layout === "plan" ? "absolute hover:scale-[1.03]" : "min-h-28 w-full py-3 hover:brightness-95",
+            layout === "plan" ? "absolute hover:scale-[1.03]" : "aspect-square w-full py-3 hover:brightness-95 sm:aspect-auto sm:min-h-28",
             TABLE_DISPLAY[tableDisplayOf(table)].tile,
           )}
         >
@@ -158,13 +158,13 @@ export function TableTile({
           {menu}
           {occupied && (
             <div className="grid grid-cols-2 gap-1.5">
-              <Button variant="outline" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => printForTable("kot")}>
+              <Button variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs sm:px-2" aria-label="Print KOT" title="Print KOT" onClick={() => printForTable("kot")}>
                 <ChefHat className="h-3.5 w-3.5" />
-                Print KOT
+                <span className="hidden sm:inline">Print KOT</span>
               </Button>
-              <Button variant="outline" size="sm" className="h-9 gap-1 px-2 text-xs" onClick={() => setBillOpen(true)}>
+              <Button variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs sm:px-2" aria-label="View bill" title="View bill" onClick={() => setBillOpen(true)}>
                 <ClipboardList className="h-3.5 w-3.5" />
-                View bill
+                <span className="hidden sm:inline">View bill</span>
               </Button>
             </div>
           )}

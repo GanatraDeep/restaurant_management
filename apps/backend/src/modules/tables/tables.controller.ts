@@ -193,6 +193,50 @@ export class TablesController {
     res.send(pdf);
   }
 
+  // --- Takeaway QR (one per branch) ---------------------------------------
+
+  @Auth('tables.manage')
+  @Get('takeaway-qr')
+  async takeawayQr(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.tablesService.takeawayQr(branchId);
+  }
+
+  @Auth('tables.manage')
+  @Post('takeaway-qr')
+  async rotateTakeawayQr(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.tablesService.rotateTakeawayQr(branchId);
+  }
+
+  @Auth('tables.manage')
+  @Post('takeaway-qr/export')
+  @UsePipes(new ZodValidationPipe(qrExportSchema))
+  async exportTakeawayQr(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Body() body: z.infer<typeof qrExportSchema>,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const pdf = await this.tablesService.takeawayQrPdf(
+      branchId,
+      new URL(body.origin).origin,
+    );
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="takeaway-qr.pdf"',
+    );
+    res.send(pdf);
+  }
+
   @Auth('tables.manage')
   @Post(':id/qr-token')
   async rotateQrToken(
