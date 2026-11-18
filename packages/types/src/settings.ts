@@ -51,6 +51,8 @@ export const branchSettingsSchema = z.object({
   qrPayFirst: z.boolean().optional(),
   // Guests ordering by QR confirm their number with a WhatsApp code.
   qrOtpRequired: z.boolean().optional(),
+  // Table QR asks the guest's name and number before ordering.
+  qrCollectGuestInfo: z.boolean().optional(),
   // Token number on every order: big on the KOT, on the bill, plus a token slip.
   tokenEnabled: z.boolean().optional(),
   // Self-service kiosk: which service-mode buttons the start screen offers.

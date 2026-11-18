@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PublicMenuCategory, PublicMenuItem } from "./guest-types";
+import { useI18n } from "@/lib/i18n/context";
 
 type DietFilter = "all" | "veg" | "nonveg";
 
@@ -42,6 +43,7 @@ function ItemCard({
   onAdd: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const spice = SPICE[item.spiceLevel] ?? 0;
   const long = (item.description?.length ?? 0) > 90;
@@ -76,7 +78,7 @@ function ItemCard({
         )}
         onClick={onAdd}
       >
-        <Plus className="h-4 w-4" /> ADD
+        <Plus className="h-4 w-4" /> {t("order.addCaps")}
       </Button>
     );
 
@@ -124,7 +126,7 @@ function ItemCard({
             {expanded ? "Less" : "More"}
           </button>
         )}
-        {item.modifierGroups.length > 0 && <p className="mt-1 text-xs text-muted-foreground">Customisable</p>}
+        {item.modifierGroups.length > 0 && <p className="mt-1 text-xs text-muted-foreground">{t("order.customisable")}</p>}
       </div>
 
       {item.imageUrl ? (
@@ -151,6 +153,7 @@ export function GuestMenu({
   onAdd: (item: PublicMenuItem) => void;
   onRemove: (item: PublicMenuItem) => void;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [diet, setDiet] = useState<DietFilter>("all");
   const sectionRefs = useRef(new Map<string, HTMLElement>());
@@ -188,8 +191,8 @@ export function GuestMenu({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search dishes"
-            aria-label="Search dishes"
+            placeholder={t("order.searchDishes")}
+            aria-label={t("order.searchDishes")}
             className="h-11 w-full rounded-xl border border-input bg-secondary/40 pl-9 pr-9 text-base text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/40 md:text-sm"
           />
           {query && (
@@ -213,7 +216,7 @@ export function GuestMenu({
                   )}
                 >
                   <DietMark veg={d === "veg"} className="h-3.5 w-3.5" decorative />
-                  {d === "veg" ? "Veg" : "Non-veg"}
+                  {d === "veg" ? t("order.veg") : t("order.nonVeg")}
                 </button>
               ))}
               <span aria-hidden className="my-1.5 w-px shrink-0 bg-border" />
@@ -235,7 +238,7 @@ export function GuestMenu({
 
       {visible.length === 0 ? (
         <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <p className="text-sm font-medium text-foreground">Nothing matches</p>
+          <p className="text-sm font-medium text-foreground">{t("order.nothingMatches")}</p>
           <button
             type="button"
             className="text-sm text-primary underline-offset-2 hover:underline"
@@ -244,7 +247,7 @@ export function GuestMenu({
               setDiet("all");
             }}
           >
-            Clear filters
+            {t("order.clearFilters")}
           </button>
         </div>
       ) : (

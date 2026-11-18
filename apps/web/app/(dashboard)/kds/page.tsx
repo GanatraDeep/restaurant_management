@@ -19,6 +19,7 @@ import { useKdsStationPreference } from "@/hooks/use-kds-station";
 import { installAudioUnlock } from "@/lib/audio-unlock";
 import { resolveStation } from "@/lib/kds-station";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
 
 const COLUMNS: { status: KotStatusDto; label: string; dot: string }[] = [
   { status: "NEW", label: "New", dot: "bg-primary" },
@@ -29,6 +30,7 @@ const COLUMNS: { status: KotStatusDto; label: string; dot: string }[] = [
 
 export default function KdsPage() {
   const { branchId } = useBranch();
+  const { t } = useI18n();
   const tokenOn = useBranchFeatures(branchId).data?.tokenEnabled ?? false;
   const { data: me } = useCurrentUser();
   const canAnswer = hasPermission(me?.user, "orders.accept");
@@ -52,7 +54,7 @@ export default function KdsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-semibold sm:text-[32px] tracking-tight text-foreground">
-            Kitchen Display
+            {t("nav.kds")}
           </h1>
           <PerformanceWidget branchId={branchId} />
         </div>
@@ -102,7 +104,7 @@ export default function KdsPage() {
       {pendingOrders.length > 0 && (
         <section aria-label="Incoming orders" className="flex flex-col gap-2">
           <h2 className="text-sm font-semibold text-foreground">
-            Incoming - needs a decision{" "}
+            {t("kds.incoming")}{" "}
             <span className="ml-1 rounded-full bg-destructive px-2 py-0.5 text-xs text-white">{pendingOrders.length}</span>
           </h2>
           {/* Padding inside the scroller so the cards' highlight ring isn't
@@ -135,7 +137,7 @@ export default function KdsPage() {
               <div className="flex items-center justify-between px-1">
                 <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-foreground">
                   <span className={cn("h-2.5 w-2.5 rounded-full", col.dot)} aria-hidden />
-                  {col.label}
+                  {t(`kds.col.${col.status}`)}
                 </h2>
                 <span className="min-w-6 rounded-full bg-background px-2 py-0.5 text-center text-xs font-semibold tabular-nums text-foreground">
                   {byStatus(col.status).length}
@@ -150,7 +152,7 @@ export default function KdsPage() {
                   <TicketCard key={ticket.id} ticket={ticket} branchId={branchId} showToken={tokenOn} />
                 ))}
                 {canFetch && !tickets.isLoading && byStatus(col.status).length === 0 && (
-                  <p className="py-6 text-center text-xs text-muted-foreground">No tickets</p>
+                  <p className="py-6 text-center text-xs text-muted-foreground">{t("kds.noTickets")}</p>
                 )}
               </div>
             </div>

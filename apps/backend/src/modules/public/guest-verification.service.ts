@@ -21,9 +21,11 @@ const GUEST_TOKEN_TTL = '90d';
 export interface GuestClaims {
   typ: 'guest';
   branchId: string;
-  customerId: string;
+  /** Absent for an anonymous table-QR guest (branch doesn't collect info). */
+  customerId?: string;
   name: string;
   phone: string;
+  anonymous?: boolean;
 }
 
 const hashCode = (branchId: string, phone: string, code: string) =>
@@ -189,6 +191,25 @@ export class GuestVerificationService {
       phone,
     };
     return this.jwt.signAsync(claims, { expiresIn: GUEST_TOKEN_TTL });
+  }
+
+  /**
+   * A guest at a table whose branch doesn't ask for name and number: a
+   * token that lets them order, tied to no customer record.
+   */
+  async anonymous(branchId: string) {
+    const claims: GuestClaims = {
+      typ: 'guest',
+      branchId,
+      name: 'Guest',
+      phone: '',
+      anonymous: true,
+    };
+    return {
+      guestToken: await this.jwt.signAsync(claims, {
+        expiresIn: GUEST_TOKEN_TTL,
+      }),
+    };
   }
 
   /** Checks a guest token belongs to this branch; returns who it is. */

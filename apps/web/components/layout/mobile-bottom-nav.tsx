@@ -15,7 +15,9 @@ import { NAV_ITEMS } from "./nav-items";
 // a full bar. Everything else lives behind "More" (the existing drawer).
 // Point of Sale — where orders are taken — sits raised in the centre.
 const CENTRE_HREF = "/pos";
-const SIDE_HREFS = ["/orders", "/tables", "/kds", "/dashboard"];
+// Menu (to switch items on / off fast) rather than Tables: the POS already
+// shows every table, and two table screens side by side confused staff.
+const SIDE_HREFS = ["/orders", "/menu", "/kds", "/dashboard"];
 const PRIMARY_COUNT = 4;
 
 // Thumb-reach navigation for phones. Hidden from lg up, where the sidebar takes over.
@@ -69,7 +71,7 @@ export function MobileBottomNav({
               >
                 <Icon className="h-6 w-6" strokeWidth={2.25} />
               </span>
-              <span className={cn("max-w-full truncate px-1", isActive ? "text-primary" : "text-muted-foreground")}>POS</span>
+              <span className={cn("max-w-full truncate px-1", isActive ? "text-primary" : "text-muted-foreground")}>{t("nav.posShort")}</span>
             </Link>
           );
         }
@@ -98,7 +100,7 @@ export function MobileBottomNav({
         className={cn(itemClass, "h-16 text-muted-foreground active:text-foreground")}
       >
         <MoreHorizontal className="h-5 w-5" />
-        <span>More</span>
+        <span>{t("nav.more")}</span>
       </button>
     </nav>
   );

@@ -21,6 +21,7 @@ import {
 import { formatCurrency } from "@/lib/format";
 import { openEntity } from "@/lib/entity-events";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
 
 const TABS: { key: OrderTab; label: string }[] = [
   { key: "pending", label: "New (to accept)" },
@@ -39,6 +40,15 @@ const FILTERS: { key: string; label: string; channel?: OrderChannel; type?: stri
   { key: "dinein", label: "Dine-in", type: "DINE_IN" },
 ];
 
+const FILTER_LABEL_KEY: Record<string, string> = {
+  all: "common.all",
+  online: "orders.filter.online",
+  offline: "orders.filter.offline",
+  takeaway: "pos.takeaway",
+  delivery: "pos.delivery",
+  dinein: "pos.dineIn",
+};
+
 const chip = (on: boolean) =>
   cn(
     "rounded-full border px-3.5 py-1.5 text-sm transition-colors",
@@ -56,6 +66,7 @@ function timeAgo(iso: string) {
 }
 
 export default function OrdersPage() {
+  const { t: tr } = useI18n();
   const { branchId } = useBranch();
   const [tab, setTab] = useState<OrderTab>("pending");
   const [filterKey, setFilterKey] = useState("all");
@@ -88,9 +99,9 @@ export default function OrdersPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Orders</h1>
+        <h1 className="text-[32px] font-semibold tracking-tight text-foreground">{tr("nav.orders")}</h1>
         <p className="text-sm text-muted-foreground">
-          Accept new online orders and manage everything in progress
+          {tr("orders.subtitle")}
         </p>
       </div>
 
@@ -102,7 +113,7 @@ export default function OrdersPage() {
               setTab(t.key);
               setSelected(new Set());
             }} className={chip(tab === t.key)}>
-            {t.label}
+            {tr(`orders.tab.${t.key}`)}
             {t.key === "pending" && pendingCount > 0 && (
               <span className="ml-2 rounded-full bg-destructive px-1.5 text-xs text-white">
                 {pendingCount}
@@ -120,7 +131,7 @@ export default function OrdersPage() {
             onClick={() => setFilterKey(f.key)}
             className={cn(chip(filterKey === f.key), "py-1 text-xs")}
           >
-            {f.label}
+            {tr(FILTER_LABEL_KEY[f.key] ?? f.key)}
           </button>
         ))}
       </div>

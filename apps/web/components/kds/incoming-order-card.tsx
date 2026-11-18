@@ -12,6 +12,7 @@ import { ApiError } from "@/lib/api";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { tokenOf } from "@/lib/token";
+import { useI18n } from "@/lib/i18n/context";
 
 const DECLINE_REASONS = ["Closing soon", "Out of stock", "Too busy", "Outside delivery area"];
 
@@ -32,6 +33,7 @@ export function IncomingOrderCard({
   showToken?: boolean;
 }) {
   const token = showToken ? tokenOf(order.orderNumber) : null;
+  const { t } = useI18n();
   const accept = useAcceptIncoming(branchId);
   const acceptPaid = useAcceptPaidIncoming(branchId);
   const decline = useDeclineIncoming(branchId);
@@ -121,7 +123,7 @@ export function IncomingOrderCard({
             }
           >
             <Check className="h-5 w-5" aria-hidden />
-            {acceptPaid.isPending ? "Accepting…" : "Payment received"}
+            {acceptPaid.isPending ? t("kds.accepting") : t("kds.paymentReceived")}
           </Button>
         )}
         {!order.payFirst && (
@@ -136,12 +138,12 @@ export function IncomingOrderCard({
           }
         >
           <Check className="h-5 w-5" aria-hidden />
-          {accept.isPending ? "Accepting…" : "Accept"}
+          {accept.isPending ? t("kds.accepting") : t("kds.accept")}
         </Button>
         )}
         <Button variant="destructive" className="h-12 px-4" onClick={() => setDeclineOpen(true)}>
           <X className="h-5 w-5" aria-hidden />
-          Decline
+          {t("kds.decline")}
         </Button>
       </div>
     </Card>

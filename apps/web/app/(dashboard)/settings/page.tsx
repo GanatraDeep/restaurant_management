@@ -89,7 +89,7 @@ function OnlineOrdersCard({
   hasUpi,
 }: {
   branchId: string | null;
-  branch: { autoConfirmOrders: boolean; autoConfirmReservations: boolean; qrPayFirst: boolean; qrOtpRequired: boolean };
+  branch: { autoConfirmOrders: boolean; autoConfirmReservations: boolean; qrPayFirst: boolean; qrOtpRequired: boolean; qrCollectGuestInfo: boolean };
   hasUpi: boolean;
 }) {
   const update = useUpdateBranchSettings(branchId);
@@ -98,6 +98,7 @@ function OnlineOrdersCard({
     autoConfirmReservations?: boolean;
     qrPayFirst?: boolean;
     qrOtpRequired?: boolean;
+    qrCollectGuestInfo?: boolean;
   }) =>
     update.mutate(dto, {
       onSuccess: () => toast.success("Saved"),
@@ -140,6 +141,21 @@ function OnlineOrdersCard({
           checked={branch.autoConfirmReservations}
           disabled={update.isPending}
           onCheckedChange={(v) => save({ autoConfirmReservations: v })}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+        <div className="flex flex-col gap-0.5">
+          <Label htmlFor="qr-guest-info">Table QR: ask guest&rsquo;s name and number</Label>
+          <p className="text-xs text-muted-foreground">
+            On = guests enter their name and mobile before their first order (shown on the order, saved as a customer).
+            Off = guests go straight to the menu and order. The takeaway QR always asks, so the counter can call them.
+          </p>
+        </div>
+        <Switch
+          id="qr-guest-info"
+          checked={branch.qrCollectGuestInfo}
+          disabled={update.isPending}
+          onCheckedChange={(v) => save({ qrCollectGuestInfo: v })}
         />
       </div>
       <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">

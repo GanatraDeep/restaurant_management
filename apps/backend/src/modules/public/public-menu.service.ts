@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { CartItemDto } from '@nodedr-restaurant/types';
@@ -80,6 +81,8 @@ export class PublicMenuService {
       logoUrl: branch.restaurant.logoUrl ?? null,
       branchName: branch.name,
       tableName: scan.label,
+      // false: a table QR goes straight to the menu, no name / number.
+      collectGuestInfo: !(scan.table && !branch.qrCollectGuestInfo),
       // TAKEAWAY: the counter QR — no table, no waiter / bill buttons.
       mode: scan.table ? ('TABLE' as const) : ('TAKEAWAY' as const),
       // Whether a new number gets a WhatsApp code (false when not set up).
@@ -110,6 +113,15 @@ export class PublicMenuService {
   async verifyStart(qrToken: string, name: string, phone: string) {
     const { branch } = await this.resolveScan(qrToken);
     return this.guests.start(branch.id, branch.restaurant.name, name, phone);
+  }
+
+  /** Table QR of a branch that doesn't collect guest info: an anonymous token. */
+  async verifyAnonymous(qrToken: string) {
+    const { table, branch } = await this.resolveScan(qrToken);
+    if (!table || branch.qrCollectGuestInfo) {
+      throw new BadRequestException('Please enter your name and number');
+    }
+    return this.guests.anonymous(branch.id);
   }
 
   async verifyCheck(qrToken: string, phone: string, code: string) {
@@ -193,6 +205,11 @@ export class PublicMenuService {
 
     // Takeaway QR: every order stands alone, picked up at the counter.
     if (!table) {
+      if (!guest.customerId) {
+        throw new UnauthorizedException(
+          'Please enter your name and number to order',
+        );
+      }
       return this.ordersService.createOrder(
         branchId,
         await this.receivingStaff(branchId, null),
@@ -235,7 +252,7 @@ export class PublicMenuService {
       {
         type: 'QR_ORDER',
         tableId: table.id,
-        guestName: guest.name,
+        guestName: guest.anonymous ? undefined : guest.name,
         customerId: guest.customerId,
         items,
       },
@@ -256,6 +273,7 @@ export class PublicMenuService {
       if (!guestToken) return { order: null, openRequests: [] };
       try {
         const guest = await this.guests.verify(guestToken, scan.branch.id);
+        if (!guest.customerId) return { order: null, openRequests: [] };
         mine = { customerId: guest.customerId };
       } catch {
         return { order: null, openRequests: [] };
@@ -346,7 +364,8 @@ export class PublicMenuService {
         ...(scan.table
           ? { tableId: scan.table.id }
           : { branchId, type: 'TAKEAWAY' }),
-        customerId: guest.customerId,
+        // An anonymous table guest: the table's own pending order.
+        ...(guest.customerId ? { customerId: guest.customerId } : {}),
         payFirst: true,
         status: 'OPEN',
         acceptance: 'PENDING',

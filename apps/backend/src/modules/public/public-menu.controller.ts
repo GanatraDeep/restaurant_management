@@ -56,6 +56,13 @@ export class PublicMenuController {
     return this.publicMenuService.verifyStart(qrToken, name, phone);
   }
 
+  // Table QR with guest info switched off: straight to ordering.
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Post('menu/:qrToken/verify/anonymous')
+  verifyAnonymous(@Param('qrToken') qrToken: string) {
+    return this.publicMenuService.verifyAnonymous(qrToken);
+  }
+
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('menu/:qrToken/verify/check')
   @UsePipes(new ZodValidationPipe(publicVerifyCheckSchema))

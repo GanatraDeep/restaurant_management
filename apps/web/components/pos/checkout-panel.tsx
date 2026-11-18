@@ -34,6 +34,7 @@ import { buildUpiUri } from "@/lib/upi";
 import { QRCodeSVG } from "qrcode.react";
 import { openKotPrint, openReceiptPrint } from "@/lib/print";
 import { round2 } from "@/lib/pricing-preview";
+import { useI18n } from "@/lib/i18n/context";
 
 const METHODS: PaymentMethodDto[] = ["CASH", "CARD", "UPI", "OTHER"];
 
@@ -60,12 +61,16 @@ export function CheckoutPanel({
   branchId,
   initialCustomer = null,
   onDone,
+  onBack,
 }: {
   order: CreatedOrder;
   branchId: string | null;
   initialCustomer?: Customer | null;
   onDone: () => void;
+  /** Back to the order (items) without paying; defaults to onDone. */
+  onBack?: () => void;
 }) {
+  const { t } = useI18n();
   // The order passed in is a snapshot from when it was sent; the live copy
   // carries edits (removed lines, new totals), payments already taken, the
   // kitchen's progress, and a cancel/pay by someone else.
@@ -312,7 +317,7 @@ export function CheckoutPanel({
   const partialLabel = `Record partial payment · ${formatCurrency(plan.applied)}`;
 
   return (
-    <div className="flex h-full flex-col gap-5 overflow-y-auto">
+    <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto">
       <StatusNote note={note} onClear={clearNote} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Button
@@ -320,16 +325,16 @@ export function CheckoutPanel({
           variant="ghost"
           size="sm"
           className="-ml-2 shrink-0 text-muted-foreground"
-          onClick={onDone}
+          onClick={onBack ?? onDone}
         >
           <ArrowLeft className="h-4 w-4" />
-          Back
+          {t("common.back")}
         </Button>
         <div className="flex flex-wrap justify-end gap-2">
           {canEditRole && !locked && (
             <Button type="button" variant="outline" size="sm" onClick={() => setEditOpen(true)}>
               <Pencil className="h-4 w-4" />
-              Edit bill
+              {t("pos.editBill")}
             </Button>
           )}
           {canCancelRole && !locked && (
@@ -340,7 +345,7 @@ export function CheckoutPanel({
               className="text-destructive hover:text-destructive"
               onClick={() => setCancelOpen(true)}
             >
-              Cancel order
+              {t("pos.cancelOrder")}
             </Button>
           )}
         </div>
@@ -374,7 +379,7 @@ export function CheckoutPanel({
             onClick={() => branchId && openKotPrint(order.id, branchId)}
           >
             <Printer className="h-4 w-4" />
-            Print KOT
+            {t("pos.printKot")}
           </Button>
           </div>
         </div>
@@ -385,6 +390,27 @@ export function CheckoutPanel({
           </p>
         )}
       </div>
+
+      {/* What is being charged, at a glance. */}
+      {(live?.items?.length ?? 0) > 0 && (
+        <details className="group rounded-xl border border-border px-3 py-2" open={(live?.items?.length ?? 0) <= 6}>
+          <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground">
+            {t("pos.itemsCount", { count: live!.items.filter((i) => i.status !== "CANCELLED").reduce((n, i) => n + i.quantity, 0) })}
+          </summary>
+          <ul className="mt-1.5 flex flex-col gap-1 text-sm">
+            {live!.items
+              .filter((i) => i.status !== "CANCELLED")
+              .map((i) => (
+                <li key={i.id} className="flex justify-between gap-3">
+                  <span className="min-w-0 text-foreground">
+                    {i.quantity} × {i.nameSnapshot}
+                  </span>
+                  <span className="shrink-0 tabular-nums text-muted-foreground">{formatCurrency(i.lineTotal)}</span>
+                </li>
+              ))}
+          </ul>
+        </details>
+      )}
 
       {paidSoFar.length > 0 && (
         <div className="rounded-xl border border-border px-3 py-2">

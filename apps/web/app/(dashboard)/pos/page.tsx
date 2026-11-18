@@ -10,6 +10,7 @@ import { CartPanel, type DeliveryDetails, type PosOrderType } from "@/components
 import { cartLineKey, portionText, type CartLine, type Portion } from "@/components/pos/cart-line";
 import { clearDraft, switchTableDraft, type Drafts } from "@/lib/pos-drafts";
 import { CheckoutPanel } from "@/components/pos/checkout-panel";
+import { EditBillDialog } from "@/components/orders/edit-bill-dialog";
 import { KitchenProgressWidget } from "@/components/pos/kitchen-progress-widget";
 import { ModifierPickerDialog } from "@/components/pos/modifier-picker-dialog";
 import { PosTablePicker } from "@/components/pos/pos-table-picker";
@@ -24,6 +25,7 @@ import {
   useCreateOrder,
   useOpenOrdersForTable,
   useOpenOrdersWithoutTable,
+  useOrder,
   type CreatedOrder,
   type OpenOrder,
 } from "@/hooks/use-orders";
@@ -34,6 +36,7 @@ import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { tokenOf } from "@/lib/token";
 import { useBranchFeatures } from "@/hooks/use-settings";
+import { useI18n } from "@/lib/i18n/context";
 
 export default function PosPage() {
   return (
@@ -44,6 +47,7 @@ export default function PosPage() {
 }
 
 function PosPageInner() {
+  const { t } = useI18n();
   const { branchId, isLoading: branchLoading } = useBranch();
   const { note, clear: clearNote, toast } = useNoteToast();
   const floorsQuery = useFloors(branchId);
@@ -63,6 +67,7 @@ function PosPageInner() {
   const [drafts, setDrafts] = useState<Drafts<CartLine>>({});
   const setTableId = (next: string) => {
     if (next === tableId) return;
+    setHeldOrderId(null);
     const r = switchTableDraft(drafts, tableId, next, lines);
     setDrafts(r.drafts);
     setLines(r.lines);
@@ -113,8 +118,17 @@ function PosPageInner() {
   // not know whether this is a new bill or a new round, so submitting waits.
   const checkingTable =
     orderType === "DINE_IN" && !!tableId && (openBillsQuery.isPending || openBillsQuery.isFetching);
+  // A running takeaway / delivery order opened from the POS: its items show in
+  // the cart like a table's, new items go on as the next round.
+  const [heldOrderId, setHeldOrderId] = useState<string | null>(null);
+  const heldQuery = useOrder(branchId, orderType !== "DINE_IN" ? heldOrderId : null);
+  const heldOrder =
+    heldQuery.data && heldQuery.data.status === "OPEN" ? (heldQuery.data as unknown as OpenOrder) : undefined;
   const existingOrder =
-    existingOrders?.find((o) => o.id === selectedBillId) ?? existingOrders?.[0];
+    orderType === "DINE_IN"
+      ? (existingOrders?.find((o) => o.id === selectedBillId) ?? existingOrders?.[0])
+      : heldOrder;
+  const [editBillOpen, setEditBillOpen] = useState(false);
 
   const addLine = (
     menuItemId: string,
@@ -201,6 +215,8 @@ function PosPageInner() {
         return;
       }
       toast.success(`${verb} #${order.orderNumber}${tokenText(order)}`);
+      // Sent: the cart is empty again (it would otherwise go out twice).
+      setLines([]);
       setActiveCustomer(null);
       setActiveOrder(order);
       setCartOpen(true);
@@ -257,6 +273,7 @@ function PosPageInner() {
   };
 
   const resetForNewOrder = () => {
+    setHeldOrderId(null);
     setActiveOrder(null);
     setCartOpen(false);
     // The sent cart is gone; other tables' unsent drafts stay.
@@ -271,6 +288,7 @@ function PosPageInner() {
   // Back to the table grid. `sent`: the cart was just saved, so drop it
   // instead of keeping it as this table's draft.
   const goToTables = (sent = false) => {
+    setHeldOrderId(null);
     setActiveOrder(null);
     setActiveCustomer(null);
     setCartOpen(false);
@@ -285,6 +303,23 @@ function PosPageInner() {
   };
 
   const handleTablePick = (table: RestaurantTable) => setTableId(table.id);
+
+  // Payment screen's Back: to the order (items, add more, print bill), not
+  // all the way out.
+  const backFromPayment = () => {
+    const o = activeOrder;
+    setActiveOrder(null);
+    if (o && orderType !== "DINE_IN") setHeldOrderId(o.id);
+  };
+
+  // A running takeaway / delivery order, opened like a table.
+  const openHeld = (order: OpenOrder) => {
+    if (order.type === "TAKEAWAY" || order.type === "DELIVERY") setOrderType(order.type);
+    setLines([]);
+    setActiveOrder(null);
+    setHeldOrderId(order.id);
+    setCartOpen(true);
+  };
 
   const runningQuery = useOpenOrdersWithoutTable(branchId);
   const openForPayment = (order: OpenOrder) => {
@@ -325,9 +360,8 @@ function PosPageInner() {
         openKotPrint(order.id, branchId);
         return;
       }
+      // Bill: the table's order — items, Print bill, Settle & pay.
       setTableId(table.id);
-      setActiveCustomer(order.customer);
-      setActiveOrder(order);
       setCartOpen(true);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not load the table's order");
@@ -374,10 +408,10 @@ function PosPageInner() {
           {/* Orders without a table start here too. */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Button type="button" variant="outline" className="h-11 gap-1.5 sm:h-10" onClick={() => setOrderType("TAKEAWAY")}>
-              <ShoppingBag className="h-4 w-4" /> Takeaway order
+              <ShoppingBag className="h-4 w-4" /> {t("pos.takeawayOrder")}
             </Button>
             <Button type="button" variant="outline" className="h-11 gap-1.5 sm:h-10" onClick={() => setOrderType("DELIVERY")}>
-              <Bike className="h-4 w-4" /> Delivery order
+              <Bike className="h-4 w-4" /> {t("pos.deliveryOrder")}
             </Button>
           </div>
           <RunningOrders
@@ -385,6 +419,7 @@ function PosPageInner() {
             showToken={!!features?.tokenEnabled}
             onPrintBill={(o) => branchId && openReceiptPrint(o.id, branchId)}
             onPay={openForPayment}
+            onOpen={openHeld}
           />
           <div className="lg:min-h-0 lg:flex-1">
           <PosTablePicker
@@ -423,25 +458,27 @@ function PosPageInner() {
               className="mb-3 -ml-1 flex items-center gap-1 text-sm font-medium text-muted-foreground lg:hidden"
             >
               <ChevronLeft className="h-4 w-4" />
-              Back to menu
+              {t("pos.backToMenu")}
             </button>
-            {activeOrder && (
-              <Button type="button" variant="outline" size="sm" className="mb-3 h-9 gap-1 pl-2" onClick={() => goToTables()}>
-                <ChevronLeft className="h-4 w-4" /> All tables
-              </Button>
-            )}
+            {/* flex-1, not h-full: the "Back to menu" row above must not push
+                the bottom buttons out of the (clipped) card. */}
+            <div className="flex min-h-0 flex-1 flex-col">
             {activeOrder ? (
               <CheckoutPanel
                 order={activeOrder}
                 branchId={branchId}
                 initialCustomer={activeCustomer}
                 onDone={resetForNewOrder}
+                onBack={backFromPayment}
               />
             ) : (
               <CartPanel
                 lines={lines}
                 orderType={orderType}
-                onOrderTypeChange={setOrderType}
+                onOrderTypeChange={(t) => {
+                  setHeldOrderId(null);
+                  setOrderType(t);
+                }}
                 tables={tables}
                 tableId={tableId}
                 onTableChange={setTableId}
@@ -464,6 +501,16 @@ function PosPageInner() {
                 onDeliveryChange={setDelivery}
                 scheduledFor={scheduledFor}
                 onScheduledForChange={setScheduledFor}
+                onEditBill={existingOrder ? () => setEditBillOpen(true) : undefined}
+              />
+            )}
+            </div>
+            {existingOrder && (
+              <EditBillDialog
+                branchId={branchId}
+                orderId={existingOrder.id}
+                open={editBillOpen}
+                onOpenChange={setEditBillOpen}
               />
             )}
           </Card>
@@ -482,7 +529,7 @@ function PosPageInner() {
             {activeOrder
               ? `Order #${activeOrder.orderNumber} — pay`
               : lines.length > 0
-                ? `View cart · ${lines.reduce((n, l) => n + l.quantity, 0)} items`
+                ? t("pos.viewCart", { count: lines.reduce((n, l) => n + l.quantity, 0) })
                 : `Open bill #${existingOrder?.orderNumber} — view`}
           </span>
           {!activeOrder && lines.length > 0 && (

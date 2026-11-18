@@ -1,6 +1,6 @@
 "use client";
 
-import { ChefHat, ChevronLeft, CreditCard, Minus, Plus, Printer, Save, ShoppingCart, Trash2 } from "lucide-react";
+import { ChefHat, ChevronLeft, CreditCard, Minus, Pencil, Plus, Printer, Save, ShoppingCart, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -16,6 +16,7 @@ import type { OpenOrder } from "@/hooks/use-orders";
 import type { RestaurantTable } from "@/hooks/use-tables";
 import { formatCurrency } from "@/lib/format";
 import { subtotalOf } from "@/lib/pricing-preview";
+import { useI18n } from "@/lib/i18n/context";
 
 export type PosOrderType = "DINE_IN" | "TAKEAWAY" | "DELIVERY";
 export interface DeliveryDetails {
@@ -38,6 +39,7 @@ export function CartPanel({
   isSubmitting,
   submittingPrint = false,
   onBackToTables,
+  onEditBill,
   existingOrder,
   onPayExisting,
   onPrintKot,
@@ -67,6 +69,8 @@ export function CartPanel({
   submittingPrint?: boolean;
   /** Dine-in: back to the table grid (the unsent cart is kept for this table). */
   onBackToTables?: () => void;
+  /** Change or remove items already sent (opens Edit bill). */
+  onEditBill?: () => void;
   /** The selected table's open bill: shown in full, with Print KOT / Print bill / Pay. */
   existingOrder?: OpenOrder;
   onPayExisting?: () => void;
@@ -83,6 +87,7 @@ export function CartPanel({
   scheduledFor: string;
   onScheduledForChange: (v: string) => void;
 }) {
+  const { t } = useI18n();
   const subtotal = subtotalOf(lines.map((l) => l.unitPrice * l.quantity));
   const deliveryReady =
     orderType !== "DELIVERY" ||
@@ -91,33 +96,42 @@ export function CartPanel({
     lines.length > 0 && (orderType !== "DINE_IN" || !!tableId) && deliveryReady && !isSubmitting && !checkingTable;
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <Tabs value={orderType} onValueChange={(v) => onOrderTypeChange(v as PosOrderType)}>
         <TabsList className="w-full">
           <TabsTrigger value="DINE_IN" className="flex-1">
-            Dine-in
+            {t("pos.dineIn")}
           </TabsTrigger>
           <TabsTrigger value="TAKEAWAY" className="flex-1">
-            Takeaway
+            {t("pos.takeaway")}
           </TabsTrigger>
           <TabsTrigger value="DELIVERY" className="flex-1">
-            Delivery
+            {t("pos.delivery")}
           </TabsTrigger>
         </TabsList>
       </Tabs>
 
-      {orderType === "DINE_IN" && tableId && onBackToTables ? (
+      {onBackToTables && ((orderType === "DINE_IN" && tableId) || (orderType !== "DINE_IN" && existingOrder)) ? (
         <div className="flex items-center gap-2">
           <Button type="button" variant="outline" size="sm" className="h-9 gap-1 pl-2" onClick={onBackToTables}>
-            <ChevronLeft className="h-4 w-4" /> All tables
+            <ChevronLeft className="h-4 w-4" /> {t("pos.allTables")}
           </Button>
           <p className="min-w-0 flex-1 truncate text-right text-sm font-semibold text-foreground">
-            {(() => {
-              const t = tables.find((table) => table.id === tableId);
-              return t ? (t.name ?? (/^\d/.test(t.number) ? `Table T${t.number}` : t.number)) : "Table";
-            })()}
+            {orderType !== "DINE_IN"
+              ? orderType === "DELIVERY"
+                ? t("pos.delivery")
+                : t("pos.takeaway")
+              : (() => {
+                  const t = tables.find((table) => table.id === tableId);
+                  return t ? (t.name ?? (/^\d/.test(t.number) ? `Table T${t.number}` : t.number)) : "Table";
+                })()}
             {existingOrder && <span className="font-normal text-muted-foreground"> · #{existingOrder.orderNumber}</span>}
           </p>
+          {existingOrder && onEditBill && (
+            <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Edit or remove items" aria-label="Edit bill" onClick={onEditBill}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
           {existingOrder && onPrintKot && (
             <Button type="button" variant="ghost" size="icon" className="h-9 w-9 shrink-0" title="Reprint the whole KOT" aria-label="Reprint KOT" onClick={onPrintKot}>
               <ChefHat className="h-4 w-4" />
@@ -209,15 +223,15 @@ export function CartPanel({
         {lines.length === 0 && !existingOrder ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-muted-foreground">
             <ShoppingCart className="h-8 w-8 opacity-40" />
-            <p className="text-sm">Cart is empty</p>
+            <p className="text-sm">{t("pos.cartEmpty")}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10 bg-card">
               <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
-                <th className="py-2 font-medium">Item</th>
-                <th className="w-[6.5rem] py-2 text-center font-medium">Qty.</th>
-                <th className="w-20 py-2 text-right font-medium">Price</th>
+                <th className="py-2 font-medium">{t("pos.item")}</th>
+                <th className="w-[6.5rem] py-2 text-center font-medium">{t("pos.qty")}</th>
+                <th className="w-20 py-2 text-right font-medium">{t("pos.price")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -231,7 +245,7 @@ export function CartPanel({
                       <span className="text-[11px] text-muted-foreground no-underline">
                         {[
                           i.modifiers?.map((m) => m.nameSnapshot).join(", "),
-                          ITEM_STATUS[i.status] ?? i.status,
+                          ITEM_STATUS[i.status] ? t(`status.${i.status}`) : i.status,
                         ]
                           .filter(Boolean)
                           .join(" · ")}
@@ -245,7 +259,7 @@ export function CartPanel({
               {existingOrder && lines.length > 0 && (
                 <tr>
                   <td colSpan={3} className="pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-primary">
-                    New items — not sent yet
+                    {t("pos.newItems")}
                   </td>
                 </tr>
               )}
@@ -280,14 +294,14 @@ export function CartPanel({
         )}
         {existingOrder && lines.length === 0 && (
           <p className="mt-3 rounded-lg border border-dashed border-border px-3 py-3 text-center text-xs text-muted-foreground">
-            Pick items from the menu to add another round.
+            {t("pos.addRound")}
           </p>
         )}
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-3">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground">Total</span>
+          <span className="text-sm font-medium text-foreground">{t("pos.total")}</span>
           <span className="text-lg font-semibold tabular-nums text-foreground">
             {formatCurrency(subtotal + (existingOrder ? Number(existingOrder.totalAmount) : 0))}
           </span>
@@ -295,19 +309,19 @@ export function CartPanel({
         <div className="grid grid-cols-2 gap-2">
           <Button variant="outline" className="h-11 gap-1.5" disabled={!canSubmit} onClick={() => onSubmit(false)}>
             <Save className="h-4 w-4" />
-            {isSubmitting && !submittingPrint ? "Saving…" : "Save"}
+            {isSubmitting && !submittingPrint ? t("pos.saving") : t("pos.save")}
           </Button>
           <Button className="h-11 gap-1.5" disabled={!canSubmit} onClick={() => onSubmit(true)}>
             <Printer className="h-4 w-4" />
-            {isSubmitting && submittingPrint ? "Saving…" : "Save & Print KOT"}
+            {isSubmitting && submittingPrint ? t("pos.saving") : t("pos.savePrintKot")}
           </Button>
           {existingOrder && (
             <>
               <Button variant="outline" className="h-11 gap-1.5" onClick={onPrintBill}>
-                <Printer className="h-4 w-4" /> Print bill
+                <Printer className="h-4 w-4" /> {t("pos.printBill")}
               </Button>
               <Button variant="secondary" className="h-11 gap-1.5" onClick={onPayExisting}>
-                <CreditCard className="h-4 w-4" /> Settle &amp; pay
+                <CreditCard className="h-4 w-4" /> {t("pos.settlePay")}
               </Button>
             </>
           )}

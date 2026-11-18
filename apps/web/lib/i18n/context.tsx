@@ -16,8 +16,11 @@ import { DEFAULT_LOCALE, isEnabledLocale, type Locale } from "./locales";
 import en from "./dictionaries/en.json";
 import es from "./dictionaries/es.json";
 import fr from "./dictionaries/fr.json";
+import gu from "./dictionaries/gu.json";
+import hi from "./dictionaries/hi.json";
+import mr from "./dictionaries/mr.json";
 
-const DICTIONARIES: Record<Locale, Record<string, string>> = { en, es, fr };
+const DICTIONARIES: Record<Locale, Record<string, string>> = { en, hi, gu, mr, es, fr };
 const STORAGE_KEY = "nodedr-locale";
 
 function detectBrowserLocale(): Locale {

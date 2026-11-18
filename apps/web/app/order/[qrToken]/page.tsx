@@ -96,6 +96,19 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
     }
   };
 
+  // Branch doesn't ask for name / number: get an anonymous pass, skip the form.
+  const [anonFailed, setAnonFailed] = useState(false);
+  useEffect(() => {
+    if (!data || !sessionLoaded || data.collectGuestInfo !== false || anonFailed) return;
+    if (session) return;
+    api
+      .post<{ guestToken: string }>(`/public/menu/${qrToken}/verify/anonymous`, {})
+      .then((r) => saveSession({ token: r.guestToken, name: "Guest", phone: "", anonymous: true }))
+      .catch(() => setAnonFailed(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, sessionLoaded, session, anonFailed, qrToken]);
+
+
   // Live status of the table's tab, faster while a payment is being checked.
   const { data: status } = useQuery({
     // The takeaway QR is shared, so guests pass their sign-in to see their own order.
@@ -187,7 +200,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
         </p>
         {status?.order?.token && status.order.orderNumber === placed.orderNumber && (
           <div className="rounded-2xl border-2 border-foreground px-6 py-3">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Your token</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{t("order.yourToken")}</p>
             <p className="text-5xl font-bold tabular-nums text-foreground">{status.order.token}</p>
           </div>
         )}
@@ -204,6 +217,15 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
   }
 
   if (isLoading || !data || !sessionLoaded) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-6">
+        <Skeleton className="h-16 w-16 rounded-xl" />
+        <Skeleton className="h-7 w-40" />
+      </div>
+    );
+  }
+
+  if (!session && data.collectGuestInfo === false && !anonFailed) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-6">
         <Skeleton className="h-16 w-16 rounded-xl" />
@@ -240,12 +262,14 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-lg font-semibold leading-tight text-foreground">{data.restaurantName}</h1>
           <p className="truncate text-sm text-muted-foreground">{subtitle(data)}</p>
+          {!session.anonymous && (
           <p className="truncate text-xs text-muted-foreground">
-            Ordering as {session.name}{" "}
+            {t("order.orderingAs", { name: session.name })}{" "}
             <button type="button" className="underline underline-offset-2" onClick={() => saveSession(null)}>
-              not you?
+              {t("order.notYou")}
             </button>
           </p>
+          )}
         </div>
         <LanguageSwitcher compact />
       </header>
@@ -266,8 +290,8 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium text-foreground">
                   <span>
                     {order.token ? <span className="mr-1.5 rounded-md bg-foreground px-1.5 py-0.5 text-background">Token {order.token}</span> : null}
-                    Your order #{order.orderNumber}
-                    {order.acceptance === "PENDING" && <span className="font-normal text-muted-foreground"> — waiting for the restaurant to confirm</span>}
+                    {t("order.yourOrder", { number: order.orderNumber })}
+                    {order.acceptance === "PENDING" && <span className="font-normal text-muted-foreground"> — {t("order.waitingConfirm")}</span>}
                   </span>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
                 </summary>
@@ -297,7 +321,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
             onClick={() => requestService.mutate("WAITER")}
           >
             <BellRing className="mr-2 h-4 w-4" />
-            {status?.openRequests.includes("WAITER") ? "Waiter is coming" : "Call waiter"}
+            {status?.openRequests.includes("WAITER") ? t("order.waiterComing") : t("order.callWaiter")}
           </Button>
           {order && !order.payFirst && (
             <Button
@@ -307,7 +331,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
               onClick={() => requestService.mutate("BILL")}
             >
               <Receipt className="mr-2 h-4 w-4" />
-              {status?.openRequests.includes("BILL") ? "Bill requested" : "Request bill"}
+              {status?.openRequests.includes("BILL") ? t("order.billRequested") : t("order.requestBill")}
             </Button>
           )}
         </section>
@@ -345,7 +369,7 @@ export default function PublicMenuPage({ params }: { params: Promise<{ qrToken: 
               <span className="block text-base font-semibold tabular-nums">{formatCurrency(cartTotal)}</span>
             </span>
             <span className="flex items-center gap-1 text-base font-semibold">
-              View cart <ChevronRight className="h-5 w-5" />
+              {t("order.viewCart")} <ChevronRight className="h-5 w-5" />
             </span>
           </button>
         </div>
