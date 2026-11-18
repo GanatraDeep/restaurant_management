@@ -37,6 +37,7 @@ export interface BranchSettings {
   autoConfirmOrders: boolean;
   autoConfirmReservations: boolean;
   qrPayFirst: boolean;
+  qrOtpRequired: boolean;
   tokenEnabled: boolean;
   kioskToken: string | null;
   kioskDineInEnabled: boolean;

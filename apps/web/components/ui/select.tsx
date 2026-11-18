@@ -6,7 +6,35 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+/**
+ * The trigger shows the chosen option's label, not its raw value (often an
+ * id). Base UI needs an `items` map for that; when a caller doesn't pass one,
+ * it is built from the <SelectItem value=…>label</SelectItem> children, so
+ * every dropdown shows names after a pick without extra code.
+ */
+function collectItems(node: React.ReactNode, out: Record<string, React.ReactNode>) {
+  React.Children.forEach(node, (child) => {
+    if (!React.isValidElement(child)) return
+    const props = child.props as { value?: unknown; children?: React.ReactNode }
+    if (child.type === SelectItem && props.value !== undefined && props.value !== null) {
+      out[String(props.value)] = props.children
+    } else if (props.children) {
+      collectItems(props.children, out)
+    }
+  })
+}
+
+function Select<Value, Multiple extends boolean | undefined = false>(
+  props: SelectPrimitive.Root.Props<Value, Multiple>
+) {
+  let items = props.items
+  if (items === undefined) {
+    const found: Record<string, React.ReactNode> = {}
+    collectItems(props.children, found)
+    if (Object.keys(found).length > 0) items = found
+  }
+  return <SelectPrimitive.Root {...props} items={items} />
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

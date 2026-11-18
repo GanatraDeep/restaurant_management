@@ -56,8 +56,17 @@ export class GuestVerificationService {
       orderBy: { createdAt: 'asc' },
     });
     const sender = this.whatsapp.settings();
-    // Seen and verified before (or OTP not set up on this server): no code.
-    if (customer?.phoneVerifiedAt || !sender) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+      select: { qrOtpRequired: true },
+    });
+    // Seen and verified before, OTP switched off for this branch, or not set
+    // up on this server: no code.
+    if (
+      customer?.phoneVerifiedAt ||
+      !sender ||
+      branch?.qrOtpRequired === false
+    ) {
       return {
         verified: true as const,
         guestToken: await this.issue(branchId, name, phone),

@@ -83,10 +83,12 @@ export class PublicMenuService {
       // TAKEAWAY: the counter QR — no table, no waiter / bill buttons.
       mode: scan.table ? ('TABLE' as const) : ('TAKEAWAY' as const),
       // Whether a new number gets a WhatsApp code (false when not set up).
-      otpEnabled: !!(
-        this.config.get<string>('WHATSAPP_API_URL') &&
-        this.config.get<string>('WHATSAPP_SESSION_NAME')
-      ),
+      otpEnabled:
+        branch.qrOtpRequired &&
+        !!(
+          this.config.get<string>('WHATSAPP_API_URL') &&
+          this.config.get<string>('WHATSAPP_SESSION_NAME')
+        ),
       payFirst,
       upi: payFirst
         ? {

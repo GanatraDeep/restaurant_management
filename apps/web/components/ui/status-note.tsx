@@ -4,10 +4,9 @@ import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
-// Inline result/error message. The app has no toast popups (the Toaster was
-// removed in 1.3.0 and is not mounted), so `toast.*` calls show nothing; a
-// flow that must tell the user "it worked" or "it failed" renders this next
-// to the thing they just did instead.
+// Inline result/error message, shown next to the thing the user just did.
+// Pop-up toasts (sonner's toast.*) are mounted again (AppProviders); this is
+// for results that should stay visible in place, like errors to fix.
 export type NoteKind = "success" | "error" | "info" | "warning";
 export interface Note {
   kind: NoteKind;

@@ -89,11 +89,16 @@ function OnlineOrdersCard({
   hasUpi,
 }: {
   branchId: string | null;
-  branch: { autoConfirmOrders: boolean; autoConfirmReservations: boolean; qrPayFirst: boolean };
+  branch: { autoConfirmOrders: boolean; autoConfirmReservations: boolean; qrPayFirst: boolean; qrOtpRequired: boolean };
   hasUpi: boolean;
 }) {
   const update = useUpdateBranchSettings(branchId);
-  const save = (dto: { autoConfirmOrders?: boolean; autoConfirmReservations?: boolean; qrPayFirst?: boolean }) =>
+  const save = (dto: {
+    autoConfirmOrders?: boolean;
+    autoConfirmReservations?: boolean;
+    qrPayFirst?: boolean;
+    qrOtpRequired?: boolean;
+  }) =>
     update.mutate(dto, {
       onSuccess: () => toast.success("Saved"),
       onError: (err) => toast.error(err instanceof Error ? err.message : "Could not save"),
@@ -135,6 +140,21 @@ function OnlineOrdersCard({
           checked={branch.autoConfirmReservations}
           disabled={update.isPending}
           onCheckedChange={(v) => save({ autoConfirmReservations: v })}
+        />
+      </div>
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">
+        <div className="flex flex-col gap-0.5">
+          <Label htmlFor="qr-otp">QR orders: verify phone by WhatsApp OTP</Label>
+          <p className="text-xs text-muted-foreground">
+            On = a guest&rsquo;s number is confirmed once with a WhatsApp code before their first QR order. Off = guests
+            just enter their name and number and start ordering.
+          </p>
+        </div>
+        <Switch
+          id="qr-otp"
+          checked={branch.qrOtpRequired}
+          disabled={update.isPending}
+          onCheckedChange={(v) => save({ qrOtpRequired: v })}
         />
       </div>
       <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-4">

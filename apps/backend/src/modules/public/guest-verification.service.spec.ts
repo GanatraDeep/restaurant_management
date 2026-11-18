@@ -27,10 +27,17 @@ type Customer = {
   createdAt: Date;
 };
 
-function setup(opts: { whatsapp?: boolean; customers?: Customer[] } = {}) {
+function setup(
+  opts: { whatsapp?: boolean; customers?: Customer[]; otpOff?: boolean } = {},
+) {
   const otps: Otp[] = [];
   const customers: Customer[] = [...(opts.customers ?? [])];
   const prisma = {
+    branch: {
+      findUnique: jest.fn(() =>
+        Promise.resolve({ qrOtpRequired: !opts.otpOff }),
+      ),
+    },
     customer: {
       findFirst: jest.fn(
         ({ where }: { where: { branchId: string; phone: string } }) =>
@@ -220,6 +227,13 @@ describe('guest phone verification', () => {
       phone: '9876543210',
       phoneVerifiedAt: null,
     });
+  });
+
+  it('skips the code when the branch has switched QR OTP off', async () => {
+    const t = setup({ otpOff: true });
+    const r = await t.service.start('b1', 'R', 'Amit', '9876543210');
+    expect(r.verified).toBe(true);
+    expect(t.sent).toHaveLength(0);
   });
 
   it('rejects a wrong code, and locks after five tries', async () => {
