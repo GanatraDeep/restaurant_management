@@ -1,6 +1,7 @@
 "use client";
 
-import { ChefHat, ClipboardList, Users } from "lucide-react";
+import { Users } from "lucide-react";
+import { TileActions } from "@/components/tables/tile-actions";
 import { useState } from "react";
 import { ElapsedTimer } from "@/components/tables/elapsed-timer";
 import { ResponsiveTabs } from "@/components/ui/nav-picker";
@@ -10,6 +11,7 @@ import type { Floor, RestaurantTable } from "@/hooks/use-tables";
 import { TABLE_DISPLAY, tableDisplayOf } from "@/lib/table-colors";
 import { cn } from "@/lib/utils";
 import { TableLegend } from "@/components/tables/table-legend";
+import { useI18n } from "@/lib/i18n/context";
 
 const ALL = "all";
 
@@ -39,6 +41,7 @@ export function PosTablePicker({
   onRetry?: () => void;
   retrying?: boolean;
 }) {
+  const { t } = useI18n();
   // "all" (default) lists every floor's tables, grouped; a floor tab narrows it.
   const [activeFloorId, setActiveFloorId] = useState<string>(ALL);
   const shown =
@@ -83,7 +86,7 @@ export function PosTablePicker({
       {floors.length > 1 && (
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Floor">
           {[
-            { id: ALL, label: "All tables", free: floors.flatMap((f) => f.tables).filter((t) => t.status === "AVAILABLE").length },
+            { id: ALL, label: t("pos.allTables"), free: floors.flatMap((f) => f.tables).filter((t) => t.status === "AVAILABLE").length },
             ...floors.map((f) => ({ id: f.id, label: f.name, free: f.tables.filter((t) => t.status === "AVAILABLE").length })),
           ].map((c) => (
             <button
@@ -98,7 +101,7 @@ export function PosTablePicker({
               )}
             >
               {c.label}
-              <span className={cn("text-xs tabular-nums", activeFloorId === c.id ? "opacity-70" : "text-muted-foreground")}>{c.free} free</span>
+              <span className={cn("text-xs tabular-nums", activeFloorId === c.id ? "opacity-70" : "text-muted-foreground")}>{t("pos.free", { count: c.free })}</span>
             </button>
           ))}
         </div>
@@ -113,13 +116,13 @@ export function PosTablePicker({
             items={[
               {
                 id: ALL,
-                label: "All tables",
-                hint: `${floors.flatMap((f) => f.tables).filter((t) => t.status === "AVAILABLE").length} free`,
+                label: t("pos.allTables"),
+                hint: t("pos.free", { count: floors.flatMap((f) => f.tables).filter((x) => x.status === "AVAILABLE").length }),
               },
               ...floors.map((f) => ({
                 id: f.id,
                 label: f.name,
-                hint: `${f.tables.filter((t) => t.status === "AVAILABLE").length} free`,
+                hint: t("pos.free", { count: f.tables.filter((x) => x.status === "AVAILABLE").length }),
               })),
             ]}
           />
@@ -135,7 +138,7 @@ export function PosTablePicker({
                 {floor.name}
               </h3>
             )}
-            <div className="grid auto-rows-min grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] items-start gap-2.5 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))]">
+            <div className="grid auto-rows-min grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] items-start gap-x-2.5 gap-y-6 pb-4 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))]">
               {[...floor.tables]
                 .sort((a, b) =>
                   a.number.localeCompare(b.number, undefined, {
@@ -148,30 +151,22 @@ export function PosTablePicker({
                     table.status !== "OUT_OF_SERVICE";
                   const occupied = table.status === "OCCUPIED";
                   return (
-                    // Square tiles; KOT / Bill shortcuts sit inside the tile's bottom edge.
-                    <div
-                      key={table.id}
-                      className={cn(
-                        "relative flex aspect-square w-full flex-col overflow-hidden rounded-xl border-2 shadow-sm transition-transform",
-                        clickable && "hover:scale-[1.03] hover:shadow-md",
-                        TABLE_DISPLAY[tableDisplayOf(table)].tile,
-                      )}
-                    >
+                    // Square tile; KOT / Bill sit half over its bottom edge.
+                    <div key={table.id} className="relative">
                       <button
                         type="button"
                         disabled={!clickable}
                         title={TABLE_DISPLAY[tableDisplayOf(table)].hint}
                         onClick={() => onSelect(table)}
                         className={cn(
-                          "flex min-h-0 flex-1 flex-col items-center justify-center gap-0.5 px-1.5 text-xs font-medium",
-                          clickable ? "cursor-pointer" : "cursor-not-allowed",
+                          "flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-1.5 text-xs font-medium shadow-sm transition-transform",
+                          clickable ? "cursor-pointer hover:scale-[1.03] hover:shadow-md" : "cursor-not-allowed",
+                          occupied && "pb-3",
+                          TABLE_DISPLAY[tableDisplayOf(table)].tile,
                         )}
                       >
                         <span className="max-w-full truncate text-lg font-semibold leading-tight">
-                          {table.name ??
-                            (/^\d/.test(table.number)
-                              ? `T${table.number}`
-                              : table.number)}
+                          {tableLabelOf(table)}
                         </span>
                         {/* Seats, and how long it's been occupied; the colour says the status. */}
                         <span className="flex items-center gap-2 text-[11px] opacity-80">
@@ -188,32 +183,12 @@ export function PosTablePicker({
                           )}
                         </span>
                       </button>
-                      {occupied && (onPrintKot || onViewBill) && (
-                        // In the flow under the name, never on top of it.
-                        <div className="flex shrink-0 justify-center gap-1 px-1 pb-1">
-                          {onPrintKot && (
-                            <button
-                              type="button"
-                              className="flex h-6 flex-1 items-center justify-center gap-0.5 rounded-md bg-background/90 text-[10px] font-medium text-foreground shadow-sm hover:bg-background"
-                              title="Print KOT"
-                              aria-label={`Print KOT for ${table.name ?? table.number}`}
-                              onClick={() => onPrintKot(table)}
-                            >
-                              <ChefHat className="h-3 w-3 shrink-0" /> KOT
-                            </button>
-                          )}
-                          {onViewBill && (
-                            <button
-                              type="button"
-                              className="flex h-6 flex-1 items-center justify-center gap-0.5 rounded-md bg-background/90 text-[10px] font-medium text-foreground shadow-sm hover:bg-background"
-                              title="View bill"
-                              aria-label={`View bill for ${table.name ?? table.number}`}
-                              onClick={() => onViewBill(table)}
-                            >
-                              <ClipboardList className="h-3 w-3 shrink-0" /> Bill
-                            </button>
-                          )}
-                        </div>
+                      {occupied && (
+                        <TileActions
+                          tableLabel={tableLabelOf(table)}
+                          onKot={onPrintKot ? () => onPrintKot(table) : undefined}
+                          onBill={onViewBill ? () => onViewBill(table) : undefined}
+                        />
                       )}
                     </div>
                   );
@@ -230,3 +205,6 @@ export function PosTablePicker({
     </div>
   );
 }
+
+const tableLabelOf = (t: { name: string | null; number: string }) =>
+  t.name ?? (/^\d/.test(t.number) ? `T${t.number}` : t.number);

@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories, useMenuItems, type MenuItem } from "@/hooks/use-menu";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/context";
 
 const FAV = "fav";
 const ALL = "all";
@@ -24,6 +25,7 @@ export function ProductGrid({
   /** Units of each item already in the cart, shown as a badge on its tile. */
   quantityOf?: (itemId: string) => number;
 }) {
+  const { t } = useI18n();
   const { data: categories } = useCategories(branchId);
   // All items once; switching category is then instant.
   const { data: items, isLoading, isError, error, refetch, isFetching } = useMenuItems(branchId);
@@ -45,8 +47,8 @@ export function ProductGrid({
   }, [items, favourites, active, search]);
 
   const nav = [
-    ...(favourites.length > 0 ? [{ id: FAV, name: "Favourite items", count: favourites.length }] : []),
-    { id: ALL, name: "All items", count: items?.length },
+    ...(favourites.length > 0 ? [{ id: FAV, name: t("pos.favourites"), count: favourites.length }] : []),
+    { id: ALL, name: t("pos.allItems"), count: items?.length },
     ...(categories ?? []).map((c) => ({ id: c.id, name: c.name, count: c._count.items as number | undefined })),
   ];
 
@@ -84,7 +86,7 @@ export function ProductGrid({
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
-            placeholder="Search item"
+            placeholder={t("pos.searchItem")}
             aria-label="Search menu"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -139,7 +141,7 @@ export function ProductGrid({
                 <span className="flex items-baseline justify-between gap-1">
                   <span className="text-xs font-semibold tabular-nums text-muted-foreground">{formatCurrency(item.price)}</span>
                   {item.variants?.length > 0 ? (
-                    <span className="text-[10px] font-medium text-primary">{item.variants.length} options</span>
+                    <span className="text-[10px] font-medium text-primary">{t("pos.options", { count: item.variants.length })}</span>
                   ) : item.halfPrice != null && (
                     <span className="hidden text-[10px] tabular-nums text-muted-foreground xl:inline">Half {formatCurrency(item.halfPrice)}</span>
                   )}

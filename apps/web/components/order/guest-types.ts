@@ -36,6 +36,8 @@ export interface PublicMenuResponse {
   tableName: string;
   /** TAKEAWAY: the counter QR (no table, no waiter / bill buttons). */
   mode?: "TABLE" | "TAKEAWAY";
+  /** false: no name / number screen — straight to the menu. */
+  collectGuestInfo?: boolean;
   otpEnabled: boolean;
   payFirst: boolean;
   upi: { vpa: string; payeeName: string } | null;
@@ -77,4 +79,6 @@ export interface GuestSession {
   token: string;
   name: string;
   phone: string;
+  /** No name / number asked (the branch switched guest info off). */
+  anonymous?: boolean;
 }

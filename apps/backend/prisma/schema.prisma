@@ -135,6 +135,10 @@ model Branch {
   // Table / takeaway QR: a new guest number is checked with a WhatsApp code.
   // Off = guests just type their name and number.
   qrOtpRequired           Boolean @default(true)
+  // Table QR asks the guest's name and number. Off = guests go straight to
+  // the menu; orders carry no customer. (The takeaway QR always asks: the
+  // counter needs a name to call.)
+  qrCollectGuestInfo      Boolean @default(true)
   // Token system: every order gets a daily token number (the order's daily
   // sequence), stamped on the KOT and bill, with a token slip for the guest.
   tokenEnabled            Boolean @default(false)

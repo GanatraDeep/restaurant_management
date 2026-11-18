@@ -166,6 +166,7 @@ export interface OrderDetail {
     quantity: number;
     unitPriceSnapshot: string;
     lineTotal: string;
+    status?: string;
     kitchenNote: string | null;
     modifiers: { id: string; nameSnapshot: string; priceAdjSnapshot: string }[];
   }[];

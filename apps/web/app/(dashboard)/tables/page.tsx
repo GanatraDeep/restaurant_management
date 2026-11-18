@@ -21,10 +21,12 @@ import { TableRequestsBar } from "@/components/tables/table-requests-bar";
 import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import { useBranch } from "@/hooks/use-branch";
 import { useFloors, type RestaurantTable } from "@/hooks/use-tables";
+import { useI18n } from "@/lib/i18n/context";
 
 const ALL = "all";
 
 export default function TablesPage() {
+  const { t } = useI18n();
   const { branchId } = useBranch();
   const { data: me } = useCurrentUser();
   // tables.view is read-only (status updates stay available); layout edits need tables.manage.
@@ -98,7 +100,7 @@ export default function TablesPage() {
       <TableRequestsBar branchId={branchId} />
       <div className="flex items-start justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Tables</h1>
+          <h1 className="text-[32px] font-semibold tracking-tight text-foreground">{t("nav.tables")}</h1>
           <p className="text-sm text-muted-foreground">
             {editMode
               ? "Drag tables to match your floor — changes save automatically"
@@ -197,7 +199,7 @@ export default function TablesPage() {
                       </h2>
                     )}
                     {floor.tables.length > 0 ? (
-                      <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] sm:gap-3">
+                      <div className="grid grid-cols-3 gap-x-2.5 gap-y-6 pb-4 sm:grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] sm:gap-x-3">
                         {[...floor.tables]
                           .sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }))
                           .map((table) => (

@@ -16,13 +16,13 @@ import type { OpenOrder } from "@/hooks/use-orders";
 import { useUpdateTableStatus, type RestaurantTable } from "@/hooks/use-tables";
 import { api, ApiError } from "@/lib/api";
 import { openKotPrint, openReceiptPrint } from "@/lib/print";
-import { Button } from "@/components/ui/button";
 import { TABLE_DISPLAY, tableDisplayOf } from "@/lib/table-colors";
 import { cn } from "@/lib/utils";
 import { BillTableDialog } from "./bill-table-dialog";
 import { ElapsedTimer } from "./elapsed-timer";
 import { MergeTableDialog } from "./merge-table-dialog";
 import { TableQrDialog } from "./table-qr-dialog";
+import { TileActions } from "./tile-actions";
 import { TableShapeIcon } from "./table-shape-icon";
 
 const STATUS_LABEL: Record<TableStatusDto, string> = {
@@ -78,7 +78,7 @@ export function TableTile({
           style={style}
           className={cn(
             "flex flex-col items-center justify-center gap-1 rounded-2xl border-2 text-xs font-medium shadow-sm transition-transform",
-            layout === "plan" ? "absolute hover:scale-[1.03]" : "aspect-square w-full py-3 hover:brightness-95 sm:aspect-auto sm:min-h-28",
+            layout === "plan" ? "absolute hover:scale-[1.03]" : cn("aspect-square w-full py-3 hover:brightness-95 sm:aspect-auto sm:min-h-28", occupied && "pb-5"),
             TABLE_DISPLAY[tableDisplayOf(table)].tile,
           )}
         >
@@ -154,21 +154,14 @@ export function TableTile({
       {layout === "plan" ? (
         menu
       ) : (
-        <div className="flex flex-col gap-1.5">
+        <div className="relative">
           {menu}
           {occupied && (
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs sm:px-2" aria-label="Print KOT" title="Print KOT" onClick={() => printForTable("kot")}>
-                <ChefHat className="h-3.5 w-3.5" />
-                <span className="sm:hidden">KOT</span>
-                <span className="hidden sm:inline">Print KOT</span>
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 gap-1 px-1 text-xs sm:px-2" aria-label="View bill" title="View bill" onClick={() => setBillOpen(true)}>
-                <ClipboardList className="h-3.5 w-3.5" />
-                <span className="sm:hidden">Bill</span>
-                <span className="hidden sm:inline">View bill</span>
-              </Button>
-            </div>
+            <TileActions
+              tableLabel={table.name ?? (/^\d/.test(table.number) ? `T${table.number}` : table.number)}
+              onKot={() => printForTable("kot")}
+              onBill={() => router.push(`/pos?tableId=${table.id}`)}
+            />
           )}
         </div>
       )}
