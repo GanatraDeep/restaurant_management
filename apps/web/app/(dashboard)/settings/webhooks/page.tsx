@@ -5,9 +5,19 @@ import { toast } from "sonner";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useWebhookActions, useWebhookDeliveries, useWebhookEvents, useWebhooks } from "@/hooks/use-webhooks";
+import { WebhookForm } from "@/components/settings/webhook-form";
+import {
+  useWebhookActions,
+  useWebhookDeliveries,
+  useWebhookEvents,
+  useWebhooks,
+  type WebhookRow,
+  type WebhookTestResult,
+} from "@/hooks/use-webhooks";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -38,17 +48,77 @@ function Deliveries({ id }: { id: string }) {
   );
 }
 
+/** Send one event's sample data now — with your own number, so a WhatsApp test reaches you. */
+function TestDialog({ hook, onClose }: { hook: WebhookRow; onClose: () => void }) {
+  const { test } = useWebhookActions();
+  const [event, setEvent] = useState(hook.events[0]);
+  const [phone, setPhone] = useState("");
+  const [result, setResult] = useState<WebhookTestResult | null>(null);
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Send a test</DialogTitle>
+          <DialogDescription>Sends sample data for one event to {hook.url}.</DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1.5 text-sm">
+            Event
+            <select
+              className="h-9 rounded-lg border border-input bg-background px-2.5 text-sm"
+              value={event}
+              onChange={(e) => setEvent(e.target.value)}
+            >
+              {hook.events.map((e) => <option key={e} value={e}>{e}</option>)}
+            </select>
+          </label>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="wh-test-phone">Your phone number (optional)</Label>
+            <Input id="wh-test-phone" inputMode="tel" placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <p className="text-xs text-muted-foreground">Replaces the sample customer&rsquo;s number, so a WhatsApp/SMS test comes to you.</p>
+          </div>
+          {result && (
+            <div className={cn("rounded-lg border p-3 text-xs", result.status === "SUCCESS" ? "border-success/40" : "border-destructive/40")}>
+              <p className={cn("font-medium", result.status === "SUCCESS" ? "text-success" : "text-destructive")}>
+                {result.status === "SUCCESS" ? `Accepted — HTTP ${result.lastStatusCode}` : result.lastError ?? "Not accepted"}
+              </p>
+              {result.body && (
+                <>
+                  <p className="mt-2 text-muted-foreground">Body sent</p>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono">{(() => { try { return JSON.stringify(JSON.parse(result.body), null, 2); } catch { return result.body; } })()}</pre>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button
+            disabled={test.isPending}
+            onClick={() =>
+              test.mutate(
+                { id: hook.id, event, phone: phone.trim() || undefined },
+                { onSuccess: setResult, onError: (e) => toast.error(errMsg(e)) },
+              )
+            }
+          >
+            {test.isPending ? "Sending…" : "Send test"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function WebhooksPage() {
   const { data: hooks, isLoading } = useWebhooks();
   const { data: allEvents } = useWebhookEvents();
-  const { create, setActive, remove, test } = useWebhookActions();
-  const [url, setUrl] = useState("");
-  const [description, setDescription] = useState("");
-  const [events, setEvents] = useState<string[]>(["order.paid"]);
+  const { create, update, setActive, remove } = useWebhookActions();
   const [secret, setSecret] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
-
-  const toggle = (e: string) => setEvents(events.includes(e) ? events.filter((x) => x !== e) : [...events, e]);
+  const [editing, setEditing] = useState<WebhookRow | null>(null);
+  const [testing, setTesting] = useState<WebhookRow | null>(null);
+  const [formKey, setFormKey] = useState(0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,10 +130,11 @@ export default function WebhooksPage() {
 
       <Card className="flex max-w-3xl flex-col gap-4 p-6">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Webhooks</h2>
+          <h2 className="text-lg font-semibold text-foreground">{editing ? "Edit webhook" : "Webhooks"}</h2>
           <p className="text-sm text-muted-foreground">
             Send signed events to a URL when something happens — connect accounting, WhatsApp/SMS, payment or
-            delivery tools through an automation service (n8n, Zapier, Make) or your own server.
+            delivery tools through an automation service (n8n, Zapier, Make) or your own server. Use a custom body
+            when the service expects its own format, e.g. a WhatsApp API that wants a number and a message.
           </p>
         </div>
 
@@ -80,45 +151,35 @@ export default function WebhooksPage() {
           </div>
         )}
 
-        <div className="flex flex-col gap-3">
-          <Input placeholder="https://example.com/fcartel-hook" value={url} onChange={(e) => setUrl(e.target.value)} />
-          <Input placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
-          <div className="flex flex-wrap gap-1.5">
-            {allEvents?.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => toggle(e)}
-                className={cn(
-                  "rounded-full border px-3 py-1 font-mono text-xs",
-                  events.includes(e) ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground",
-                )}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
-          <div>
-            <Button
-              disabled={!url.trim() || events.length === 0 || create.isPending}
-              onClick={() =>
-                create.mutate(
-                  { url: url.trim(), events, description: description.trim() || undefined },
-                  {
+        {allEvents && (
+          <WebhookForm
+            key={editing ? `edit-${editing.id}` : `new-${formKey}`}
+            allEvents={allEvents}
+            initial={editing ?? undefined}
+            busy={create.isPending || update.isPending}
+            onCancel={editing ? () => setEditing(null) : undefined}
+            onSubmit={(dto) =>
+              editing
+                ? update.mutate(
+                    { id: editing.id, dto },
+                    {
+                      onSuccess: () => {
+                        toast.success("Webhook saved");
+                        setEditing(null);
+                      },
+                      onError: (e) => toast.error(errMsg(e)),
+                    },
+                  )
+                : create.mutate(dto, {
                     onSuccess: (r) => {
                       setSecret(r.secret);
-                      setUrl("");
-                      setDescription("");
+                      setFormKey((k) => k + 1);
                     },
                     onError: (e) => toast.error(errMsg(e)),
-                  },
-                )
-              }
-            >
-              Add webhook
-            </Button>
-          </div>
-        </div>
+                  })
+            }
+          />
+        )}
       </Card>
 
       <Card className="flex max-w-3xl flex-col divide-y divide-border p-2">
@@ -130,24 +191,25 @@ export default function WebhooksPage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className={cn("truncate font-mono text-sm", !h.isActive && "text-muted-foreground line-through")}>{h.url}</p>
-                  <p className="text-xs text-muted-foreground">{h.events.join(", ")}{h.description && ` · ${h.description}`}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {h.events.join(", ")}
+                    {h.description && ` · ${h.description}`}
+                    {h.payloadTemplate && " · custom body"}
+                    {h.headerNames.length > 0 && ` · headers: ${h.headerNames.join(", ")}`}
+                  </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setTesting(h)}>Send test</Button>
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={test.isPending}
-                    onClick={() =>
-                      test.mutate(h.id, {
-                        onSuccess: (r) =>
-                          r.status === "SUCCESS"
-                            ? toast.success(`Receiver answered ${r.lastStatusCode}`)
-                            : toast.error(r.lastError ?? "Receiver did not accept the test (it will be retried)"),
-                        onError: (e) => toast.error(errMsg(e)),
-                      })
-                    }
+                    onClick={() => {
+                      setEditing(h);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                      document.querySelector("main")?.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
                   >
-                    Send test
+                    Edit
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setOpen(open === h.id ? null : h.id)}>Log</Button>
                   <Button size="sm" variant="outline" onClick={() => setActive.mutate({ id: h.id, isActive: !h.isActive })}>
@@ -167,12 +229,15 @@ export default function WebhooksPage() {
       <Card className="max-w-3xl p-6 text-sm text-muted-foreground">
         <p className="font-medium text-foreground">Verifying a request</p>
         <p className="mt-1">
-          Each request has an <code>X-OrderRestro-Signature</code> header: <code>t=&lt;unix time&gt;,v1=&lt;hex&gt;</code>,
-          where <code>v1</code> is the HMAC-SHA256 of <code>{"{t}.{raw body}"}</code> with your signing secret. Reject
-          anything older than five minutes. Failed deliveries are retried up to 6 times (1 min, 5 min, 30 min, 2 h,
-          12 h). Respond with any 2xx to accept.
+          Each request has an <code>X-FCartel-Signature</code> header: <code>t=&lt;unix time&gt;,v1=&lt;hex&gt;</code>,
+          where <code>v1</code> is the HMAC-SHA256 of <code>{"{t}.{raw body}"}</code> with your signing secret — the
+          body exactly as sent, custom or standard. <code>X-FCartel-Event</code> and <code>X-FCartel-Delivery</code> name
+          the event and the delivery. Reject anything older than five minutes. Failed deliveries are retried up to 6
+          times (1 min, 5 min, 30 min, 2 h, 12 h). Respond with any 2xx to accept.
         </p>
       </Card>
+
+      {testing && <TestDialog hook={testing} onClose={() => setTesting(null)} />}
     </div>
   );
 }

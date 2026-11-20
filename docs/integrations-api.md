@@ -252,13 +252,39 @@ website can show the price before the guest orders:
 ## 3. Webhooks (events pushed to your system)
 
 Add one under **Settings > Webhooks**. Each request is a `POST` with a JSON
-body `{ "event", "createdAt", "data" }` and these headers:
+body `{ "event", "createdAt", "data" }` (or your custom body, below) and these
+headers:
 
-- `X-OrderRestro-Event` — the event name
-- `X-OrderRestro-Delivery` — unique delivery id (use it to de-duplicate)
-- `X-OrderRestro-Signature` — `t=<unix seconds>,v1=<hex>` where `v1` is the
+- `X-FCartel-Event` — the event name
+- `X-FCartel-Delivery` — unique delivery id (use it to de-duplicate)
+- `X-FCartel-Signature` — `t=<unix seconds>,v1=<hex>` where `v1` is the
   HMAC-SHA256 of `"<t>.<raw body>"` using the endpoint's signing secret
   (shown once when you create it). Reject requests older than 5 minutes.
+
+The same three values are also sent as `X-OrderRestro-*` for receivers set up
+before the rename; new receivers should read the `X-FCartel-*` names.
+
+### Custom body and headers
+
+When a service expects its own format (a WhatsApp API that wants
+`{ "number", "message" }`, a chat app that wants `{ "text" }`), choose
+**Custom body** and write the JSON with placeholders inside quotes:
+
+```json
+{ "number": "{{data.to | phoneIN}}", "message": "Hi {{data.name}}, {{data.message}}" }
+```
+
+- `{{event}}`, `{{createdAt}}`, `{{deliveryId}}` and `{{data.<field>}}` —
+  every event's `data` also has `branchName` and `restaurantName`. Array items:
+  `{{data.payments.0.method}}`.
+- A string that is only a placeholder keeps the value's type (`"{{data.total}}"`
+  becomes the number `450`); inside other text it becomes text.
+- Filters: `digits`, `phoneIN` (10-digit Indian mobile → `91…`), `upper`,
+  `lower`, `money` (2 decimals), `json`.
+- **Extra headers** (up to 10, e.g. `Authorization: Bearer …` or `apikey`)
+  are stored encrypted and never shown again after saving.
+- The signature covers the body exactly as sent. **Send test** lets you pick
+  an event and your own phone number, and shows the body that was sent.
 
 Events: `order.created`, `order.paid`, `order.cancelled`,
 `reservation.created`, `delivery.updated`, `campaign.message`.

@@ -198,6 +198,7 @@ export class DeliveryService {
       status: updated.deliveryStatus,
       driver: updated.driver?.name ?? null,
       address: updated.deliveryAddress,
+      phone: updated.deliveryPhone,
     });
     return updated;
   }

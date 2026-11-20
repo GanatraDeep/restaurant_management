@@ -2086,6 +2086,12 @@ model WebhookEndpoint {
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
+  /// Optional JSON body template with {{placeholders}}; null = the standard envelope.
+  payloadTemplate String?
+  /// Extra request headers (e.g. an API key), sealed like `secret`: JSON [{name,value}].
+  headers         String?
+  /// Header names only, so the settings screen can list them without the values.
+  headerNames     String[] @default([])
 
   deliveries WebhookDelivery[]
 
