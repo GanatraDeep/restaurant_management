@@ -67,7 +67,7 @@ export class SignupOtpService {
     });
     const r = await this.whatsapp.sendText(
       phone,
-      `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel verification code is:\n\n${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`,
+      `Hello${name ? ` ${name}` : ''},\n\nYour Annapurna verification code is:\n\n${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`,
     );
     if (!r.ok) {
       // A failed send doesn't count against the resend wait.

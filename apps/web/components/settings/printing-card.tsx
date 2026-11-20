@@ -87,7 +87,7 @@ export function PrintingCard() {
           <p className="text-sm font-medium text-foreground">Auto-print KOTs on this device</p>
           <p className="text-xs text-muted-foreground">
             Turn this on at the computer the kitchen printer is connected to. Every order&rsquo;s KOT then prints as soon as
-            it&rsquo;s accepted (or arrives already accepted), from any F Cartel page — each KOT prints once, even if two
+            it&rsquo;s accepted (or arrives already accepted), from any Annapurna page — each KOT prints once, even if two
             devices have this on.
           </p>
         </div>

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# F Cartel — install / re-apply on a VPS that already hosts other sites.
+# Annapurna — install / re-apply on a VPS that already hosts other sites.
 #
 #   cd deploy && sudo ./setup.sh            # interactive
 #   sudo ./setup.sh --yes                   # don't ask before adding the nginx site
@@ -83,7 +83,7 @@ bold "Signing in to $(env_get REGISTRY_SERVER) to pull the private images"
 env_get REGISTRY_TOKEN | docker login "$(env_get REGISTRY_SERVER)" -u "$(env_get REGISTRY_USERNAME)" --password-stdin >/dev/null
 echo "Signed in."
 
-bold "Starting F Cartel (Docker project \"fcartel\")"
+bold "Starting Annapurna (Docker project \"fcartel\")"
 "${COMPOSE[@]}" up -d --build
 echo "Waiting for the app to answer on 127.0.0.1:$PORT (the first start runs the database setup)..."
 for _ in $(seq 1 60); do
@@ -93,7 +93,7 @@ for _ in $(seq 1 60); do
   sleep 3
 done
 [ "${ok:-0}" = 1 ] || die "The app did not come up. Check: docker logs fcartel-backend   (other sites are unaffected)"
-echo "F Cartel is running."
+echo "Annapurna is running."
 
 if [ "$SKIP_NGINX" = 1 ]; then
   bold "Skipping nginx (--skip-nginx). Done."
@@ -129,7 +129,7 @@ else
   echo "----------------------------------------------------------------"
   echo "$rendered"
   echo "----------------------------------------------------------------"
-  confirm "Add it and reload nginx (a graceful reload; other sites keep serving)?" || die "Stopped before touching nginx. F Cartel is running on 127.0.0.1:$PORT."
+  confirm "Add it and reload nginx (a graceful reload; other sites keep serving)?" || die "Stopped before touching nginx. Annapurna is running on 127.0.0.1:$PORT."
   printf '%s\n' "$rendered" > "$SITE"
   [ -n "$LINK" ] && ln -sf "$SITE" "$LINK"
   if ! nginx -t; then
@@ -159,7 +159,7 @@ fi
 
 bold "Done"
 cat <<MSG
-F Cartel is live at https://$DOMAIN
+Annapurna is live at https://$DOMAIN
 
 Next steps (README.md has the details):
   1. Sign up at https://$DOMAIN/signup with $(env_get SUPER_ADMIN_EMAILS | cut -d, -f1) — that account gets /admin.

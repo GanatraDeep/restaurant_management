@@ -166,7 +166,7 @@ export class AggregatorsController {
   }
 }
 
-// Marketplace → F Cartel. Public: authenticated per connection by an HMAC
+// Marketplace → Annapurna. Public: authenticated per connection by an HMAC
 // signature (or bearer secret), not a session. See docs/aggregators.md.
 @ApiTags('aggregators')
 @Controller('v1/aggregators/inbound')

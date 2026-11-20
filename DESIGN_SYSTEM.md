@@ -25,7 +25,7 @@ before calling anything done.
 --success:          #22C55E
 --warning:          #F59E0B
 --danger:           #EF4444
---primary:          #D13644   /* F Cartel coral, deepened for AA — see below */
+--primary:          #D13644   /* Annapurna coral, deepened for AA — see below */
 --primary-foreground: #FFFFFF
 ```
 
@@ -45,7 +45,7 @@ Dark mode (own token set, not `background * 0.1` math):
 --primary-foreground: #14161B   /* near-black ink, as in the logo */
 ```
 
-**Primary accent:** the F Cartel logo's coral (#FA6C76). It is too light
+**Primary accent:** the Annapurna logo's coral (#FA6C76). It is too light
 to carry white text or to be used as text on the light page (2.8:1), so
 light mode uses a deepened coral, #D13644 (4.9:1 with white, 4.6:1 on the
 page background — WCAG AA). Dark mode uses the logo coral itself with

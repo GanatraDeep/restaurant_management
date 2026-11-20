@@ -1,6 +1,6 @@
 name: Publish Docker images
 
-# Builds and publishes the F Cartel backend/web images to this repository
+# Builds and publishes the Annapurna backend/web images to this repository
 # owner's GitHub Container Registry (ghcr.io/<owner>/...), so a server can
 # run a pre-built, version-pinned image instead of building from source.
 #

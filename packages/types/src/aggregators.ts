@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Zomato / Swiggy marketplace integration. Orders reach F Cartel as the
+// Zomato / Swiggy marketplace integration. Orders reach Annapurna as the
 // normalized payload below (the integration partner / middleware that holds
 // the marketplace POS-integration credentials maps the marketplace's own
 // format onto it), signed with the connection's webhook secret. See
@@ -51,7 +51,7 @@ export const aggregatorInboundOrderSchema = z.object({
 });
 export type AggregatorInboundOrder = z.infer<typeof aggregatorInboundOrderSchema>;
 
-// Status updates F Cartel pushes back to the marketplace.
+// Status updates Annapurna pushes back to the marketplace.
 export const AGGREGATOR_STATUSES = [
   "ACCEPTED",
   "REJECTED",

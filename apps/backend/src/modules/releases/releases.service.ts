@@ -169,7 +169,7 @@ export class ReleasesService implements OnModuleInit {
     const firstLine = dto.message?.split('\n')[0]?.slice(0, 140);
     await notifySuperAdmins(this.prisma, this.notifications, {
       type: 'release.available',
-      title: 'New F Cartel version ready to deploy',
+      title: 'New Annapurna version ready to deploy',
       body: `${dto.tag}${firstLine ? ` — ${firstLine}` : ''}. Review it in Admin → Releases.`,
     });
   }

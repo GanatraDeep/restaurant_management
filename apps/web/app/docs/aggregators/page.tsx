@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
 
 export const metadata: Metadata = {
-  title: "Zomato & Swiggy — F Cartel",
-  description: "Receive Zomato and Swiggy orders in F Cartel and send order status back: setup, payload format, and status updates.",
+  title: "Zomato & Swiggy — Annapurna",
+  description: "Receive Zomato and Swiggy orders in Annapurna and send order status back: setup, payload format, and status updates.",
 };
 
 function Code({ children }: { children: string }) {
@@ -22,8 +22,8 @@ export default function AggregatorDocsPage() {
           Zomato and Swiggy don&rsquo;t offer an open public order API. Restaurant software connects through their{" "}
           <strong className="text-foreground">POS integration programmes</strong> (you apply as a POS partner and get
           their spec and credentials), or through an <strong className="text-foreground">integration middleware</strong>{" "}
-          that already holds that partnership. Either way, the partner sends each new order to F Cartel in the format
-          below and receives status updates from F Cartel.
+          that already holds that partnership. Either way, the partner sends each new order to Annapurna in the format
+          below and receives status updates from Annapurna.
         </p>
       </DocSection>
 
@@ -42,7 +42,7 @@ export default function AggregatorDocsPage() {
         />
       </DocSection>
 
-      <DocSection heading="New order (marketplace → F Cartel)">
+      <DocSection heading="New order (marketplace → Annapurna)">
         <Code>{`POST /api/v1/aggregators/inbound/<connectionId>/orders
 Content-Type: application/json
 X-FCartel-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">
@@ -68,11 +68,11 @@ X-FCartel-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "<t>.<raw body>">
         />
         <p>
           Orders arrive as takeaway orders on the online channel, tagged Zomato or Swiggy, and wait for Accept / Reject
-          unless auto-accept is on. Prices come from your F Cartel menu.
+          unless auto-accept is on. Prices come from your Annapurna menu.
         </p>
       </DocSection>
 
-      <DocSection heading="Status updates (F Cartel → marketplace)">
+      <DocSection heading="Status updates (Annapurna → marketplace)">
         <Code>{`POST <status callback URL>
 X-FCartel-Signature: t=…,v1=…
 Authorization: Bearer <API key>   (when set)

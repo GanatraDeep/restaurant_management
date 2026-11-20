@@ -1,7 +1,7 @@
 # RasoiOS — Kitchen SOPs
 
 Sidebar → **Kitchen SOPs** (`/sop`). Built from the "RasoiOS: Feature Comparison and
-Idea Assessment" list. Uses F Cartel's existing outlets, staff, roles and notifications.
+Idea Assessment" list. Uses Annapurna's existing outlets, staff, roles and notifications.
 
 | Feature from the assessment | Where |
 |---|---|
@@ -21,7 +21,7 @@ Idea Assessment" list. Uses F Cartel's existing outlets, staff, roles and notifi
 | Fast SOP capture | Paste many steps at once; microphone dictation in Hindi / Gujarati / Marathi / English (Chrome, Edge, Android) |
 | Multi-outlet owner dashboard | Outlets tab — checklists done, overdue, temperature alerts, licences, training % per outlet |
 
-Already in F Cartel (not rebuilt): food costing & recipes, auto stock deduction, POS,
+Already in Annapurna (not rebuilt): food costing & recipes, auto stock deduction, POS,
 aggregator integration, vendor directory (Inventory → Suppliers), multi-outlet.
 
 Not built: AI photo-to-SOP (needs an AI provider key), full offline mode.

@@ -27,7 +27,7 @@ export interface BillingStatus {
   accessEndsAt: string | null;
   trialUsed: boolean;
   // null = online payment isn't set up on this server: paid plans are
-  // requested from F Cartel and activated by a super admin instead.
+  // requested from Annapurna and activated by a super admin instead.
   razorpayKeyId: string | null;
   planRequest: { id: string; planId: string | null; planName: string | null; createdAt: string } | null;
 }
@@ -168,7 +168,7 @@ export function useCheckout() {
           order_id: result.orderId,
           amount: result.amount,
           currency: result.currency,
-          name: "F Cartel",
+          name: "Annapurna",
           description: `${result.planName} plan — ${result.restaurantName}`,
           prefill: { name: result.prefill.name, email: result.prefill.email ?? undefined },
           theme: { color: "#d13644" },

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="apps/web/public/brand-lockup.png" alt="F Cartel" width="520">
+<img src="apps/web/public/brand-lockup.png" alt="Annapurna" width="520">
 
 <img src="docs/orderrestro-cover.jpg" alt="Illustrative evening scene in an independent restaurant" width="100%">
 
@@ -23,7 +23,7 @@ Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
 **[Try OrderRestro](https://orderrestro.nodedr.com/)** · **[Case study](https://www.raktimranjit.com/projects/orderrestro)** · **[Maintainer: Raktim Ranjit](https://www.raktimranjit.com/)**
 
 <p align="center">
-  <img src="docs/assets/hero-animated.svg" alt="F Cartel: animated overview with an illustrative sample screen" width="100%">
+  <img src="docs/assets/hero-animated.svg" alt="Annapurna: animated overview with an illustrative sample screen" width="100%">
 </p>
 
 
@@ -42,7 +42,7 @@ Developed by [NodeDR Infotech Private Limited](https://www.nodedr.com/)
 
 ## What this is
 
-**F Cartel** is a purpose-built, offline-first Restaurant
+**Annapurna** is a purpose-built, offline-first Restaurant
 Management System for restaurants, cafés, coffee shops, bakeries, fast
 food, fine dining, bars, food courts, cloud kitchens, and multi-branch
 chains. The whole stack — Postgres, API, and web app — runs on one local
@@ -219,7 +219,7 @@ management tools with **56 screenshots of the app**.
 ## FAQ
 
 **Can I run it on my own server?**
-Yes — F Cartel installs with `docker compose up`.
+Yes — Annapurna installs with `docker compose up`.
 
 **Does it support UPI payments and GST billing?**
 Yes. Add your UPI id under *Settings → Restaurant*; checkout then shows a
@@ -270,7 +270,7 @@ Postgres over the originally-specced SQLite — is in
 
 ## Quick start
 
-> **Production (F Cartel on fcartel.divtech.cloud):** use
+> **Production (Annapurna on fcartel.divtech.cloud):** use
 > [`deploy/README.md`](./deploy/README.md) — pre-built images, an isolated
 > Docker project that leaves other sites on the server alone, and
 > approve-before-deploy updates from **Admin console → Releases**. The
@@ -476,7 +476,7 @@ See [`MAINTAINERS.md`](./MAINTAINERS.md) for project maintainers.
 ---
 
 <div align="center">
-<img src="apps/web/public/logo.png" alt="F Cartel" width="72">
+<img src="apps/web/public/logo.png" alt="Annapurna" width="72">
 </div>
 
 

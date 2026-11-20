@@ -1,4 +1,4 @@
-# F Cartel — production stack for a shared VPS (see deploy/README.md).
+# Annapurna — production stack for a shared VPS (see deploy/README.md).
 #
 # Built so it can't get in the way of other sites on the same server:
 #  - Its own Compose project ("fcartel"): own network, own volumes, and every

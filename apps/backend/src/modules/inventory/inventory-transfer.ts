@@ -144,7 +144,7 @@ export async function buildInventoryWorkbook(
   opts: { restaurantName: string; example?: boolean },
 ): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'F Cartel';
+  wb.creator = 'Annapurna';
   const ws = wb.addWorksheet('Inventory');
   ws.columns = COLUMNS.map((c) => ({
     header: c.header,

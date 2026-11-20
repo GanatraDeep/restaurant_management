@@ -39,7 +39,7 @@ services:
       CORS_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:1995}"
       COOKIE_SECURE: "${COOKIE_SECURE:-false}"
       UPLOADS_DIR: "/data/uploads"
-      # F Cartel platform billing (Admin console at /admin). See .env.example.
+      # Annapurna platform billing (Admin console at /admin). See .env.example.
       SUPER_ADMIN_EMAILS: "${SUPER_ADMIN_EMAILS:-}"
       RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-}"
       RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:-}"

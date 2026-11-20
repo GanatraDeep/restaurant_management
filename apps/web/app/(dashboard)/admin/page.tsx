@@ -68,7 +68,7 @@ export default function AdminOverviewPage() {
               <div>
                 <p className="text-sm font-medium text-foreground">Require a subscription</p>
                 <p className="text-sm text-muted-foreground">
-                  When on, every restaurant needs an active free trial or paid plan to use F Cartel. New sign-ups see
+                  When on, every restaurant needs an active free trial or paid plan to use Annapurna. New sign-ups see
                   the plan picker straight away. Super admins are never blocked.
                 </p>
               </div>

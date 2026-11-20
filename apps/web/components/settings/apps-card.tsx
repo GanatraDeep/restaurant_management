@@ -10,7 +10,7 @@ const linkButton =
   "inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90";
 
 /**
- * Where an owner gets F Cartel on their devices: the Android app, the
+ * Where an owner gets Annapurna on their devices: the Android app, the
  * Windows desktop app (silent printing, kitchen + counter printers) and, for
  * iPhone, the website added to the home screen. Owners only.
  */
@@ -25,7 +25,7 @@ export function AppsCard() {
       <div>
         <h2 className="text-[18px] font-medium text-foreground">Apps</h2>
         <p className="text-sm text-muted-foreground">
-          Install F Cartel on your restaurant&rsquo;s devices. Only you (the owner) see these downloads.
+          Install Annapurna on your restaurant&rsquo;s devices. Only you (the owner) see these downloads.
         </p>
       </div>
 

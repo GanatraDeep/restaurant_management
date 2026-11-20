@@ -28,7 +28,7 @@ import { BillingService } from './billing.service';
 import { SkipSubscription } from './skip-subscription.decorator';
 import { SuperAdminGuard } from './super-admin.guard';
 
-// F Cartel platform console — plans, trials, and every restaurant's
+// Annapurna platform console — plans, trials, and every restaurant's
 // subscription. Super admins only (see common/super-admin.ts).
 @ApiTags('admin')
 @Controller('v1/admin')
@@ -65,7 +65,7 @@ export class AdminController {
     }
     return this.whatsapp.sendText(
       number,
-      'F Cartel test message: guest OTPs from your restaurant will arrive like this.',
+      'Annapurna test message: guest OTPs from your restaurant will arrive like this.',
     );
   }
 

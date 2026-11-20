@@ -112,7 +112,7 @@ export function NotificationBell() {
 
   const handleSelect = (notification: NotificationEntry) => {
     if (!notification.readAt) markRead.mutate(notification.id);
-    // New F Cartel version announced by CI → the super admin's Releases page.
+    // New Annapurna version announced by CI → the super admin's Releases page.
     if (notification.type === "release.available") {
       router.push("/admin/releases");
       return;

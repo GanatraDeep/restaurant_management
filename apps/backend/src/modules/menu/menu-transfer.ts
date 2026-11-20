@@ -228,7 +228,7 @@ export async function buildMenuWorkbook(
   opts: { restaurantName: string; example?: boolean },
 ): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'F Cartel';
+  wb.creator = 'Annapurna';
   const ws = wb.addWorksheet('Menu');
   ws.columns = MENU_COLUMNS.map((c) => ({
     header: c.header,

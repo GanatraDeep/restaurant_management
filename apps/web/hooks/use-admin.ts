@@ -11,7 +11,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { SubscriptionPlan } from "@/hooks/use-billing";
 
-// F Cartel super-admin console (/admin).
+// Annapurna super-admin console (/admin).
 
 export interface AdminOverview {
   restaurants: number;

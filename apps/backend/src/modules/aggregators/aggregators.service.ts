@@ -266,11 +266,11 @@ export class AggregatorsService {
     );
   }
 
-  // ─── Inbound (marketplace → F Cartel) ───────────────────────────────────
+  // ─── Inbound (marketplace → Annapurna) ───────────────────────────────────
 
   /**
    * Accepts either the X-FCartel-Signature HMAC over the raw body (same
-   * scheme as F Cartel's outgoing webhooks) or `Authorization: Bearer
+   * scheme as Annapurna's outgoing webhooks) or `Authorization: Bearer
    * <secret>` for middleware that can only send a static header.
    */
   async receive(

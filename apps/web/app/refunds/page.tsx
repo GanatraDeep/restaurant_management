@@ -3,8 +3,8 @@ import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
 import { BUSINESS } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Cancellation & Refund Policy — F Cartel",
-  description: "F Cartel subscriptions: cancellation, refunds and duplicate payments.",
+  title: "Cancellation & Refund Policy — Annapurna",
+  description: "Annapurna subscriptions: cancellation, refunds and duplicate payments.",
 };
 
 export default function RefundsPage() {
@@ -12,11 +12,11 @@ export default function RefundsPage() {
     <DocPage title="Cancellation &amp; Refund Policy" updated={BUSINESS.policiesUpdated}>
       <DocSection heading="Refunds">
         <p>
-          F Cartel subscriptions are paid in advance for a billing period.{" "}
+          Annapurna subscriptions are paid in advance for a billing period.{" "}
           <strong className="text-foreground">
             Once a billing period has started, the payment for it is not refundable
           </strong>
-          , in full or in part, including when you stop using F Cartel before the period ends.
+          , in full or in part, including when you stop using Annapurna before the period ends.
         </p>
         <p>We only refund in these cases:</p>
         <DocList

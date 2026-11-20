@@ -3,8 +3,8 @@ import { DocPage, DocSection } from "@/components/marketing/doc-page";
 import { BUSINESS } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Service Delivery Policy — F Cartel",
-  description: "How F Cartel subscriptions are delivered: online, immediately after payment.",
+  title: "Service Delivery Policy — Annapurna",
+  description: "How Annapurna subscriptions are delivered: online, immediately after payment.",
 };
 
 export default function DeliveryPage() {
@@ -12,7 +12,7 @@ export default function DeliveryPage() {
     <DocPage title="Service Delivery Policy" updated={BUSINESS.policiesUpdated}>
       <DocSection heading="Digital service — nothing is shipped">
         <p>
-          F Cartel is online software. There are no physical goods and nothing is shipped. You use it in a web
+          Annapurna is online software. There are no physical goods and nothing is shipped. You use it in a web
           browser at {BUSINESS.website} on any computer, tablet or phone.
         </p>
       </DocSection>

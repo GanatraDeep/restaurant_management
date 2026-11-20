@@ -5,8 +5,8 @@ import { DocPage, DocSection } from "@/components/marketing/doc-page";
 import { BUSINESS } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Contact Us — F Cartel",
-  description: "Contact F Cartel by Divtech for sales, support, billing and privacy questions.",
+  title: "Contact Us — Annapurna",
+  description: "Contact Annapurna by Divtech for sales, support, billing and privacy questions.",
 };
 
 function Row({ icon: Icon, children }: { icon: typeof Mail; children: React.ReactNode }) {

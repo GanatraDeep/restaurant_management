@@ -7,7 +7,7 @@ import { SubscriptionGuard } from '../../modules/billing/subscription.guard';
 import { RequirePermission } from './permissions.decorator';
 
 // Combines "must be logged in" + "must hold these permissions" + "restaurant
-// has an active F Cartel subscription" (when the platform requires one) into
+// has an active Annapurna subscription" (when the platform requires one) into
 // one decorator so every protected route reads @Auth('menu.manage') instead
 // of stacked decorators repeated on every controller method.
 export const Auth = (...permissions: PermissionKey[]) =>

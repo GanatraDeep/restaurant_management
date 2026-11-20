@@ -1,4 +1,4 @@
-// A user is an F Cartel super admin (platform operator) when flagged in the
+// A user is an Annapurna super admin (platform operator) when flagged in the
 // database or when their email is listed in SUPER_ADMIN_EMAILS
 // (comma-separated) — the env list is how the first super admin is
 // bootstrapped on a fresh install.

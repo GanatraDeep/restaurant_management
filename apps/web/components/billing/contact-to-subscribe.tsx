@@ -13,7 +13,7 @@ import { formatPlanPrice } from "@/lib/billing";
 import { BUSINESS } from "@/lib/brand";
 
 // Shown instead of online checkout while Razorpay isn't set up on this
-// server: the restaurant pays F Cartel directly, and a super admin activates
+// server: the restaurant pays Annapurna directly, and a super admin activates
 // the plan from Admin console → Restaurants. Disappears by itself once
 // Razorpay keys are configured (BillingStatus.razorpayKeyId).
 export function ContactToSubscribeDialog({
@@ -32,7 +32,7 @@ export function ContactToSubscribeDialog({
 
   const price = formatPlanPrice(plan.priceMinor, plan.currency, plan.interval);
   const restaurant = branding?.name ?? "my restaurant";
-  const text = `Hi, I'd like to subscribe ${restaurant} to the F Cartel ${plan.name} plan (${price}).`;
+  const text = `Hi, I'd like to subscribe ${restaurant} to the Annapurna ${plan.name} plan (${price}).`;
   const alreadyRequested = status?.planRequest?.planId === plan.id;
 
   const notify = () =>
@@ -83,7 +83,7 @@ export function ContactToSubscribeDialog({
             </span>
           </a>
           <a
-            href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`F Cartel ${plan.name} plan — ${restaurant}`)}&body=${encodeURIComponent(text)}`}
+            href={`mailto:${BUSINESS.email}?subject=${encodeURIComponent(`Annapurna ${plan.name} plan — ${restaurant}`)}&body=${encodeURIComponent(text)}`}
             className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 text-sm hover:bg-secondary"
           >
             <Mail className="size-5 shrink-0 text-primary" />
@@ -111,7 +111,7 @@ export function ContactToSubscribeDialog({
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Optional: best time to call, GST details for the invoice…"
                 maxLength={500}
-                aria-label="Message for the F Cartel team"
+                aria-label="Message for the Annapurna team"
               />
             </>
           )}
@@ -123,7 +123,7 @@ export function ContactToSubscribeDialog({
           </Button>
           {!alreadyRequested && (
             <Button onClick={notify} disabled={request.isPending}>
-              {request.isPending ? "Sending…" : "Notify F Cartel team"}
+              {request.isPending ? "Sending…" : "Notify Annapurna team"}
             </Button>
           )}
         </DialogFooter>

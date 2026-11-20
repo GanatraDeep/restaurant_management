@@ -284,7 +284,7 @@ OrderRestro has a REST API (`/api/v1`, docs at `/api/docs`), API keys, webhooks 
 
 Everything lives in your Postgres volume. Use **Settings → Backup** for scheduled backups, and test a restore before you need one.
 
-Questions or bugs: contact F Cartel support.
+Questions or bugs: contact Annapurna support.
 
 ---
 

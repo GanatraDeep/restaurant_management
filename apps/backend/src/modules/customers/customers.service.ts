@@ -46,7 +46,7 @@ export class CustomersService {
       d ? d.toISOString().slice(0, 10) : null;
 
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'F Cartel';
+    wb.creator = 'Annapurna';
     const ws = wb.addWorksheet('Customers');
     ws.columns = [
       { header: 'Name', key: 'name', width: 24 },

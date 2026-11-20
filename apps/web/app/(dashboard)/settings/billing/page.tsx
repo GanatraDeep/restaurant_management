@@ -28,7 +28,7 @@ export default function BillingPage() {
             <CreditCard className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-lg font-semibold text-foreground">Your F Cartel plan</h2>
+            <h2 className="text-lg font-semibold text-foreground">Your Annapurna plan</h2>
             {isLoading || !status ? (
               <Skeleton className="mt-2 h-5 w-48" />
             ) : (

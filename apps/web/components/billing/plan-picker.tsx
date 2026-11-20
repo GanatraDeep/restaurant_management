@@ -67,7 +67,7 @@ export function PlanPicker({
   if (!plans?.length) {
     return (
       <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-        No plans are available yet. Please contact F Cartel support.
+        No plans are available yet. Please contact Annapurna support.
       </p>
     );
   }

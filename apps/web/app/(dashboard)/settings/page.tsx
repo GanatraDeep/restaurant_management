@@ -400,7 +400,7 @@ function GeneralSettingsForm({
                 </button>
               )}
               <p className="text-xs text-muted-foreground">
-                Shows in the app sidebar and on the kiosk instead of the F Cartel mark.
+                Shows in the app sidebar and on the kiosk instead of the Annapurna mark.
                 Square, at least 256×256px, PNG with a transparent background works best.
               </p>
             </div>

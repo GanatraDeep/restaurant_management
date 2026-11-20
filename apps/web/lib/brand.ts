@@ -3,20 +3,20 @@
 // always takes priority inside the app; this is the fallback and the mark
 // used on public pages (landing, login, signup, docs, policies).
 export const BRAND = {
-  name: "F Cartel",
+  name: "Annapurna",
   tagline: "Run your restaurant under your own brand.",
   description:
-    "F Cartel is restaurant management software — POS, kitchen display, tables, reservations, inventory, and CRM — that puts your restaurant's name and logo front and center.",
-  logoSrc: "/logo.png",
+    "Annapurna is restaurant management software — POS, kitchen display, tables, reservations, inventory, and CRM — that puts your restaurant's name and logo front and center.",
+  logoSrc: "/brand/annapurna-logo.png",
   // Shown as "Contact support" in the app sidebar and docs; the contact page by default.
   supportUrl: process.env.NEXT_PUBLIC_SUPPORT_URL || "/contact",
 } as const;
 
-// The business behind F Cartel, as shown on the contact and policy pages
+// The business behind Annapurna, as shown on the contact and policy pages
 // (payment providers check these).
 export const BUSINESS = {
   legalName: "Divtech",
-  displayName: "F Cartel - By Divtech",
+  displayName: "Annapurna - By Divtech",
   email: "hello@divtech.in",
   phone: "+91 94299 11067",
   // wa.me number (country code + number, digits only).

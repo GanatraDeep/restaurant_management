@@ -269,7 +269,7 @@ function ConnectionCard({
             placeholder="https://partner.example.com/status"
           />
           <p className="text-xs text-muted-foreground">
-            F Cartel posts accepted / rejected / preparing / ready / handed over / cancelled here.
+            Annapurna posts accepted / rejected / preparing / ready / handed over / cancelled here.
           </p>
         </div>
       </div>
@@ -382,7 +382,7 @@ export default function AggregatorsPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <AggregatorBadge aggregator={o.connection.provider} />
                     <span className="font-medium text-foreground">#{o.externalOrderId}</span>
-                    {o.order && <span className="text-muted-foreground">→ F Cartel #{o.order.orderNumber}</span>}
+                    {o.order && <span className="text-muted-foreground">→ Annapurna #{o.order.orderNumber}</span>}
                   </div>
                   <p className="mt-1 text-xs break-words text-muted-foreground">
                     {formatDate(o.createdAt)}

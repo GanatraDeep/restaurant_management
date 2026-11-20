@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Platform subscriptions (F Cartel billing). Plans are managed by a super
+// Platform subscriptions (Annapurna billing). Plans are managed by a super
 // admin; restaurants pick one at signup (trial or paid via Razorpay).
 
 export const BILLING_INTERVALS = ["MONTHLY", "QUARTERLY", "YEARLY"] as const;

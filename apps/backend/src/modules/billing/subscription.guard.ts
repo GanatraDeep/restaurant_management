@@ -32,7 +32,7 @@ export class SubscriptionGuard implements CanActivate {
     throw new HttpException(
       {
         statusCode: HttpStatus.PAYMENT_REQUIRED,
-        message: 'Your F Cartel subscription is not active',
+        message: 'Your Annapurna subscription is not active',
         code: 'SUBSCRIPTION_REQUIRED',
       },
       HttpStatus.PAYMENT_REQUIRED,

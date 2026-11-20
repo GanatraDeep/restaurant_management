@@ -38,7 +38,7 @@ export function billQueryString(adj: BillQuery = {}): string {
 }
 
 /**
- * The F Cartel desktop app (Electron) exposes this bridge. Electron ignores
+ * The Annapurna desktop app (Electron) exposes this bridge. Electron ignores
  * Chrome's --kiosk-printing, and a print() from inside an iframe can't be
  * made silent, so in the app the page's address is handed over instead: the
  * app loads it in a hidden window (same login) and prints it straight to the

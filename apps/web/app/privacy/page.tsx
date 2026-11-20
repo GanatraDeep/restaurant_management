@@ -4,8 +4,8 @@ import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
 import { BUSINESS } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — F Cartel",
-  description: "How F Cartel by Divtech collects, uses and protects personal data.",
+  title: "Privacy Policy — Annapurna",
+  description: "How Annapurna by Divtech collects, uses and protects personal data.",
 };
 
 export default function PrivacyPage() {
@@ -13,8 +13,8 @@ export default function PrivacyPage() {
     <DocPage title="Privacy Policy" updated={BUSINESS.policiesUpdated}>
       <DocSection heading="Who this covers">
         <p>
-          This policy explains how {BUSINESS.legalName} (&ldquo;we&rdquo;) handles personal data in F Cartel
-          ({BUSINESS.website}). It covers restaurant owners and staff who use F Cartel, and the restaurants&rsquo;
+          This policy explains how {BUSINESS.legalName} (&ldquo;we&rdquo;) handles personal data in Annapurna
+          ({BUSINESS.website}). It covers restaurant owners and staff who use Annapurna, and the restaurants&rsquo;
           guests whose details are entered into it.
         </p>
       </DocSection>
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
           items={[
             "To provide the service: run your POS, kitchen display, reports and the other features you use.",
             "To manage your subscription and send service messages such as payment confirmations and important changes.",
-            "To keep F Cartel secure, prevent abuse and fix problems.",
+            "To keep Annapurna secure, prevent abuse and fix problems.",
             "To meet legal obligations, such as keeping tax and payment records.",
           ]}
         />
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
 
       <DocSection heading="Your guests' data">
         <p>
-          Each restaurant decides what guest data it collects in F Cartel and why, and is the Data Fiduciary for it
+          Each restaurant decides what guest data it collects in Annapurna and why, and is the Data Fiduciary for it
           under the Digital Personal Data Protection Act, 2023. We process that data only on the restaurant&rsquo;s
           behalf and instructions, to provide the service. Guests who want to access or correct their data should
           contact the restaurant first; we will help the restaurant respond.

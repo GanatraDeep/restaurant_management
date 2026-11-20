@@ -1,4 +1,4 @@
-# F Cartel — __DOMAIN__ → the F Cartel web container on 127.0.0.1:__PORT__.
+# Annapurna — __DOMAIN__ → the Annapurna web container on 127.0.0.1:__PORT__.
 # Added by deploy/setup.sh. This block only answers for __DOMAIN__, so every
 # other site on this server is unaffected; certbot adds the HTTPS lines here.
 

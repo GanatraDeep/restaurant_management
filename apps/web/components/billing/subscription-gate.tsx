@@ -59,11 +59,11 @@ export function SubscriptionGate({ user }: { user: SessionUser }) {
           <p className="max-w-lg text-sm text-muted-foreground">
             {canManage
               ? lapsed
-                ? "Renew to keep using F Cartel. Your data is safe and will be right where you left it."
+                ? "Renew to keep using Annapurna. Your data is safe and will be right where you left it."
                 : status.razorpayKeyId
                   ? "Start with a free trial or subscribe now. You can change plans any time from Settings → Billing."
                   : "Start with a free trial, or contact us to subscribe — we activate your plan as soon as payment is received."
-              : "Your restaurant's F Cartel subscription isn't active. Ask the owner to choose a plan, then reload this page."}
+              : "Your restaurant's Annapurna subscription isn't active. Ask the owner to choose a plan, then reload this page."}
           </p>
         </div>
 

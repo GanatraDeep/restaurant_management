@@ -225,7 +225,7 @@ export default function AdminReleasesPage() {
           <DialogHeader>
             <DialogTitle>Deploy {confirm?.tag} to production?</DialogTitle>
             <DialogDescription>
-              F Cartel restarts on this version — usually under a minute, during which the app may briefly not respond.
+              Annapurna restarts on this version — usually under a minute, during which the app may briefly not respond.
               Database changes in the new version are applied automatically. If the new version fails its health
               checks, the current version ({data?.currentVersion}) is restored.
             </DialogDescription>

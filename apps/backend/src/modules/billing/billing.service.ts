@@ -272,7 +272,7 @@ export class BillingService {
     const config = razorpayConfig();
     if (!config) {
       throw new ServiceUnavailableException(
-        "Online payments aren't set up yet. Please contact F Cartel support.",
+        "Online payments aren't set up yet. Please contact Annapurna support.",
       );
     }
     const restaurant = await this.prisma.restaurant.findUniqueOrThrow({
@@ -688,7 +688,7 @@ export class BillingService {
   }
 }
 
-/** The F Cartel Android app (a WebView wrapper) until a super admin sets another link. */
+/** The Annapurna Android app (a WebView wrapper) until a super admin sets another link. */
 export const DEFAULT_ANDROID_APK_URL =
   'https://drive.google.com/file/d/1FxFWZLr3NCtogFA0g631ZbPxBNuZ6ak1/view?usp=sharing';
 

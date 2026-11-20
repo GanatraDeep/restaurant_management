@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# F Cartel quickstart — macOS & Linux.
+# Annapurna quickstart — macOS & Linux.
 #
 # Checks whether Docker is installed and running; installs it if not
 # (Docker Desktop via Homebrew on macOS, Docker Engine via the official
 # get.docker.com script on Linux). Does the same for git (Homebrew on macOS,
 # the system package manager on Linux) if it's missing too. Then clones (or
-# updates) F Cartel into ./restaurant_management and runs its
+# updates) Annapurna into ./restaurant_management and runs its
 # installer (which generates a .env with random secrets on first run).
 #
 # Usage:
@@ -121,7 +121,7 @@ if ! command -v git >/dev/null 2>&1; then
   esac
 fi
 
-echo "==> Getting F Cartel..."
+echo "==> Getting Annapurna..."
 if [ -d "$REPO_DIR/.git" ]; then
   echo "Existing checkout found in ./$REPO_DIR — updating it instead of re-cloning."
   git -C "$REPO_DIR" pull --ff-only
@@ -130,5 +130,5 @@ else
 fi
 
 cd "$REPO_DIR"
-echo "==> Installing and starting F Cartel..."
+echo "==> Installing and starting Annapurna..."
 $SUDO ./install.sh

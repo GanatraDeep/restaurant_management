@@ -1,6 +1,6 @@
-# Deploying F Cartel to the Hostinger VPS (fcartel.divtech.cloud)
+# Deploying Annapurna to the Hostinger VPS (fcartel.divtech.cloud)
 
-This puts F Cartel on its own sub-domain of a VPS that already hosts other
+This puts Annapurna on its own sub-domain of a VPS that already hosts other
 sites, and sets up **approve-before-production updates**: every push to
 `master` builds a new version, and nothing reaches the live site until a super
 admin presses **Deploy** in **Admin console → Releases**.
@@ -32,8 +32,8 @@ Internet ──► nginx (already on the VPS, ports 80/443)
 - **Nothing is compiled on the VPS.** GitHub Actions builds the images, so
   your server's CPU and memory stay with your sites.
 - **Memory caps and log rotation** on every container (`*_MEM_LIMIT` in
-  `.env`), so F Cartel can't starve the server.
-- **Updates only touch F Cartel's containers**, health-check the new version,
+  `.env`), so Annapurna can't starve the server.
+- **Updates only touch Annapurna's containers**, health-check the new version,
   and put the previous one back automatically if anything fails.
 
 ## 1. Before you start
@@ -103,7 +103,7 @@ sidebar.
 
 > **Not using nginx?** If ports 80/443 are served by something else
 > (Apache, OpenLiteSpeed/CyberPanel, Caddy, Traefik, a control panel), the
-> script changes nothing and stops after starting F Cartel. Add a reverse
+> script changes nothing and stops after starting Annapurna. Add a reverse
 > proxy for `fcartel.divtech.cloud` → `http://127.0.0.1:3095` in that tool
 > (enable WebSocket support), then use `sudo ./setup.sh --skip-nginx` for
 > future runs. Panels like CloudPanel have a "Reverse Proxy" site type for

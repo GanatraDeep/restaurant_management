@@ -1,4 +1,4 @@
-// F Cartel — Phase 0/1 core schema.
+// Annapurna — Phase 0/1 core schema.
 // See ARCHITECTURE.md for why PostgreSQL is the primary target and how
 // multi-branch/single-location both map onto the same schema (a branch is
 // just a Branch row, not a different deployment mode).
@@ -45,7 +45,7 @@ model Restaurant {
   name      String
   legalName String?
   // The restaurant's own branding, shown in the app shell (sidebar header,
-  // login screen) in place of the F Cartel product mark — this is
+  // login screen) in place of the Annapurna product mark — this is
   // white-label self-hosted software, so the operator's brand should lead;
   // the product name stays as a small credit line instead (see BrandFooter).
   logoUrl   String?
@@ -270,7 +270,7 @@ model User {
   twoFactorEnabled        Boolean  @default(false)
   twoFactorRecoveryHashes String[] @default([]) // bcrypt hashes of unused one-time recovery codes
   twoFactorLastStep       Int? // last accepted TOTP step: a code works once
-  // Platform operator (F Cartel super admin): manages subscription plans,
+  // Platform operator (Annapurna super admin): manages subscription plans,
   // trials, and every restaurant's subscription. Also granted to any email
   // listed in the SUPER_ADMIN_EMAILS env var (see jwt.strategy.ts).
   isSuperAdmin            Boolean  @default(false)
@@ -2358,7 +2358,7 @@ model SyncChange {
   @@map("sync_changes")
 }
 
-// ─── Platform billing (F Cartel subscriptions) ──────────────────────────────
+// ─── Platform billing (Annapurna subscriptions) ──────────────────────────────
 // Plans are managed by a super admin; each restaurant has at most one
 // subscription row. Payments go through Razorpay Orders (one payment buys
 // one billing period); see modules/billing.
@@ -2477,7 +2477,7 @@ enum AggregatorProvider {
 }
 
 enum AggregatorOrderState {
-  RECEIVED // created as an F Cartel order
+  RECEIVED // created as an Annapurna order
   FAILED // could not be created (unmapped items, closed outlet, ...) — retryable
 }
 

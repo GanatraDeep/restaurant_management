@@ -1,4 +1,4 @@
-// F Cartel updater — a tiny sidecar that moves the app's containers to a
+// Annapurna updater — a tiny sidecar that moves the app's containers to a
 // specific published version when a super admin presses Deploy in
 // Admin → Releases. A container can't replace itself, hence a sidecar.
 //
@@ -6,7 +6,7 @@
 //   GET  /v1/status                                same auth -> {state, version, step, error}
 //
 // Safety:
-//  - It only touches the containers named in TARGET_CONTAINERS (the F Cartel
+//  - It only touches the containers named in TARGET_CONTAINERS (the Annapurna
 //    ones), never anything else on the host.
 //  - It only swaps the *tag* of the image each container already runs (same
 //    repository), so it can't be pointed at an arbitrary image.

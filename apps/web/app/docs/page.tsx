@@ -3,15 +3,15 @@ import Link from "next/link";
 import { DocPage, DocSection } from "@/components/marketing/doc-page";
 
 export const metadata: Metadata = {
-  title: "Documentation — F Cartel",
-  description: "API & MCP, Zomato & Swiggy, accessibility, and India compliance docs for F Cartel.",
+  title: "Documentation — Annapurna",
+  description: "API & MCP, Zomato & Swiggy, accessibility, and India compliance docs for Annapurna.",
 };
 
 const docs = [
   {
     href: "/docs/api",
     title: "API & MCP",
-    description: "Connect an AI client via MCP, or use F Cartel as a backend for your own website.",
+    description: "Connect an AI client via MCP, or use Annapurna as a backend for your own website.",
   },
   {
     href: "/docs/aggregators",
@@ -21,12 +21,12 @@ const docs = [
   {
     href: "/docs/accessibility",
     title: "Accessibility",
-    description: "How F Cartel is built to work with keyboards, screen readers, and reduced motion.",
+    description: "How Annapurna is built to work with keyboards, screen readers, and reduced motion.",
   },
   {
     href: "/docs/compliance-india",
     title: "India compliance",
-    description: "GST, receipts, and data-residency notes for running F Cartel in India.",
+    description: "GST, receipts, and data-residency notes for running Annapurna in India.",
   },
 ];
 

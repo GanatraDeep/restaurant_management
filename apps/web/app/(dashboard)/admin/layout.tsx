@@ -3,7 +3,7 @@
 import { AdminTabs } from "@/components/admin/admin-tabs";
 import { useCurrentUser } from "@/hooks/use-auth";
 
-// F Cartel super-admin console: subscription plans, free trials, and every
+// Annapurna super-admin console: subscription plans, free trials, and every
 // restaurant's subscription. The API enforces super-admin access too
 // (SuperAdminGuard); this just avoids rendering pages that would 403.
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   if (!data?.user.isSuperAdmin) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center p-6 text-center text-sm text-muted-foreground">
-        The admin console is only available to F Cartel super admins.
+        The admin console is only available to Annapurna super admins.
       </div>
     );
   }

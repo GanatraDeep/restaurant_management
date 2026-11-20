@@ -4,8 +4,8 @@ import { DocList, DocPage, DocSection } from "@/components/marketing/doc-page";
 import { BUSINESS } from "@/lib/brand";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions — F Cartel",
-  description: "The terms for using F Cartel, restaurant management software by Divtech.",
+  title: "Terms & Conditions — Annapurna",
+  description: "The terms for using Annapurna, restaurant management software by Divtech.",
 };
 
 const A = ({ href, children }: { href: string; children: React.ReactNode }) => (
@@ -19,7 +19,7 @@ export default function TermsPage() {
     <DocPage title="Terms &amp; Conditions" updated={BUSINESS.policiesUpdated}>
       <DocSection heading="Who we are">
         <p>
-          F Cartel (&ldquo;F Cartel&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is restaurant management software
+          Annapurna (&ldquo;Annapurna&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is restaurant management software
           provided by {BUSINESS.legalName} at <strong className="text-foreground">{BUSINESS.website}</strong>. These
           terms apply to everyone who creates an account or uses the service. By signing up you agree to them; if you
           sign up for a business, you confirm you are authorised to accept them on its behalf.
@@ -28,7 +28,7 @@ export default function TermsPage() {
 
       <DocSection heading="The service">
         <p>
-          F Cartel provides point-of-sale, kitchen display, tables and reservations, menu, inventory, customer and
+          Annapurna provides point-of-sale, kitchen display, tables and reservations, menu, inventory, customer and
           reporting tools, delivered online as software you sign in to. Features available to you depend on your plan.
           We improve the service continually and may change, add or remove features; we will not remove a core feature
           you are paying for during a paid period without notice.
@@ -40,7 +40,7 @@ export default function TermsPage() {
           items={[
             "Keep your login details confidential. You are responsible for everything done through your account, including by staff accounts you create.",
             "Give accurate business and contact details, and keep them up to date.",
-            "You may not use F Cartel for anything unlawful, to send spam, to interfere with the service, or to try to access other restaurants' data.",
+            "You may not use Annapurna for anything unlawful, to send spam, to interfere with the service, or to try to access other restaurants' data.",
           ]}
         />
       </DocSection>
@@ -68,7 +68,7 @@ export default function TermsPage() {
 
       <DocSection heading="Your data">
         <p>
-          The menu, orders, customer and staff records you put into F Cartel belong to you. You are responsible for
+          The menu, orders, customer and staff records you put into Annapurna belong to you. You are responsible for
           having the right to collect your customers&rsquo; personal data and for how you use it; we process it on your
           behalf to run the service, as described in the <A href="/privacy">Privacy Policy</A>. You can export reports
           and data from the app at any time.
@@ -85,7 +85,7 @@ export default function TermsPage() {
 
       <DocSection heading="Availability and support">
         <p>
-          We work to keep F Cartel available and your data backed up, but the service is provided &ldquo;as is&rdquo;
+          We work to keep Annapurna available and your data backed up, but the service is provided &ldquo;as is&rdquo;
           without a guarantee of uninterrupted operation; planned maintenance may briefly interrupt it. Support is
           available at {BUSINESS.email} and {BUSINESS.phone}.
         </p>

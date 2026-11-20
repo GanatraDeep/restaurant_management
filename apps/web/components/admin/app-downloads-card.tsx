@@ -83,7 +83,7 @@ function Form({ settings }: { settings: AdminPlatformSettings }) {
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Leave the desktop link empty to hide that download. An empty Android link falls back to the built-in F Cartel APK.
+        Leave the desktop link empty to hide that download. An empty Android link falls back to the built-in Annapurna APK.
       </p>
       <Button type="submit" className="self-start" disabled={!dirty || update.isPending}>
         {update.isPending ? "Saving…" : "Save links"}

@@ -1,6 +1,6 @@
 # Zomato & Swiggy orders
 
-F Cartel takes orders from Zomato and Swiggy straight into the POS, kitchen
+Annapurna takes orders from Zomato and Swiggy straight into the POS, kitchen
 display, and order list, and reports status back (accepted, rejected,
 preparing, food ready, handed to the rider, cancelled).
 
@@ -11,18 +11,18 @@ software connects through their **POS integration programmes** (you apply as
 a POS partner and get their spec and credentials), or through an
 **integration middleware** that already holds that partnership (for example
 UrbanPiper or similar order-aggregation services). In both cases the partner
-sends each new order to F Cartel in the format below and receives status
-updates from F Cartel.
+sends each new order to Annapurna in the format below and receives status
+updates from Annapurna.
 
 Set it up per branch under **Settings → Zomato & Swiggy**:
 
-1. **Connect** the marketplace. F Cartel shows the inbound URL and a secret
+1. **Connect** the marketplace. Annapurna shows the inbound URL and a secret
    (shown once — copy it into your integration partner's settings).
 2. Enter the marketplace **outlet ID** for this branch (optional; when set,
    orders for any other outlet are refused).
 3. Enter the **status callback URL** (and API key, if the partner needs one)
-   that F Cartel should send status updates to.
-4. **Map items**: link each marketplace item id to an F Cartel menu item.
+   that Annapurna should send status updates to.
+4. **Map items**: link each marketplace item id to an Annapurna menu item.
    Items whose name exactly matches one menu item work without a mapping.
 5. Use **Send test order** to check the whole flow, then switch it **on**.
 
@@ -55,19 +55,19 @@ middleware that can only send a fixed header.
 
 | Response | Meaning |
 | --- | --- |
-| `200 { orderId, orderNumber, duplicate: false }` | Order created in F Cartel |
+| `200 { orderId, orderNumber, duplicate: false }` | Order created in Annapurna |
 | `200 { orderId, duplicate: true }` | Same `externalOrderId` already received — safe to retry |
 | `422 { code: "ORDER_HELD", aggregatorOrderId, unmapped? }` | Held for staff (unmapped items, marketplace switched off, ...). Staff fix it and press **Retry** in Settings |
 | `400` / `401` / `404` | Bad payload / bad signature / unknown connection |
 
 Orders arrive as **takeaway** orders on the **online** channel, tagged with
 the marketplace, and wait for **Accept / Reject** unless *Auto-accept* is on.
-Prices come from the F Cartel menu (the marketplace totals are kept with the
+Prices come from the Annapurna menu (the marketplace totals are kept with the
 order record for reconciliation).
 
 ## Outbound: status updates
 
-F Cartel POSTs to the status callback URL whenever the order moves on:
+Annapurna POSTs to the status callback URL whenever the order moves on:
 
 ```json
 {

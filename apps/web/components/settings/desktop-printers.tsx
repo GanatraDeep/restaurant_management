@@ -22,7 +22,7 @@ const ROWS: { kind: Kind; label: string; hint: string; icon: typeof Printer }[] 
 
 /**
  * Two printers — one in the kitchen for KOTs, one at the counter for bills.
- * Only the F Cartel desktop app can send a print to a chosen printer without
+ * Only the Annapurna desktop app can send a print to a chosen printer without
  * a dialog, so the choice lives in the app (this card talks to it).
  */
 export function DesktopPrinters() {
@@ -51,7 +51,7 @@ export function DesktopPrinters() {
       <div className="flex flex-col gap-1 rounded-lg border border-border p-4">
         <p className="text-sm font-medium text-foreground">Two printers — kitchen and counter?</p>
         <p className="text-xs text-muted-foreground">
-          Use the F Cartel desktop app on the counter computer: it sends KOTs to the kitchen printer and bills to the
+          Use the Annapurna desktop app on the counter computer: it sends KOTs to the kitchen printer and bills to the
           counter printer, with no print dialog. Or keep a computer by the kitchen printer with the Kitchen Display open
           and <strong>Auto-print KOTs</strong> on, and print bills from the counter.
         </p>
@@ -62,7 +62,7 @@ export function DesktopPrinters() {
   if (app.outdated) {
     return (
       <div className="flex flex-col gap-2 rounded-lg border border-warning/50 bg-warning/10 p-4">
-        <p className="text-sm font-medium text-foreground">Update the F Cartel desktop app</p>
+        <p className="text-sm font-medium text-foreground">Update the Annapurna desktop app</p>
         <p className="text-xs text-muted-foreground">
           This is version {app.version}. Version 1.2 prints KOTs and bills without the print dialog and lets you pick a
           separate kitchen and counter printer here.
@@ -90,7 +90,7 @@ export function DesktopPrinters() {
       <div>
         <p className="text-sm font-medium text-foreground">Printers on this computer</p>
         <p className="text-xs text-muted-foreground">
-          You&rsquo;re in the F Cartel desktop app {app.version}: prints go straight to these printers, no dialog. Saved on
+          You&rsquo;re in the Annapurna desktop app {app.version}: prints go straight to these printers, no dialog. Saved on
           this computer.
         </p>
       </div>
