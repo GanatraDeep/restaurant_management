@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -51,5 +52,18 @@ export class NotificationsController {
   @Patch('read-all')
   markAllRead(@CurrentUser() user: SessionUser) {
     return this.notificationsService.markAllRead(user.id);
+  }
+
+  /** Clears every notification of the signed-in user (only their own). */
+  @Auth()
+  @Delete()
+  clearAll(@CurrentUser() user: SessionUser) {
+    return this.notificationsService.clearAll(user.id);
+  }
+
+  @Auth()
+  @Delete(':id')
+  dismiss(@CurrentUser() user: SessionUser, @Param('id') id: string) {
+    return this.notificationsService.dismiss(user.id, id);
   }
 }
