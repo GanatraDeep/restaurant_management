@@ -21,7 +21,19 @@ const createSchema = z.object({
   url: z.string().trim().url().max(500),
   events: z.array(z.string()).min(1),
   description: z.string().trim().max(120).optional(),
+  payloadTemplate: z.string().max(10_000).nullable().optional(),
+  headers: z
+    .array(z.object({ name: z.string().trim().max(64), value: z.string().max(2000) }))
+    .max(10)
+    .optional(),
 });
+
+const testSchema = z
+  .object({
+    event: z.string().max(40).optional(),
+    phone: z.string().trim().max(20).optional(),
+  })
+  .default({});
 
 @ApiTags('webhooks')
 @Controller('v1/webhooks')
@@ -52,6 +64,18 @@ export class WebhooksController {
   }
 
   @Auth('settings.manage')
+  @AuditAction('webhook.updated', 'WebhookEndpoint')
+  @Patch(':id')
+  @UsePipes(new ZodValidationPipe(createSchema))
+  update(
+    @CurrentUser() u: SessionUser,
+    @Param('id') id: string,
+    @Body() body: z.infer<typeof createSchema>,
+  ) {
+    return this.webhooks.update(u.restaurantId, id, body);
+  }
+
+  @Auth('settings.manage')
   @AuditAction('webhook.toggled', 'WebhookEndpoint')
   @Patch(':id/active')
   setActive(
@@ -77,7 +101,12 @@ export class WebhooksController {
 
   @Auth('settings.manage')
   @Post(':id/test')
-  test(@CurrentUser() u: SessionUser, @Param('id') id: string) {
-    return this.webhooks.sendTest(u.restaurantId, id);
+  @UsePipes(new ZodValidationPipe(testSchema))
+  test(
+    @CurrentUser() u: SessionUser,
+    @Param('id') id: string,
+    @Body() body: z.infer<typeof testSchema>,
+  ) {
+    return this.webhooks.sendTest(u.restaurantId, id, body ?? {});
   }
 }

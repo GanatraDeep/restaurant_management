@@ -9,6 +9,23 @@ export interface WebhookRow {
   events: string[];
   description: string | null;
   isActive: boolean;
+  payloadTemplate: string | null;
+  headerNames: string[];
+}
+export interface WebhookDto {
+  url: string;
+  events: string[];
+  description?: string;
+  payloadTemplate?: string | null;
+  /** Full list; an empty value keeps the saved value for that header. */
+  headers?: { name: string; value: string }[];
+}
+export interface WebhookTestResult {
+  status: string;
+  lastStatusCode: number | null;
+  lastError: string | null;
+  event: string;
+  body: string | null;
 }
 export interface DeliveryRow {
   id: string;
@@ -40,8 +57,11 @@ export function useWebhookActions() {
   const done = () => qc.invalidateQueries({ queryKey: ["webhooks"] });
   return {
     create: useMutation({
-      mutationFn: (dto: { url: string; events: string[]; description?: string }) =>
-        api.post<WebhookRow & { secret: string }>("/webhooks", dto),
+      mutationFn: (dto: WebhookDto) => api.post<WebhookRow & { secret: string }>("/webhooks", dto),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: (v: { id: string; dto: WebhookDto }) => api.patch<WebhookRow>(`/webhooks/${v.id}`, v.dto),
       onSuccess: done,
     }),
     setActive: useMutation({
@@ -50,8 +70,8 @@ export function useWebhookActions() {
     }),
     remove: useMutation({ mutationFn: (id: string) => api.delete(`/webhooks/${id}`), onSuccess: done }),
     test: useMutation({
-      mutationFn: (id: string) =>
-        api.post<{ status: string; lastStatusCode: number | null; lastError: string | null }>(`/webhooks/${id}/test`),
+      mutationFn: (v: { id: string; event?: string; phone?: string }) =>
+        api.post<WebhookTestResult>(`/webhooks/${v.id}/test`, { event: v.event, phone: v.phone || undefined }),
       onSuccess: done,
     }),
   };
