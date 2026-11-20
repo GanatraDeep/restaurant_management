@@ -59,7 +59,7 @@ describe('webhook body templates', () => {
       for (const e of p.events)
         expect(() => renderWebhookTemplate(p.template, { event: e, createdAt: '', data: WEBHOOK_SAMPLE_DATA[e] })).not.toThrow();
     expect(webhookVariables(['campaign.message'])).toEqual(expect.arrayContaining(['data.to', 'data.message', 'data.restaurantName']));
-    expect(webhookVariables(['order.paid'])).toEqual(expect.arrayContaining(['data.payments', 'data.payments.0.method']));
+    expect(webhookVariables(['order.paid'])).toEqual(expect.arrayContaining(['data.payments', 'data.payments.0.method', 'data.customerName', 'data.customerPhone']));
     expect(Object.keys(WEBHOOK_SAMPLE_DATA).sort()).toEqual([...WEBHOOK_EVENTS].sort());
   });
 });

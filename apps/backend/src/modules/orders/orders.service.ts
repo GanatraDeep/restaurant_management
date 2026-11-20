@@ -470,7 +470,7 @@ export class OrdersService {
       );
     }
 
-    void this.webhooks.emitForBranch(branchId, 'order.created', {
+    void this.withCustomer(full.id, {
       orderId: full.id,
       orderNumber: full.orderNumber,
       type: full.type,
@@ -479,7 +479,9 @@ export class OrdersService {
       deliveryAddress: full.deliveryAddress,
       deliveryPhone: full.deliveryPhone,
       scheduledFor: full.scheduledFor,
-    });
+    }).then((data) =>
+      this.webhooks.emitForBranch(branchId, 'order.created', data),
+    );
 
     return full;
   }
@@ -1020,11 +1022,13 @@ export class OrdersService {
         total: order.totalAmount.toString(),
       },
     });
-    void this.webhooks.emitForBranch(branchId, 'order.cancelled', {
+    void this.withCustomer(orderId, {
       orderId,
       orderNumber: order.orderNumber,
       type: order.type,
-    });
+    }).then((data) =>
+      this.webhooks.emitForBranch(branchId, 'order.cancelled', data),
+    );
     void this.aggregatorStatus.push(
       orderId,
       options.declineIncoming || options.source === 'ONLINE_DECLINED'
@@ -1033,6 +1037,33 @@ export class OrdersService {
     );
 
     return this.getOrder(branchId, orderId);
+  }
+
+  /**
+   * Adds who the order is for (customer or guest name, phone) and its table
+   * to webhook data, so e.g. a WhatsApp "thank you" can go out on order.paid.
+   */
+  private async withCustomer<T extends object>(orderId: string, data: T) {
+    try {
+      const o = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: {
+          guestName: true,
+          deliveryPhone: true,
+          customer: { select: { id: true, name: true, phone: true } },
+          table: { select: { number: true } },
+        },
+      });
+      return {
+        ...data,
+        customerId: o?.customer?.id ?? null,
+        customerName: o?.customer?.name || o?.guestName || null,
+        customerPhone: o?.customer?.phone || o?.deliveryPhone || null,
+        tableNumber: o?.table?.number ?? null,
+      };
+    } catch {
+      return { ...data, customerId: null, customerName: null, customerPhone: null, tableNumber: null };
+    }
   }
 
   private emitOrderWithdrawn(
@@ -1862,7 +1893,7 @@ export class OrdersService {
           orderId: updated.id,
         });
       }
-      void this.webhooks.emitForBranch(branchId, 'order.paid', {
+      void this.withCustomer(updated.id, {
         orderId: updated.id,
         orderNumber: updated.orderNumber,
         type: updated.type,
@@ -1874,7 +1905,9 @@ export class OrdersService {
           method: p.method,
           amount: Number(p.amount),
         })),
-      });
+      }).then((data) =>
+        this.webhooks.emitForBranch(branchId, 'order.paid', data),
+      );
     }
     return {
       ...updated,

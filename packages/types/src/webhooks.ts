@@ -15,10 +15,14 @@ export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 /** Every event's `data` also carries branchId, branchName and restaurantName. */
 const COMMON = { branchId: "br_123", branchName: "Main Branch", restaurantName: "Shree Sai Omelet Center" };
 
+/** order.* events also say who the order is for (null when nobody was recorded). */
+const WHO = { customerId: "cus_123", customerName: "Riya Shah", customerPhone: "9876543210", tableNumber: "T4" };
+
 /** What `data` looks like for each event — used for the variable list, preview and test sends. */
 export const WEBHOOK_SAMPLE_DATA: Record<WebhookEvent, Record<string, unknown>> = {
   "order.created": {
     ...COMMON,
+    ...WHO,
     orderId: "ord_123",
     orderNumber: "20261120-0042",
     type: "DELIVERY",
@@ -30,6 +34,7 @@ export const WEBHOOK_SAMPLE_DATA: Record<WebhookEvent, Record<string, unknown>> 
   },
   "order.paid": {
     ...COMMON,
+    ...WHO,
     orderId: "ord_123",
     orderNumber: "20261120-0042",
     type: "DINE_IN",
@@ -39,7 +44,7 @@ export const WEBHOOK_SAMPLE_DATA: Record<WebhookEvent, Record<string, unknown>> 
     couponCode: null,
     payments: [{ method: "UPI", amount: 450 }],
   },
-  "order.cancelled": { ...COMMON, orderId: "ord_123", orderNumber: "20261120-0042", type: "TAKEAWAY" },
+  "order.cancelled": { ...COMMON, ...WHO, orderId: "ord_123", orderNumber: "20261120-0042", type: "TAKEAWAY" },
   "reservation.created": {
     ...COMMON,
     reservationId: "res_123",
@@ -69,7 +74,7 @@ export const WEBHOOK_SAMPLE_DATA: Record<WebhookEvent, Record<string, unknown>> 
 };
 
 /** Fields that hold a customer's phone number — a test send swaps in the number you type. */
-export const WEBHOOK_PHONE_FIELDS = ["to", "phone", "deliveryPhone"] as const;
+export const WEBHOOK_PHONE_FIELDS = ["to", "phone", "deliveryPhone", "customerPhone"] as const;
 
 export interface WebhookEnvelope {
   event: string;
@@ -175,6 +180,19 @@ export const WEBHOOK_TEMPLATE_PRESETS: { key: string; label: string; events: Web
     label: "WhatsApp: campaign message",
     events: ["campaign.message"],
     template: JSON.stringify({ number: "{{data.to | phoneIN}}", message: "{{data.message}}" }, null, 2),
+  },
+  {
+    key: "whatsapp-order-paid",
+    label: "WhatsApp: thank you after payment",
+    events: ["order.paid"],
+    template: JSON.stringify(
+      {
+        number: "{{data.customerPhone | phoneIN}}",
+        message: "Thank you {{data.customerName}} for visiting {{data.restaurantName}}! Bill #{{data.orderNumber}}: ₹{{data.total | money}}.",
+      },
+      null,
+      2,
+    ),
   },
   {
     key: "whatsapp-reservation",

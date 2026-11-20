@@ -154,4 +154,20 @@ export class NotificationsService {
     });
     return { ok: true };
   }
+
+  /** Deletes all of this user's notifications — never anyone else's. */
+  async clearAll(userId: string) {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { recipientUserId: userId },
+    });
+    return { ok: true, cleared: count };
+  }
+
+  async dismiss(userId: string, id: string) {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { id, recipientUserId: userId },
+    });
+    if (count === 0) throw new NotFoundException('Notification not found');
+    return { ok: true };
+  }
 }

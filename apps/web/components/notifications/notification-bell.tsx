@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, CheckCheck, Volume2, VolumeX } from "lucide-react";
+import { Bell, CheckCheck, Volume2, VolumeX, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
@@ -17,6 +17,8 @@ import { useBranch } from "@/hooks/use-branch";
 import { useNotificationMute } from "@/hooks/use-notification-mute";
 import {
   useMarkAllNotificationsRead,
+  useClearNotifications,
+  useDismissNotification,
   useMarkNotificationRead,
   useNotifications,
   type NotificationEntry,
@@ -54,6 +56,8 @@ export function NotificationBell() {
   const { data } = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+  const clearAll = useClearNotifications();
+  const dismiss = useDismissNotification();
 
   // Per-device mute, not per-account — a loud kitchen expo screen and a
   // quiet back-office laptop are different physical environments. Shared
@@ -178,6 +182,19 @@ export function NotificationBell() {
                 <Volume2 className="h-3.5 w-3.5" />
               )}
             </button>
+            {notifications.length > 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  clearAll.mutate();
+                }}
+                disabled={clearAll.isPending}
+                className="h-7 rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                Clear all
+              </button>
+            )}
             {unreadCount > 0 && (
               <button
                 type="button"
@@ -231,6 +248,20 @@ export function NotificationBell() {
                   <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
                     {timeAgo(notification.createdAt)}
                   </span>
+                  <button
+                    type="button"
+                    aria-label={`Dismiss: ${notification.title}`}
+                    onClick={(e) => {
+                      // Remove just this one — don't open it or close the menu.
+                      e.preventDefault();
+                      e.stopPropagation();
+                      dismiss.mutate(notification.id);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="-mr-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
                 <p className="pl-0 text-xs text-muted-foreground">
                   {notification.body}

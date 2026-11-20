@@ -275,7 +275,9 @@ When a service expects its own format (a WhatsApp API that wants
 ```
 
 - `{{event}}`, `{{createdAt}}`, `{{deliveryId}}` and `{{data.<field>}}` —
-  every event's `data` also has `branchName` and `restaurantName`. Array items:
+  every event's `data` also has `branchName` and `restaurantName`; the
+  `order.*` events also have `customerName`, `customerPhone`, `customerId` and
+  `tableNumber` (null when no customer was recorded on the order). Array items:
   `{{data.payments.0.method}}`.
 - A string that is only a placeholder keeps the value's type (`"{{data.total}}"`
   becomes the number `450`); inside other text it becomes text.
