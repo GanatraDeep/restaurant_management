@@ -18,6 +18,7 @@ import { AccountingModule } from './modules/accounting/accounting.module';
 import { MarketingModule } from './modules/marketing/marketing.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { OperationsModule } from './modules/operations/operations.module';
+import { SopModule } from './modules/sop/sop.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { EmailModule } from './modules/email/email.module';
 import { TablesModule } from './modules/tables/tables.module';
@@ -69,6 +70,7 @@ import { ReleasesModule } from './modules/releases/releases.module';
     MarketingModule,
     ReportsModule,
     OperationsModule,
+    SopModule,
     WebhooksModule,
     EmailModule,
     OrdersModule,

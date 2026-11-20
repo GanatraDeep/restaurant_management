@@ -78,6 +78,8 @@ model Restaurant {
   subscription         RestaurantSubscription?
   subscriptionPayments SubscriptionPayment[]
   planRequests         PlanRequest[]
+  sops                 Sop[]
+  playbooks            Playbook[]
 
   @@map("restaurants")
 }
@@ -195,6 +197,8 @@ model Branch {
   supplierPayments   SupplierPayment[]
   notifications      Notification[]
   integrationApiKeys IntegrationApiKey[]
+  checklistTemplates ChecklistTemplate[]
+  complianceItems    ComplianceItem[]
 
   @@index([restaurantId])
   @@map("branches")
@@ -304,6 +308,7 @@ model User {
 
   staffApiKeys              StaffApiKey[]
   integrationApiKeysCreated IntegrationApiKey[] @relation("IntegrationApiKeyCreatedBy")
+  sopAcks                   SopAck[]            @relation("SopAcks")
 
   @@unique([restaurantId, email])
   @@index([restaurantId])
@@ -1117,7 +1122,7 @@ model MenuItem {
   halfPrice Decimal? @db.Decimal(12, 2)
   // Rates for kinds of the same dish, e.g. Plain 60 / Butter 80 / Oil 70:
   // [{ "name": "Plain", "price": 60 }, ...]. Empty = one price.
-  variants       Json     @default("[]")
+  variants  Json     @default("[]")
 
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -2634,4 +2639,170 @@ model SignupOtp {
 
   @@index([phone, createdAt])
   @@map("signup_otps")
+}
+
+// ---------------------------------------------------------------------------
+// RasoiOS: kitchen SOPs, checklists & temperature logs, delivery playbooks,
+// licences & AMCs. Text a cook reads is stored as JSON { en, hi?, gu?, mr? }.
+// SOPs and playbooks belong to the restaurant (shared by every outlet);
+// checklists and licences belong to one outlet.
+// ---------------------------------------------------------------------------
+
+model Sop {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  title          Json
+  category       String?
+  yieldText      String?
+  prepMinutes    Int?
+  variants       String[] @default([])
+  ingredients    Json     @default("[]")
+  steps          Json     @default("[]")
+  packaging      Json     @default("[]")
+  accompaniments Json     @default("[]")
+  plating        Json?
+  quiz           Json     @default("[]")
+  audioUrl       String?
+  coverUrl       String?
+  /**
+   * Bumped on every saved change; staff re-acknowledge the new version.
+   */
+  version        Int      @default(1)
+  /**
+   * Public read-only link for sharing one SOP on WhatsApp.
+   */
+  shareToken     String?  @unique
+  /**
+   * Which starter-library dish this was copied from, if any.
+   */
+  starterKey     String?
+  isArchived     Boolean  @default(false)
+  updatedByName  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  versions SopVersion[]
+  acks     SopAck[]
+
+  @@index([restaurantId, isArchived])
+  @@map("sops")
+}
+
+model SopVersion {
+  id            String   @id @default(cuid())
+  sopId         String
+  sop           Sop      @relation(fields: [sopId], references: [id], onDelete: Cascade)
+  version       Int
+  snapshot      Json
+  changeNote    String?
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  @@unique([sopId, version])
+  @@map("sop_versions")
+}
+
+/**
+ * "I have read this" — per user, per SOP version, with the quiz score.
+ */
+model SopAck {
+  id             String   @id @default(cuid())
+  sopId          String
+  sop            Sop      @relation(fields: [sopId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User     @relation("SopAcks", fields: [userId], references: [id], onDelete: Cascade)
+  version        Int
+  quizScore      Int?
+  quizTotal      Int?
+  acknowledgedAt DateTime @default(now())
+
+  @@unique([sopId, userId, version])
+  @@index([userId])
+  @@map("sop_acks")
+}
+
+model Playbook {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  channel   String
+  title     Json
+  sections  Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([restaurantId])
+  @@map("playbooks")
+}
+
+model ChecklistTemplate {
+  id       String @id @default(cuid())
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  name        Json
+  frequency   String   @default("DAILY") // DAILY | WEEKLY
+  dueTime     String? // "HH:MM" branch-local
+  items       Json     @default("[]")
+  isActive    Boolean  @default(true)
+  /**
+   * Period key ("2026-11-20" / "2026-W47") of the last overdue reminder sent.
+   */
+  remindedFor String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  runs ChecklistRun[]
+
+  @@index([branchId, isActive])
+  @@map("checklist_templates")
+}
+
+/**
+ * One day's (or week's) filled-in checklist. `log` keeps every tick, who and when.
+ */
+model ChecklistRun {
+  id         String            @id @default(cuid())
+  templateId String
+  template   ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  branchId   String
+  periodKey  String
+
+  entries         Json      @default("{}")
+  log             Json      @default("[]")
+  completedAt     DateTime?
+  completedByName String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([templateId, periodKey])
+  @@index([branchId, periodKey])
+  @@map("checklist_runs")
+}
+
+model ComplianceItem {
+  id       String @id @default(cuid())
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  kind           String // LICENCE | AMC | CERTIFICATE | INSURANCE | OTHER
+  name           String
+  number         String?
+  provider       String?
+  providerPhone  String?
+  issuedOn       DateTime? @db.Date
+  expiresOn      DateTime? @db.Date
+  remindDays     Int       @default(30)
+  cost           Decimal?  @db.Decimal(12, 2)
+  notes          String?
+  isActive       Boolean   @default(true)
+  lastRemindedAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([branchId, expiresOn])
+  @@map("compliance_items")
 }

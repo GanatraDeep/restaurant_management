@@ -122,6 +122,13 @@ export function NotificationBell() {
       router.push("/admin/restaurants");
       return;
     }
+    // Kitchen SOPs: changed recipe, temperature alert, checklist, licence.
+    if (notification.type.startsWith("sop.")) {
+      if (notification.entity === "Sop" && notification.entityId) router.push(`/sop/${notification.entityId}`);
+      else if (notification.entity === "Compliance") router.push("/sop?tab=licences");
+      else router.push("/sop?tab=checklists");
+      return;
+    }
     if (
       (notification.entity === "Order" || notification.entity === "Reservation") &&
       notification.entityId

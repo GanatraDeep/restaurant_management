@@ -37,6 +37,8 @@ export const PERMISSIONS = [
   { key: "accounting.manage", label: "Manage Accounting", category: "Accounting" },
   { key: "marketing.manage", label: "Manage Coupons, Promotions & Campaigns", category: "Marketing" },
   { key: "operations.manage", label: "Manage Equipment & Documents", category: "Operations" },
+  { key: "sop.view", label: "Read Kitchen SOPs & Fill Checklists", category: "Kitchen SOPs" },
+  { key: "sop.manage", label: "Write SOPs, Checklists, Playbooks & Licences", category: "Kitchen SOPs" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -46,6 +48,7 @@ export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
 export const PERMISSION_IMPLIES: Partial<Record<PermissionKey, PermissionKey[]>> = {
   "menu.manage": ["menu.view"],
   "tables.manage": ["tables.view"],
+  "sop.manage": ["sop.view"],
 };
 
 /** True when `held` satisfies `required`, directly or through PERMISSION_IMPLIES. */
@@ -90,19 +93,20 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<StaffRole, PermissionKey[]> = {
     "inventory.manage", "reports.access", "kds.manage",
     "reservations.manage", "customers.manage", "refunds.process",
     "attendance.manage", "delivery.manage", "staff.manage", "accounting.manage", "marketing.manage", "operations.manage",
+    "sop.view", "sop.manage",
   ],
   CASHIER: [
     "orders.create", "orders.edit", "orders.accept", "bills.print", "discounts.apply",
     "sales.view", "customers.manage", "dashboard.sales.view",
-    "menu.view", "tables.view",
+    "menu.view", "tables.view", "sop.view",
   ],
   // Waiters read the menu and floor plan and run orders; they cannot edit
   // either, and have no revenue access.
-  WAITER: ["orders.create", "orders.edit", "orders.accept", "tables.view", "menu.view", "bills.print"],
-  KITCHEN_STAFF: ["kds.manage", "orders.accept"],
-  CHEF: ["kds.manage", "orders.accept", "menu.manage", "menu.view"],
-  BARTENDER: ["orders.create", "orders.accept", "kds.manage", "menu.view", "tables.view"],
-  DELIVERY_STAFF: ["orders.edit", "delivery.manage"],
+  WAITER: ["orders.create", "orders.edit", "orders.accept", "tables.view", "menu.view", "bills.print", "sop.view"],
+  KITCHEN_STAFF: ["kds.manage", "orders.accept", "sop.view"],
+  CHEF: ["kds.manage", "orders.accept", "menu.manage", "menu.view", "sop.view", "sop.manage"],
+  BARTENDER: ["orders.create", "orders.accept", "kds.manage", "menu.view", "tables.view", "sop.view"],
+  DELIVERY_STAFF: ["orders.edit", "delivery.manage", "sop.view"],
   ACCOUNTANT: ["sales.view", "dashboard.sales.view", "reports.access", "reports.financial.view", "data.export", "accounting.manage"],
   INVENTORY_MANAGER: ["inventory.manage", "reports.access"],
 };
