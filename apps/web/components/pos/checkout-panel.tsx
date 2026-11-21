@@ -32,7 +32,7 @@ import { publishDisplay } from "@/lib/customer-display";
 import { playPaymentReceived } from "@/lib/celebrate";
 import { buildUpiUri } from "@/lib/upi";
 import { QRCodeSVG } from "qrcode.react";
-import { openKotPrint, openReceiptPrint } from "@/lib/print";
+import { openOrderTicketsPrint, openReceiptPrint } from "@/lib/print";
 import { round2 } from "@/lib/pricing-preview";
 import { useI18n } from "@/lib/i18n/context";
 
@@ -376,7 +376,7 @@ export function CheckoutPanel({
             variant="outline"
             size="sm"
             className="shrink-0"
-            onClick={() => branchId && openKotPrint(order.id, branchId)}
+            onClick={() => branchId && void openOrderTicketsPrint(order.id, branchId)}
           >
             <Printer className="h-4 w-4" />
             {t("pos.printKot")}
@@ -715,6 +715,7 @@ function BillSummary({
         )}
         {bill.tipAmount > 0 && <Row label="Tip" value={formatCurrency(bill.tipAmount)} />}
         {bill.deliveryFee > 0 && <Row label="Delivery fee" value={formatCurrency(bill.deliveryFee)} />}
+        {(bill.takeawayCharge ?? 0) > 0 && <Row label="Takeaway charge" value={formatCurrency(bill.takeawayCharge ?? 0)} />}
       </dl>
       <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
         <span className="text-sm font-medium text-foreground">Total due</span>

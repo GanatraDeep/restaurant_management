@@ -1,10 +1,11 @@
 "use client";
 
-import { Search, Star } from "lucide-react";
+import { ImageIcon, Search, Star } from "lucide-react";
 import { useMemo, useState } from "react";
 import { QueryError } from "@/components/ui/query-error";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCategories, useMenuItems, type MenuItem } from "@/hooks/use-menu";
+import { useDeviceToggle } from "@/hooks/use-device-toggle";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/context";
@@ -31,6 +32,8 @@ export function ProductGrid({
   const { data: items, isLoading, isError, error, refetch, isFetching } = useMenuItems(branchId);
   const [picked, setPicked] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  // Photo tiles instead of name tiles — per device, some counters prefer names.
+  const [photos, setPhotos] = useDeviceToggle("fcartel:pos-photo-tiles", false);
 
   const favourites = useMemo(() => items?.filter((i) => i.isFavorite) ?? [], [items]);
   // Favourites lead when there are any; otherwise the whole menu.
@@ -83,7 +86,8 @@ export function ProductGrid({
       </nav>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-        <div className="relative">
+        <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             placeholder={t("pos.searchItem")}
@@ -92,6 +96,21 @@ export function ProductGrid({
             onChange={(e) => setSearch(e.target.value)}
             className="h-10 w-full rounded-lg border border-input bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-ring focus:ring-3 focus:ring-ring/40"
           />
+        </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={photos}
+            onClick={() => setPhotos(!photos)}
+            title={photos ? t("pos.showNames") : t("pos.showPhotos")}
+            className={cn(
+              "flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-colors",
+              photos ? "border-primary bg-primary/10 text-primary" : "border-input bg-background text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <ImageIcon className="h-4 w-4" />
+            <span className="hidden lg:inline">{t("pos.photos")}</span>
+          </button>
         </div>
 
         {/* Phones: categories as a swipeable chip row, one tap each. */}
@@ -123,20 +142,39 @@ export function ProductGrid({
         {isError && !items ? (
           <QueryError error={error} what="the menu" onRetry={() => void refetch()} retrying={isFetching} />
         ) : (
-          <div className="grid min-h-0 flex-1 auto-rows-min grid-cols-2 gap-2 overflow-y-auto pb-4 sm:grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]">
+          <div className={cn("grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto pb-4", photos ? "grid-cols-3 sm:grid-cols-[repeat(auto-fill,minmax(6.5rem,1fr))]" : "grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))]")}>
             {isLoading && Array.from({ length: 12 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
-            {shown?.map((item) => (
+            {shown?.map((item) => {
+              const asPhoto = photos && !!item.imageUrl;
+              return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onSelect(item)}
                 disabled={!item.isActive}
                 title={item.isActive ? item.name : `${item.name} — switched off on the Menu page`}
+                aria-label={asPhoto ? `${item.name}, ${formatCurrency(item.price)}` : undefined}
                 className={cn(
-                  "relative flex min-h-16 flex-col justify-between gap-1 rounded-lg border border-l-4 border-border bg-card px-2.5 py-2 text-left shadow-sm transition-all hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45",
-                  item.isVeg ? "border-l-success" : "border-l-destructive",
+                  "relative flex rounded-lg border border-border bg-card text-left shadow-sm transition-all hover:shadow-md active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45",
+                  asPhoto
+                    ? "aspect-square overflow-hidden p-0"
+                    : cn("min-h-16 flex-col justify-between gap-1 border-l-4 px-2.5 py-2", item.isVeg ? "border-l-success" : "border-l-destructive"),
                 )}
               >
+                {asPhoto ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- uploaded menu photo */}
+                    <img src={item.imageUrl!} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                    <span
+                      className={cn("absolute left-1.5 top-1.5 h-3 w-3 rounded-sm border-2 border-white shadow", item.isVeg ? "bg-success" : "bg-destructive")}
+                      aria-hidden
+                    />
+                    <span className="absolute bottom-1.5 left-1.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+                      {formatCurrency(item.price)}
+                    </span>
+                  </>
+                ) : (
+                <>
                 <span className="line-clamp-2 pr-4 text-[13px] font-medium leading-tight text-foreground">{item.name}</span>
                 <span className="flex items-baseline justify-between gap-1">
                   <span className="text-xs font-semibold tabular-nums text-muted-foreground">{formatCurrency(item.price)}</span>
@@ -146,6 +184,8 @@ export function ProductGrid({
                     <span className="hidden text-[10px] tabular-nums text-muted-foreground xl:inline">Half {formatCurrency(item.halfPrice)}</span>
                   )}
                 </span>
+                </>
+                )}
                 {(quantityOf?.(item.id) ?? 0) > 0 ? (
                   <span className="absolute right-1 top-1 flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold tabular-nums text-primary-foreground shadow" aria-label={`${quantityOf!(item.id)} in cart`}>
                     {quantityOf!(item.id)}
@@ -159,7 +199,8 @@ export function ProductGrid({
                   </span>
                 )}
               </button>
-            ))}
+              );
+            })}
             {shown?.length === 0 && !isLoading && (
               <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
                 {search ? <>No items match &quot;{search}&quot;</> : "No items in this category yet"}

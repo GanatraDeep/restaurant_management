@@ -47,9 +47,14 @@ export class SettingsService {
   async branchFeatures(branchId: string) {
     const b = await this.prisma.branch.findUnique({
       where: { id: branchId },
-      select: { tokenEnabled: true },
+      select: { tokenEnabled: true, takeawayChargePerOrder: true, takeawayChargeOnDelivery: true },
     });
-    return { tokenEnabled: b?.tokenEnabled ?? false };
+    return {
+      tokenEnabled: b?.tokenEnabled ?? false,
+      // The POS shows the takeaway charge in the cart before the bill is made.
+      takeawayChargePerOrder: Number(b?.takeawayChargePerOrder ?? 0),
+      takeawayChargeOnDelivery: b?.takeawayChargeOnDelivery ?? false,
+    };
   }
 
   async getBranding(restaurantId: string) {

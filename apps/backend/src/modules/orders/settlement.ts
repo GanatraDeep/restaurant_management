@@ -6,8 +6,8 @@
 // reduces the taxable value too. The tax breakup shown on the bill is scaled
 // by (subtotal - discount) / subtotal, i.e. the discount is spread pro-rata
 // over the lines. Loyalty points are a form of tender, not a price reduction,
-// so redeeming them does not change the tax. Tips and delivery fees are
-// outside the taxable subtotal.
+// so redeeming them does not change the tax. Tips, delivery fees and the
+// takeaway charge are outside the taxable subtotal.
 
 import { BadRequestException } from '@nestjs/common';
 import { computeOrderTotals, round2, type PricedLine } from './pricing';
@@ -24,6 +24,8 @@ export interface BillInput {
   loyaltyDiscountRequested?: number;
   tip?: number;
   deliveryFee?: number;
+  /** Takeaway (packing) charge — see takeaway-charge.ts. */
+  takeawayCharge?: number;
 }
 
 export interface Bill {
@@ -37,7 +39,8 @@ export interface Bill {
   loyaltyDiscountAmount: number;
   tipAmount: number;
   deliveryFee: number;
-  /** What the guest owes: subtotal - discounts - loyalty + tip + delivery. */
+  takeawayCharge: number;
+  /** What the guest owes: subtotal - discounts - loyalty + tip + delivery + takeaway. */
   totalDue: number;
 }
 
@@ -55,6 +58,7 @@ export function computeBill(input: BillInput): Bill {
   );
   const tipAmount = round2(input.tip ?? 0);
   const deliveryFee = round2(input.deliveryFee ?? 0);
+  const takeawayCharge = round2(input.takeawayCharge ?? 0);
   const taxAmount =
     totals.subtotal > 0
       ? round2(
@@ -70,8 +74,13 @@ export function computeBill(input: BillInput): Bill {
     loyaltyDiscountAmount,
     tipAmount,
     deliveryFee,
+    takeawayCharge,
     totalDue: round2(
-      totals.totalAmount - loyaltyDiscountAmount + tipAmount + deliveryFee,
+      totals.totalAmount -
+        loyaltyDiscountAmount +
+        tipAmount +
+        deliveryFee +
+        takeawayCharge,
     ),
   };
 }

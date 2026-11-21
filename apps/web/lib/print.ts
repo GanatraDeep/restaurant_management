@@ -210,7 +210,30 @@ export function openReceiptPrint(orderId: string, branchId: string, adj: BillQue
  * prints just the round that was sent and not yet printed (POS "Save & Print KOT").
  */
 export function openKotPrint(orderId: string, branchId: string, opts: { onlyNew?: boolean } = {}) {
-  printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`, "kot");
+  return printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`, "kot");
+}
+
+/**
+ * Counter slip: the order's items that don't go to the kitchen (water,
+ * soft drinks) — printed on the counter (bill) printer. `onlyNew` = just the
+ * items not on a slip yet. Nothing to print → the page is skipped.
+ */
+export function openCounterPrint(orderId: string, branchId: string, opts: { onlyNew?: boolean } = {}) {
+  return printPage(`/api/v1/orders/${orderId}/counter-slip?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`, "bill");
+}
+
+/**
+ * KOT to the kitchen printer, then the counter slip to the counter printer —
+ * one after the other, since a browser prints through a single frame.
+ */
+export async function openOrderTicketsPrint(
+  orderId: string,
+  branchId: string,
+  opts: { onlyNew?: boolean; kitchen?: boolean; counter?: boolean } = {},
+) {
+  const { kitchen = true, counter = true, onlyNew } = opts;
+  if (kitchen) await openKotPrint(orderId, branchId, { onlyNew });
+  if (counter) await openCounterPrint(orderId, branchId, { onlyNew });
 }
 
 /** Auto-print: a ticket this device already claimed (prints as the first copy). */

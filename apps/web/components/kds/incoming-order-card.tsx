@@ -21,16 +21,19 @@ function minutesSince(iso: string) {
 }
 
 // An order that has come in but nobody has answered yet. It has no kitchen
-// ticket until it is accepted, so it lives here, above the ticket columns,
+// ticket until it is accepted, so it sits at the top of the NEW column,
 // with a big Accept and a deliberate Decline.
 export function IncomingOrderCard({
   order,
   branchId,
   showToken = false,
+  fullWidth = false,
 }: {
   order: IncomingOrder;
   branchId: string | null;
   showToken?: boolean;
+  /** Fill the column (inside the NEW column) instead of a fixed-width card. */
+  fullWidth?: boolean;
 }) {
   const token = showToken ? tokenOf(order.orderNumber) : null;
   const { t } = useI18n();
@@ -42,7 +45,12 @@ export function IncomingOrderCard({
   const who = order.guestName || order.customer?.name || null;
 
   return (
-    <Card className="flex w-[22rem] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col gap-3 border-primary p-4 ring-2 ring-primary/30">
+    <Card
+      className={cn(
+        "flex shrink-0 flex-col gap-3 border-primary p-4 ring-2 ring-primary/30",
+        fullWidth ? "w-full" : "w-[22rem] max-w-[calc(100vw-2.5rem)]",
+      )}
+    >
       <StatusNote note={note} onClear={clear} />
       <ReasonDialog
         open={declineOpen}

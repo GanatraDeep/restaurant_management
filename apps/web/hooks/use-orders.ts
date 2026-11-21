@@ -68,6 +68,8 @@ export interface BillPreview {
   loyaltyDiscountAmount: number;
   tipAmount: number;
   deliveryFee: number;
+  /** Takeaway (packing) charge — item/category per unit plus the per-bill amount. */
+  takeawayCharge?: number;
   totalDue: number;
   amountPaid: number;
   balanceDue: number;

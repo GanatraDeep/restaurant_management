@@ -69,8 +69,11 @@ export function buildKotHtml({
   timeZone,
   token,
   tokenSlip,
+  heading,
 }: {
   branchName: string;
+  /** Replaces the "KOT - n" line, e.g. "COUNTER" for the counter slip. */
+  heading?: string;
   order: KotOrder;
   /** One station's ticket (from the Kitchen Display); `reprint` > 0 stamps the copy. */
   ticket?: {
@@ -88,7 +91,7 @@ export function buildKotHtml({
   tokenSlip?: { restaurantName: string } | null;
 }): string {
   const nos = ticket?.kotNo ? [ticket.kotNo] : (kotNos ?? []).filter(Boolean);
-  const kotLabel = nos.length ? `KOT - ${nos.join(', ')}` : 'KOT';
+  const kotLabel = heading ?? (nos.length ? `KOT - ${nos.join(', ')}` : 'KOT');
   const service = SERVICE[order.type] ?? order.type.replace('_', ' ');
 
   const itemRows = order.items
@@ -160,7 +163,7 @@ export function buildKotHtml({
   ${token ? `<div class="token">TOKEN<b>${token}</b></div>` : ''}
   <div class="head">
     <p class="when">${esc(kotDateTime(new Date(order.createdAt), timeZone))}</p>
-    <p class="kot">${esc(kotLabel)}</p>
+    <p class="${heading ? 'service' : 'kot'}">${esc(kotLabel)}</p>
     <p class="service">${esc(service)}</p>
     ${order.table ? `<p class="table">Table No: ${esc(order.table.label)}</p>` : ''}
     ${ticket?.station ? `<p class="station">${esc(ticket.station)}</p>` : ''}

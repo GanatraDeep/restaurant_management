@@ -10,6 +10,7 @@ export interface MenuCategory {
   sortOrder: number;
   isActive: boolean;
   showOnWebsite: boolean;
+  takeawayCharge?: string | null;
   _count: { items: number };
 }
 
@@ -39,6 +40,8 @@ export interface MenuItem {
   categoryId: string;
   stationId: string | null;
   name: string;
+  description?: string | null;
+  takeawayCharge?: string | null;
   imageUrl: string | null;
   price: string;
   halfPrice: string | null;
@@ -50,6 +53,8 @@ export interface MenuItem {
   isCombo: boolean;
   isFavorite: boolean;
   sendToKitchen: boolean;
+  /** Not sent to the kitchen: true = counter slip, false = no ticket at all. */
+  counterSlip?: boolean;
   category: { id: string; name: string };
   station: { id: string; name: string } | null;
   modifierGroups: { modifierGroup: ModifierGroup }[];

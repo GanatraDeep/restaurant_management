@@ -86,6 +86,8 @@ type BillOverrides = {
   discountPercent: number;
   taxAmount: number;
   tipAmount: number;
+  deliveryFee: number;
+  takeawayCharge: number;
   loyaltyPointsRedeemed: number;
   loyaltyDiscountAmount: number;
   totalAmount: number;
@@ -110,6 +112,8 @@ function toEscposOrder(
     discountAmount: Number(order.discountAmount),
     taxAmount: Number(order.taxAmount),
     tipAmount: Number(order.tipAmount),
+    deliveryFee: Number(order.deliveryFee),
+    takeawayCharge: Number(order.takeawayCharge),
     loyaltyPointsRedeemed: order.loyaltyPointsRedeemed,
     loyaltyDiscountAmount: Number(order.loyaltyDiscountAmount),
     totalAmount: Number(order.totalAmount),
@@ -456,6 +460,22 @@ export class OrdersController {
       // ?paper=58 from the device's printing setting.
       fitPaper(html, paperOf(res.req.query.paper)),
     );
+  }
+
+  // Counter slip: items not sent to the kitchen (water, soft drinks), for the
+  // counter printer. new=1: only items not printed on a slip yet.
+  @Auth('orders.create')
+  @Get(':id/counter-slip')
+  async counterSlip(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Query('new') onlyNew: string | undefined,
+    @Res() res: Response,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const html = await this.kotPrint.counterSlipHtml(branchId, id, onlyNew === '1');
+    res.type('html').send(fitPaper(html, paperOf(res.req.query.paper)));
   }
 
   @Auth('orders.create')

@@ -46,7 +46,8 @@ type ColumnKey =
   | 'station'
   | 'isActive'
   | 'isFavorite'
-  | 'sendToKitchen';
+  | 'sendToKitchen'
+  | 'counterSlip';
 
 interface Column {
   key: ColumnKey;
@@ -181,6 +182,13 @@ export const MENU_COLUMNS: Column[] = [
     width: 15,
     help: 'No for items served straight from the counter (cold drinks, water bottles): they are billed but never printed on a KOT. Defaults to Yes.',
   },
+  {
+    key: 'counterSlip',
+    header: 'Counter slip',
+    aliases: ['counter', 'counter print', 'print on counter'],
+    width: 13,
+    help: 'Only for items with Send to kitchen = No. Yes prints them on the counter slip (counter printer); No means no KOT or slip at all. Defaults to Yes.',
+  },
 ];
 
 export const MAX_IMPORT_ROWS = 3000;
@@ -205,6 +213,8 @@ export interface MenuRow {
   isActive?: boolean;
   isFavorite?: boolean;
   sendToKitchen?: boolean;
+  /** Not sent to the kitchen: counter slip (true) or no ticket (false). */
+  counterSlip?: boolean;
 }
 
 export interface ParsedRow extends MenuRow {
@@ -328,6 +338,7 @@ export async function buildMenuWorkbook(
       isActive: yesNo(r.isActive),
       isFavorite: r.isFavorite ? 'Yes' : 'No',
       sendToKitchen: r.sendToKitchen === false ? 'No' : 'Yes',
+      counterSlip: r.counterSlip === false ? 'No' : 'Yes',
     });
   }
 
@@ -351,6 +362,7 @@ export async function buildMenuWorkbook(
   list('isActive', ['Yes', 'No']);
   list('isFavorite', ['Yes', 'No']);
   list('sendToKitchen', ['Yes', 'No']);
+  list('counterSlip', ['Yes', 'No']);
   list('spiceLevel', Object.values(SPICE_LABELS));
   for (const key of ['price', 'halfPrice', 'costPrice'] as const) {
     ws.getColumn(key).numFmt = '0.00';
@@ -534,6 +546,11 @@ export async function parseMenuFile(
       problems.push(
         `Send to kitchen should be Yes or No, not "${get('sendToKitchen')}"`,
       );
+    const counterSlip = parseYesNo(get('counterSlip'));
+    if (counterSlip === null)
+      problems.push(
+        `Counter slip should be Yes or No, not "${get('counterSlip')}"`,
+      );
     const isActive = parseYesNo(get('isActive'));
     if (isActive === null)
       problems.push(`Available should be Yes or No, not "${get('isActive')}"`);
@@ -567,6 +584,7 @@ export async function parseMenuFile(
       isActive: isActive ?? undefined,
       isFavorite: isFavorite ?? undefined,
       sendToKitchen: sendToKitchen ?? undefined,
+      counterSlip: counterSlip ?? undefined,
     });
   }
 

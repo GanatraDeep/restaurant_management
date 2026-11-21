@@ -196,5 +196,9 @@
   "order.yourOrder": "Your order #{number}",
   "order.waitingConfirm": "waiting for the restaurant to confirm",
   "order.orderingAs": "Ordering as {name}",
-  "order.notYou": "not you?"
+  "order.notYou": "not you?",
+  "pos.photos": "Photos",
+  "pos.showPhotos": "Show item photos instead of names (this device)",
+  "pos.showNames": "Show item names (this device)",
+  "pos.takeawayCharge": "Takeaway charge"
 }

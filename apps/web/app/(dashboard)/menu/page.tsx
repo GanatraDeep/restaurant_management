@@ -275,8 +275,12 @@ export default function MenuPage() {
                         <span className="min-w-0 break-words">{item.name}</span>
                         {favouriteButton(item)}
                         {item.sendToKitchen === false && (
-                          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-medium" title="Not printed on the KOT — served from the counter">
-                            No KOT
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 px-1.5 py-0 text-[10px] font-medium"
+                            title={item.counterSlip === false ? "Never printed on any KOT or counter slip" : "Printed on the counter slip, not the kitchen KOT"}
+                          >
+                            {item.counterSlip === false ? "No KOT" : "Counter"}
                           </Badge>
                         )}
                       </p>
@@ -354,8 +358,12 @@ export default function MenuPage() {
                         {item.name}
                         {favouriteButton(item)}
                         {item.sendToKitchen === false && (
-                          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[10px] font-medium" title="Not printed on the KOT — served from the counter">
-                            No KOT
+                          <Badge
+                            variant="outline"
+                            className="shrink-0 px-1.5 py-0 text-[10px] font-medium"
+                            title={item.counterSlip === false ? "Never printed on any KOT or counter slip" : "Printed on the counter slip, not the kitchen KOT"}
+                          >
+                            {item.counterSlip === false ? "No KOT" : "Counter"}
                           </Badge>
                         )}
                       </div>

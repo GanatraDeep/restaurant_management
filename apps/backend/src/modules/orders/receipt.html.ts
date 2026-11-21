@@ -54,6 +54,9 @@ interface ReceiptOrder {
   discountAmount: number;
   taxAmount: number;
   tipAmount: number;
+  /** Delivery fee and takeaway (packing) charge, added on top of the items. */
+  deliveryFee?: number;
+  takeawayCharge?: number;
   loyaltyPointsRedeemed: number;
   loyaltyDiscountAmount: number;
   totalAmount: number;
@@ -218,6 +221,12 @@ export function buildReceiptHtml({
   }
   if (order.tipAmount > 0) {
     totalRows.push(['Tip', money(order.tipAmount)]);
+  }
+  if ((order.deliveryFee ?? 0) > 0) {
+    totalRows.push(['Delivery fee', money(order.deliveryFee ?? 0)]);
+  }
+  if ((order.takeawayCharge ?? 0) > 0) {
+    totalRows.push(['Takeaway charge', money(order.takeawayCharge ?? 0)]);
   }
 
   const paymentRows = order.payments.flatMap((p) => {

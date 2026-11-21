@@ -20,13 +20,14 @@ import { ApiError } from "@/lib/api";
 export function AddCategoryDialog({ branchId }: { branchId: string | null }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [takeawayCharge, setTakeawayCharge] = useState("");
   const [showOnWebsite, setShowOnWebsite] = useState(true);
   const createCategory = useCreateCategory(branchId);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createCategory.mutate(
-      { name, sortOrder: 0, isActive: true, showOnWebsite },
+      { name, sortOrder: 0, isActive: true, showOnWebsite, takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge) },
       {
         onSuccess: () => {
           toast.success(`"${name}" category added`);
@@ -63,6 +64,20 @@ export function AddCategoryDialog({ branchId }: { branchId: string | null }) {
               required
               autoFocus
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="cat-add-takeaway">Takeaway charge per item (optional)</Label>
+            <Input
+              id="cat-add-takeaway"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={takeawayCharge}
+              onChange={(e) => setTakeawayCharge(e.target.value)}
+              placeholder="e.g. 10"
+            />
+            <p className="text-xs text-muted-foreground">Added per unit on takeaway bills for items in this category, unless the item has its own charge.</p>
           </div>
           <label className="mb-4 flex min-h-12 items-center justify-between gap-4 rounded-lg border border-border px-3 py-2">
             <span className="flex flex-col">

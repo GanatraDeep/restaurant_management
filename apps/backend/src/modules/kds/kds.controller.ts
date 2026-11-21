@@ -221,6 +221,23 @@ export class KdsController {
     return this.kdsService.pendingAutoPrint(branchId, from);
   }
 
+  // Orders with counter items (not sent to the kitchen) to print on the
+  // counter printer; the counter-slip page claims them, so only one device prints.
+  @Auth('orders.accept')
+  @Get('auto-print/pending-counter')
+  async autoPrintPendingCounter(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Query('since') since: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    const from = new Date(since);
+    if (Number.isNaN(from.getTime())) {
+      throw new BadRequestException('since must be a date');
+    }
+    return this.kdsService.pendingCounterAutoPrint(branchId, from);
+  }
+
   @Auth('orders.accept')
   @Post('auto-print/:id/claim')
   async autoPrintClaim(

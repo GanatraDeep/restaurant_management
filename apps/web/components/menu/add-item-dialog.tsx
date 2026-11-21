@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { routeFields, TicketRouteField, type TicketRoute } from "@/components/menu/ticket-route";
 import { draftsToVariants, VariantsEditor, type VariantDraft } from "@/components/menu/variants-editor";
 import {
   useCreateMenuItem,
@@ -41,6 +43,8 @@ export function AddItemDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [takeawayCharge, setTakeawayCharge] = useState("");
+  const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [stationId, setStationId] = useState<string>("");
   const [price, setPrice] = useState("");
@@ -49,7 +53,7 @@ export function AddItemDialog({
   const hasVariants = variants.length > 0;
   const [taxRatePercent, setTaxRatePercent] = useState("5");
   const [isVeg, setIsVeg] = useState(true);
-  const [sendToKitchen, setSendToKitchen] = useState(true);
+  const [ticketRoute, setTicketRoute] = useState<TicketRoute>("KITCHEN");
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +74,9 @@ export function AddItemDialog({
     setVariants([]);
     setTaxRatePercent("5");
     setIsVeg(true);
-    setSendToKitchen(true);
+    setTicketRoute("KITCHEN");
+    setDescription("");
+    setTakeawayCharge("");
     setImageUrl(undefined);
     setImagePreview(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -103,6 +109,7 @@ export function AddItemDialog({
     createItem.mutate(
       {
         name,
+        description: description.trim() || undefined,
         categoryId,
         stationId: stationId || undefined,
         // With variants the first one's rate is the item's price.
@@ -119,7 +126,8 @@ export function AddItemDialog({
         allergens: [],
         isActive: true,
         isFavorite: false,
-        sendToKitchen,
+        ...routeFields(ticketRoute),
+        takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge),
         modifierGroupIds: [],
         imageUrl,
       },
@@ -211,6 +219,19 @@ export function AddItemDialog({
           </div>
 
           <div className="flex flex-col gap-2">
+            <Label htmlFor="item-description">Description (optional)</Label>
+            <Textarea
+              id="item-description"
+              rows={3}
+              maxLength={500}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Fresh mozzarella, basil and tomato on a thin crust"
+            />
+            <p className="text-xs text-muted-foreground">Shown under the item on the QR menu and online ordering.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
               <SelectTrigger>
@@ -281,6 +302,21 @@ export function AddItemDialog({
           </div>
           )}
 
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="item-takeaway">Takeaway charge (optional)</Label>
+            <Input
+              id="item-takeaway"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={takeawayCharge}
+              onChange={(e) => setTakeawayCharge(e.target.value)}
+              placeholder="Empty = use the category's charge"
+            />
+            <p className="text-xs text-muted-foreground">Per unit on takeaway bills. Enter 0 for no charge on this item.</p>
+          </div>
+
           <VariantsEditor idPrefix="add" value={variants} onChange={setVariants} />
 
           <div className="flex flex-col gap-2">
@@ -308,17 +344,7 @@ export function AddItemDialog({
             <Switch id="is-veg" checked={isVeg} onCheckedChange={setIsVeg} />
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-            <div>
-              <Label htmlFor="send-kot" className="cursor-pointer">
-                Send to kitchen (KOT)
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Turn off for items given straight from the counter, like cold drinks or water bottles.
-              </p>
-            </div>
-            <Switch id="send-kot" checked={sendToKitchen} onCheckedChange={setSendToKitchen} />
-          </div>
+          <TicketRouteField idPrefix="add" value={ticketRoute} onChange={setTicketRoute} />
 
           <DialogFooter>
             <Button type="submit" disabled={createItem.isPending || uploadImage.isPending}>

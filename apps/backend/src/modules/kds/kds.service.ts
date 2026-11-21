@@ -176,6 +176,10 @@ export class KdsService {
     return this.kotPrint.pendingAutoPrint(branchId, since);
   }
 
+  pendingCounterAutoPrint(branchId: string, since: Date) {
+    return this.kotPrint.pendingCounterAutoPrint(branchId, since);
+  }
+
   claimFirstPrint(branchId: string, kotId: string) {
     return this.kotPrint.claimFirstPrint(branchId, kotId);
   }

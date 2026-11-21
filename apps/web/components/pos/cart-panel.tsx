@@ -52,6 +52,7 @@ export function CartPanel({
   onDeliveryChange,
   scheduledFor,
   onScheduledForChange,
+  takeawayCharge = 0,
 }: {
   lines: CartLine[];
   orderType: PosOrderType;
@@ -86,6 +87,8 @@ export function CartPanel({
   onDeliveryChange: (d: DeliveryDetails) => void;
   scheduledFor: string;
   onScheduledForChange: (v: string) => void;
+  /** Takeaway (packing) charge this bill will carry; 0 = none. */
+  takeawayCharge?: number;
 }) {
   const { t } = useI18n();
   const subtotal = subtotalOf(lines.map((l) => l.unitPrice * l.quantity));
@@ -300,10 +303,16 @@ export function CartPanel({
       </div>
 
       <div className="flex flex-col gap-3 border-t border-border pt-3">
+        {takeawayCharge > 0 && (
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>{t("pos.takeawayCharge")}</span>
+            <span className="tabular-nums">{formatCurrency(takeawayCharge)}</span>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">{t("pos.total")}</span>
           <span className="text-lg font-semibold tabular-nums text-foreground">
-            {formatCurrency(subtotal + (existingOrder ? Number(existingOrder.totalAmount) : 0))}
+            {formatCurrency(subtotal + (existingOrder ? Number(existingOrder.totalAmount) : 0) + takeawayCharge)}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2">

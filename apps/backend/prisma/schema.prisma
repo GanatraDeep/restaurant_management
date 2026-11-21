@@ -128,23 +128,27 @@ model Branch {
 
   // Online order / table-booking handling: false = staff must accept each
   // one from the dashboard; true = accepted automatically on arrival.
-  autoConfirmOrders       Boolean @default(false)
-  autoConfirmReservations Boolean @default(false)
+  autoConfirmOrders        Boolean @default(false)
+  autoConfirmReservations  Boolean @default(false)
   // Table-QR orders must be paid (UPI) before staff accept them.
-  qrPayFirst              Boolean @default(false)
+  qrPayFirst               Boolean @default(false)
   // Table / takeaway QR: a new guest number is checked with a WhatsApp code.
   // Off = guests just type their name and number.
-  qrOtpRequired           Boolean @default(true)
+  qrOtpRequired            Boolean @default(true)
   // Table QR asks the guest's name and number. Off = guests go straight to
   // the menu; orders carry no customer. (The takeaway QR always asks: the
   // counter needs a name to call.)
-  qrCollectGuestInfo      Boolean @default(true)
+  qrCollectGuestInfo       Boolean @default(true)
+  /// Flat takeaway charge per invoice, on top of item/category charges.
+  takeawayChargePerOrder   Decimal @default(0) @db.Decimal(10, 2)
+  /// Delivery orders pay the takeaway charges too.
+  takeawayChargeOnDelivery Boolean @default(false)
   // Token system: every order gets a daily token number (the order's daily
   // sequence), stamped on the KOT and bill, with a token slip for the guest.
-  tokenEnabled            Boolean @default(false)
+  tokenEnabled             Boolean @default(false)
   // Branch-level QR for takeaway: guests scan it at the counter and order
   // without a table. Opaque like Table.qrToken; null = not created yet.
-  takeawayQrToken         String? @unique
+  takeawayQrToken          String? @unique
 
   // Self-service kiosk (2026-10-17). kioskToken is the opaque, unguessable
   // credential in the public /kiosk/<token> URL (same idea as
@@ -564,12 +568,14 @@ model MenuCategory {
   branchId String
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
 
-  name          String
-  sortOrder     Int     @default(0)
-  isActive      Boolean @default(true)
+  name           String
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
   // false = still on the POS, but hidden from the QR/online ordering page and
   // from the Integration API that feeds the restaurant's own website.
-  showOnWebsite Boolean @default(true)
+  showOnWebsite  Boolean  @default(true)
+  /// Takeaway (packing) charge per unit for this category's items; null = none.
+  takeawayCharge Decimal? @db.Decimal(10, 2)
 
   items MenuItem[]
 
@@ -1098,15 +1104,19 @@ model MenuItem {
   seasonStart   DateTime?
   seasonEnd     DateTime?
 
-  barcode       String?
-  isActive      Boolean @default(true)
-  isCombo       Boolean @default(false)
+  barcode        String?
+  isActive       Boolean  @default(true)
+  isCombo        Boolean  @default(false)
   // Starred on the Menu page: shown first on the POS ("Favourite items")
   // and as a Favourites section at the top of the QR menu and kiosk.
-  isFavorite    Boolean @default(false)
+  isFavorite     Boolean  @default(false)
   // false = served straight from the counter (water, soft drinks): never on
   // a KOT or the Kitchen Display.
-  sendToKitchen Boolean @default(true)
+  sendToKitchen  Boolean  @default(true)
+  /// For items not sent to the kitchen: print them on the counter slip (false = no ticket at all).
+  counterSlip   Boolean  @default(true)
+  /// Takeaway (packing) charge per unit; null = use the category\'s.
+  takeawayCharge Decimal? @db.Decimal(10, 2)
 
   inventoryTracking    InventoryTracking @default(NONE)
   stockIngredientId    String?
@@ -1117,7 +1127,7 @@ model MenuItem {
   halfPrice Decimal? @db.Decimal(12, 2)
   // Rates for kinds of the same dish, e.g. Plain 60 / Butter 80 / Oil 70:
   // [{ "name": "Plain", "price": 60 }, ...]. Empty = one price.
-  variants       Json     @default("[]")
+  variants  Json     @default("[]")
 
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
@@ -1391,6 +1401,8 @@ model Order {
   deliveryZoneId  String?
   deliveryZone    DeliveryZone?   @relation(fields: [deliveryZoneId], references: [id], onDelete: SetNull)
   deliveryFee     Decimal         @default(0) @db.Decimal(12, 2)
+  /// Takeaway (packing) charge, fixed on the bill when the first payment is taken.
+  takeawayCharge  Decimal         @default(0) @db.Decimal(12, 2)
   deliveryAddress String?
   deliveryPincode String?
   deliveryPhone   String?
@@ -1445,6 +1457,10 @@ model OrderItem {
   lineTotal   Decimal       @db.Decimal(12, 2)
   kitchenNote String?
   status      KotItemStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+  /// Counter items (menu item not sent to the kitchen) print on a counter slip
+  /// instead of a KOT; set when that slip is printed, so a round prints once.
+  counterPrintedAt DateTime?
 
   modifiers    OrderItemModifier[]
   kotItems     KotItem[]
@@ -2080,12 +2096,12 @@ model WebhookEndpoint {
   restaurantId String
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
 
-  url         String
-  secret      String // sealed (auth/totp.ts sealSecret); shown in full once
-  events      String[] @default([])
-  description String?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  url             String
+  secret          String // sealed (auth/totp.ts sealSecret); shown in full once
+  events          String[] @default([])
+  description     String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
   /// Optional JSON body template with {{placeholders}}; null = the standard envelope.
   payloadTemplate String?
   /// Extra request headers (e.g. an API key), sealed like `secret`: JSON [{name,value}].

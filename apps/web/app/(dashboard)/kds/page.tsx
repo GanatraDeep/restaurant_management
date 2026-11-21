@@ -101,22 +101,6 @@ export default function KdsPage() {
 
       <BranchNotice />
 
-      {pendingOrders.length > 0 && (
-        <section aria-label="Incoming orders" className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-foreground">
-            {t("kds.incoming")}{" "}
-            <span className="ml-1 rounded-full bg-destructive px-2 py-0.5 text-xs text-white">{pendingOrders.length}</span>
-          </h2>
-          {/* Padding inside the scroller so the cards' highlight ring isn't
-              clipped; items-start so a short order doesn't stretch to the
-              height of a long one. */}
-          <div className="-mx-1 flex items-start gap-3 overflow-x-auto px-1 pb-2 pt-1">
-            {pendingOrders.map((order) => (
-              <IncomingOrderCard key={order.id} order={order} branchId={branchId} showToken={tokenOn} />
-            ))}
-          </div>
-        </section>
-      )}
       {canAnswer && incoming.isError && (
         <p role="alert" className="text-xs text-destructive">
           Could not check for incoming orders. They will show here once the connection is back.
@@ -140,18 +124,24 @@ export default function KdsPage() {
                   {t(`kds.col.${col.status}`)}
                 </h2>
                 <span className="min-w-6 rounded-full bg-background px-2 py-0.5 text-center text-xs font-semibold tabular-nums text-foreground">
-                  {byStatus(col.status).length}
+                  {byStatus(col.status).length + (col.status === "NEW" ? pendingOrders.length : 0)}
                 </span>
               </div>
-              <div className="flex flex-1 flex-col gap-3 overflow-y-auto pb-2">
+              <div className="-mx-1 flex flex-1 flex-col gap-3 overflow-y-auto px-1 pb-2 pt-1">
                 {(tickets.isLoading || !canFetch) &&
                   Array.from({ length: 2 }).map((_, i) => (
                     <Skeleton key={i} className="h-32 rounded-2xl" />
                   ))}
+                {/* Orders waiting for Accept / Decline (QR, online, aggregators) sit at
+                    the top of NEW — the other columns keep their full height. */}
+                {col.status === "NEW" &&
+                  pendingOrders.map((order) => (
+                    <IncomingOrderCard key={order.id} order={order} branchId={branchId} showToken={tokenOn} fullWidth />
+                  ))}
                 {byStatus(col.status).map((ticket) => (
                   <TicketCard key={ticket.id} ticket={ticket} branchId={branchId} showToken={tokenOn} />
                 ))}
-                {canFetch && !tickets.isLoading && byStatus(col.status).length === 0 && (
+                {canFetch && !tickets.isLoading && byStatus(col.status).length === 0 && (col.status !== "NEW" || pendingOrders.length === 0) && (
                   <p className="py-6 text-center text-xs text-muted-foreground">{t("kds.noTickets")}</p>
                 )}
               </div>

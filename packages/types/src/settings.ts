@@ -53,6 +53,10 @@ export const branchSettingsSchema = z.object({
   qrOtpRequired: z.boolean().optional(),
   // Table QR asks the guest's name and number before ordering.
   qrCollectGuestInfo: z.boolean().optional(),
+  // Takeaway charge: a flat amount per takeaway invoice (on top of any
+  // per-item / per-category charges), and whether delivery orders pay it too.
+  takeawayChargePerOrder: z.number().min(0).max(100000).optional(),
+  takeawayChargeOnDelivery: z.boolean().optional(),
   // Token number on every order: big on the KOT, on the bill, plus a token slip.
   tokenEnabled: z.boolean().optional(),
   // Self-service kiosk: which service-mode buttons the start screen offers.
