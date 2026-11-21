@@ -15,7 +15,7 @@ import {
 import type { OpenOrder } from "@/hooks/use-orders";
 import { useUpdateTableStatus, type RestaurantTable } from "@/hooks/use-tables";
 import { api, ApiError } from "@/lib/api";
-import { openKotPrint, openReceiptPrint } from "@/lib/print";
+import { openOrderTicketsPrint, openReceiptPrint } from "@/lib/print";
 import { TABLE_DISPLAY, tableDisplayOf } from "@/lib/table-colors";
 import { cn } from "@/lib/utils";
 import { BillTableDialog } from "./bill-table-dialog";
@@ -63,7 +63,7 @@ export function TableTile({
         toast.error("No open order on this table");
         return;
       }
-      if (what === "kot") openKotPrint(order.id, branchId);
+      if (what === "kot") void openOrderTicketsPrint(order.id, branchId);
       else openReceiptPrint(order.id, branchId);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Could not load the table's order");

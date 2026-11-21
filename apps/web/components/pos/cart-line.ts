@@ -9,6 +9,8 @@ export interface CartLine {
   portion?: Portion;
   /** false for counter items (no KOT). */
   toKitchen?: boolean;
+  /** Not to the kitchen: printed on the counter slip (false = no ticket). */
+  counterSlip?: boolean;
 }
 
 // VARIANT: one of the item's variants (Plain / Butter / Oil); its name is in customLabel.

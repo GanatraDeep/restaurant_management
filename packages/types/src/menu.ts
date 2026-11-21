@@ -76,6 +76,9 @@ export const menuItemSchema = z.object({
   isFavorite: z.boolean().default(false),
   // false = served from the counter (water, soft drinks): never on a KOT.
   sendToKitchen: z.boolean().default(true),
+  // Only when sendToKitchen is false: true = counter slip on the counter
+  // printer (water bottle), false = never on any ticket.
+  counterSlip: z.boolean().optional(),
   // Takeaway (packing) charge per unit; null = use the category's.
   takeawayCharge: z.coerce.number().nonnegative().max(100000).nullable().optional(),
   modifierGroupIds: z.array(z.string()).default([]),

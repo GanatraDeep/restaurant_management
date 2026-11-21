@@ -91,6 +91,7 @@ export class MenuTransferService {
       isActive: i.isActive,
       isFavorite: i.isFavorite,
       sendToKitchen: i.sendToKitchen,
+      counterSlip: i.counterSlip,
     }));
     return buildMenuWorkbook(rows, { restaurantName: b.restaurant.name });
   }

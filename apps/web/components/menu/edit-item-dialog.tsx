@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { routeFields, routeOf, TicketRouteField, type TicketRoute } from "@/components/menu/ticket-route";
 import { draftsToVariants, toDrafts, VariantsEditor, type VariantDraft } from "@/components/menu/variants-editor";
 import {
   useStations,
@@ -59,7 +60,7 @@ export function EditItemDialog({
   const hasVariants = variants.length > 0;
   const [taxRatePercent, setTaxRatePercent] = useState(item.taxRatePercent);
   const [isVeg, setIsVeg] = useState(item.isVeg);
-  const [sendToKitchen, setSendToKitchen] = useState(item.sendToKitchen ?? true);
+  const [ticketRoute, setTicketRoute] = useState<TicketRoute>(routeOf(item.sendToKitchen, item.counterSlip));
   const [imageUrl, setImageUrl] = useState<string | undefined>(item.imageUrl ?? undefined);
   const [imagePreview, setImagePreview] = useState<string | undefined>(item.imageUrl ?? undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +110,7 @@ export function EditItemDialog({
           variants: v.variants,
           taxRatePercent: Number(taxRatePercent),
           isVeg,
-          sendToKitchen,
+          ...routeFields(ticketRoute),
           takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge),
           imageUrl,
         },
@@ -313,17 +314,7 @@ export function EditItemDialog({
             <Switch id="edit-is-veg" checked={isVeg} onCheckedChange={setIsVeg} />
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-            <div>
-              <Label htmlFor="edit-send-kot" className="cursor-pointer">
-                Send to kitchen (KOT)
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Turn off for items given straight from the counter, like cold drinks or water bottles.
-              </p>
-            </div>
-            <Switch id="edit-send-kot" checked={sendToKitchen} onCheckedChange={setSendToKitchen} />
-          </div>
+          <TicketRouteField idPrefix="edit" value={ticketRoute} onChange={setTicketRoute} />
 
           <DialogFooter>
             <Button type="submit" disabled={updateItem.isPending || uploadImage.isPending}>

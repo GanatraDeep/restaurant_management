@@ -53,6 +53,8 @@ export interface MenuItem {
   isCombo: boolean;
   isFavorite: boolean;
   sendToKitchen: boolean;
+  /** Not sent to the kitchen: true = counter slip, false = no ticket at all. */
+  counterSlip?: boolean;
   category: { id: string; name: string };
   station: { id: string; name: string } | null;
   modifierGroups: { modifierGroup: ModifierGroup }[];

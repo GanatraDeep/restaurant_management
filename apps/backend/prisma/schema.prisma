@@ -1113,6 +1113,8 @@ model MenuItem {
   // false = served straight from the counter (water, soft drinks): never on
   // a KOT or the Kitchen Display.
   sendToKitchen  Boolean  @default(true)
+  /// For items not sent to the kitchen: print them on the counter slip (false = no ticket at all).
+  counterSlip   Boolean  @default(true)
   /// Takeaway (packing) charge per unit; null = use the category\'s.
   takeawayCharge Decimal? @db.Decimal(10, 2)
 
@@ -1455,6 +1457,10 @@ model OrderItem {
   lineTotal   Decimal       @db.Decimal(12, 2)
   kitchenNote String?
   status      KotItemStatus @default(NEW)
+  createdAt   DateTime      @default(now())
+  /// Counter items (menu item not sent to the kitchen) print on a counter slip
+  /// instead of a KOT; set when that slip is printed, so a round prints once.
+  counterPrintedAt DateTime?
 
   modifiers    OrderItemModifier[]
   kotItems     KotItem[]

@@ -32,7 +32,7 @@ import {
 } from "@/hooks/use-orders";
 import { useFloors, type RestaurantTable } from "@/hooks/use-tables";
 import { api, ApiError } from "@/lib/api";
-import { openKotPrint, openReceiptPrint } from "@/lib/print";
+import { openOrderTicketsPrint, openReceiptPrint } from "@/lib/print";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { tokenOf } from "@/lib/token";
@@ -139,6 +139,7 @@ function PosPageInner() {
     modifierLabel: string,
     portion?: Portion,
     toKitchen = true,
+    counterSlip = true,
   ) => {
     const key = cartLineKey(menuItemId, modifierIds, portion);
     setLines((prev) => {
@@ -146,7 +147,7 @@ function PosPageInner() {
       if (existing) {
         return prev.map((l) => (l.key === key ? { ...l, quantity: l.quantity + 1 } : l));
       }
-      return [...prev, { key, menuItemId, name, unitPrice, quantity: 1, modifierIds, modifierLabel, portion, toKitchen }];
+      return [...prev, { key, menuItemId, name, unitPrice, quantity: 1, modifierIds, modifierLabel, portion, toKitchen, counterSlip }];
     });
   };
 
@@ -155,7 +156,7 @@ function PosPageInner() {
       setPickerItem(item);
       return;
     }
-    addLine(item.id, item.name, Number(item.price), [], "", undefined, item.sendToKitchen !== false);
+    addLine(item.id, item.name, Number(item.price), [], "", undefined, item.sendToKitchen !== false, item.counterSlip !== false);
   };
 
   const handleModifierConfirm = (modifierIds: string[], modifierLabel: string, portion?: Portion) => {
@@ -177,6 +178,7 @@ function PosPageInner() {
       modifierLabel,
       portion,
       pickerItem.sendToKitchen !== false,
+      pickerItem.counterSlip !== false,
     );
   };
 
@@ -219,13 +221,15 @@ function PosPageInner() {
     setSubmittingPrint(print);
     const sentTableId = tableId;
     const kitchenItems = lines.some((l) => l.toKitchen !== false);
+    const counterItems = lines.some((l) => l.toKitchen === false && l.counterSlip !== false);
     // After saving: print this round's KOT here if asked, then a dine-in
     // table goes back to the table grid; takeaway / delivery go on to payment.
     const afterSave = (order: CreatedOrder, verb: string) => {
       setDrafts((d) => clearDraft(d, sentTableId));
       if (print && branchId) {
-        if (kitchenItems) openKotPrint(order.id, branchId, { onlyNew: true });
-        else toast.success("Saved — nothing in this round goes to the kitchen, so no KOT");
+        // Kitchen items → KOT on the kitchen printer; counter items (water,
+        // soft drinks) → a counter slip on the counter printer.
+        void openOrderTicketsPrint(order.id, branchId, { onlyNew: true, kitchen: kitchenItems, counter: counterItems });
       }
       if (orderType === "DINE_IN") {
         const t = tables.find((x) => x.id === sentTableId);
@@ -376,7 +380,7 @@ function PosPageInner() {
         return;
       }
       if (action === "kot") {
-        openKotPrint(order.id, branchId);
+        void openOrderTicketsPrint(order.id, branchId);
         return;
       }
       // Bill: the table's order — items, Print bill, Settle & pay.
@@ -511,7 +515,7 @@ function PosPageInner() {
                 onBackToTables={() => goToTables()}
                 existingOrder={existingOrder}
                 onPayExisting={viewExistingOrder}
-                onPrintKot={() => existingOrder && branchId && openKotPrint(existingOrder.id, branchId)}
+                onPrintKot={() => existingOrder && branchId && void openOrderTicketsPrint(existingOrder.id, branchId)}
                 onPrintBill={() => existingOrder && branchId && openReceiptPrint(existingOrder.id, branchId)}
                 openBills={existingOrders?.map((o) => ({ id: o.id, orderNumber: o.orderNumber }))}
                 selectedBillId={existingOrder?.id ?? null}

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { hasPermission, useCurrentUser } from "@/hooks/use-auth";
 import { api } from "@/lib/api";
-import { openClaimedTicketPrint } from "@/lib/print";
+import { openClaimedTicketPrint, openCounterPrint } from "@/lib/print";
 
 // Auto-printing KOTs is a choice for this device (the one with the printer),
 // remembered in this browser per branch. `since` is when it was switched on,
@@ -68,6 +68,30 @@ export function useKotAutoPrint(branchId: string | null) {
     enabled: !!branchId && !!since && allowed,
     refetchInterval: 8000,
   });
+  // Counter items (water, soft drinks) of those orders: a counter slip on the
+  // counter printer. The slip page claims them, so only one device prints.
+  const { data: counter } = useQuery({
+    queryKey: ["kds", "auto-print-counter", branchId, since],
+    queryFn: () =>
+      api.get<{ orderId: string }[]>(`/kds/auto-print/pending-counter?branchId=${branchId}&since=${encodeURIComponent(since!)}`),
+    enabled: !!branchId && !!since && allowed,
+    refetchInterval: 8000,
+  });
+
+  useEffect(() => {
+    if (!branchId || !counter?.length || busy.current) return;
+    busy.current = true;
+    void (async () => {
+      for (const o of counter) {
+        try {
+          await openCounterPrint(o.orderId, branchId, { onlyNew: true });
+        } catch {
+          // Left for a manual Print KOT.
+        }
+      }
+      busy.current = false;
+    })();
+  }, [counter, branchId]);
 
   useEffect(() => {
     if (!branchId || !data?.length || busy.current) return;

@@ -144,6 +144,111 @@ export class KotPrintService {
   }
 
   /**
+   * Counter slip: items served from the counter (menu item ticket = "Counter
+   * slip" — water bottles, soft drinks) never get a KOT, so they print on their
+   * own slip, which the POS sends to the counter (bill) printer. Items set to
+   * "No ticket" print nowhere.
+   * `onlyNew` prints just the items not on a counter slip yet, claimed
+   * atomically so two devices can't both print them; otherwise every live
+   * counter item (a reprint). Orders still waiting for Accept print nothing.
+   */
+  async counterSlipHtml(branchId: string, orderId: string, onlyNew: boolean) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, branchId },
+      include: {
+        table: true,
+        customer: true,
+        branch: { include: { restaurant: { select: { timezone: true, name: true } } } },
+      },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+    if (order.status === 'CANCELLED' || ['PENDING', 'REJECTED'].includes(order.acceptance)) {
+      return NO_COUNTER_PAGE;
+    }
+    const where = {
+      orderId,
+      status: { not: 'CANCELLED' as const },
+      menuItem: { sendToKitchen: false, counterSlip: true },
+    };
+    let ids = (
+      await this.prisma.orderItem.findMany({
+        where: { ...where, ...(onlyNew ? { counterPrintedAt: null } : {}) },
+        select: { id: true },
+      })
+    ).map((i) => i.id);
+    if (ids.length === 0) return NO_COUNTER_PAGE;
+    const stamp = new Date();
+    if (onlyNew) {
+      await this.prisma.orderItem.updateMany({
+        where: { id: { in: ids }, counterPrintedAt: null },
+        data: { counterPrintedAt: stamp },
+      });
+      // Only what this request claimed (another device may have won some).
+      ids = (
+        await this.prisma.orderItem.findMany({
+          where: { id: { in: ids }, counterPrintedAt: stamp },
+          select: { id: true },
+        })
+      ).map((i) => i.id);
+      if (ids.length === 0) return NO_COUNTER_PAGE;
+    } else {
+      await this.prisma.orderItem.updateMany({
+        where: { id: { in: ids }, counterPrintedAt: null },
+        data: { counterPrintedAt: stamp },
+      });
+    }
+    const items = await this.prisma.orderItem.findMany({
+      where: { id: { in: ids } },
+      include: { modifiers: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const token = order.branch.tokenEnabled ? tokenOf(order.orderNumber) : null;
+    return buildKotHtml({
+      branchName: order.branch.name,
+      timeZone: order.branch.restaurant.timezone,
+      heading: 'COUNTER',
+      token,
+      order: {
+        orderNumber: order.orderNumber,
+        type: order.type,
+        createdAt: items[items.length - 1]?.createdAt ?? order.createdAt,
+        table: order.table ? { label: tableLabel(order.table) } : null,
+        customer: order.customer
+          ? { name: order.customer.name ?? 'Guest' }
+          : order.guestName
+            ? { name: order.guestName }
+            : null,
+        items: items.map((i) => ({
+          nameSnapshot: i.nameSnapshot,
+          quantity: i.quantity,
+          kitchenNote: i.kitchenNote,
+          modifiers: i.modifiers.map((m) => ({ nameSnapshot: m.nameSnapshot })),
+        })),
+      },
+    });
+  }
+
+  /**
+   * Auto-print: orders with counter items not on a counter slip yet, added
+   * since the device switched auto-print on.
+   */
+  async pendingCounterAutoPrint(branchId: string, since: Date) {
+    const rows = await this.prisma.orderItem.findMany({
+      where: {
+        counterPrintedAt: null,
+        status: { not: 'CANCELLED' },
+        createdAt: { gte: since },
+        menuItem: { sendToKitchen: false, counterSlip: true },
+        order: { branchId, status: { not: 'CANCELLED' }, acceptance: { in: ['NOT_REQUIRED', 'ACCEPTED'] } },
+      },
+      select: { orderId: true },
+      distinct: ['orderId'],
+      take: 20,
+    });
+    return rows.map((r) => ({ orderId: r.orderId }));
+  }
+
+  /**
    * Auto-print: accepted tickets nobody has printed yet, since the device
    * switched auto-print on (so turning it on doesn't print the backlog).
    */
@@ -370,3 +475,6 @@ function kotPage(
 
 /** Served when nothing on the order goes to the kitchen: never printed. */
 export const NO_KOT_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="fc-noprint" content="1"><title>No KOT</title></head><body data-noprint="1"><p>Nothing on this order goes to the kitchen.</p></body></html>`;
+
+/** Counter slip with nothing on it: the browser / desktop app skip printing. */
+export const NO_COUNTER_PAGE = `<!doctype html><html><head><meta charset="utf-8"><meta name="fc-noprint" content="1"><title>No counter items</title></head><body data-noprint="1"><p>Nothing on this order is served from the counter.</p></body></html>`;

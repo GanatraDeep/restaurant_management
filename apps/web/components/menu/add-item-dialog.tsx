@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { routeFields, TicketRouteField, type TicketRoute } from "@/components/menu/ticket-route";
 import { draftsToVariants, VariantsEditor, type VariantDraft } from "@/components/menu/variants-editor";
 import {
   useCreateMenuItem,
@@ -52,7 +53,7 @@ export function AddItemDialog({
   const hasVariants = variants.length > 0;
   const [taxRatePercent, setTaxRatePercent] = useState("5");
   const [isVeg, setIsVeg] = useState(true);
-  const [sendToKitchen, setSendToKitchen] = useState(true);
+  const [ticketRoute, setTicketRoute] = useState<TicketRoute>("KITCHEN");
   const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [imagePreview, setImagePreview] = useState<string | undefined>(undefined);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +74,9 @@ export function AddItemDialog({
     setVariants([]);
     setTaxRatePercent("5");
     setIsVeg(true);
-    setSendToKitchen(true);
+    setTicketRoute("KITCHEN");
+    setDescription("");
+    setTakeawayCharge("");
     setImageUrl(undefined);
     setImagePreview(undefined);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -123,7 +126,7 @@ export function AddItemDialog({
         allergens: [],
         isActive: true,
         isFavorite: false,
-        sendToKitchen,
+        ...routeFields(ticketRoute),
         takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge),
         modifierGroupIds: [],
         imageUrl,
@@ -341,17 +344,7 @@ export function AddItemDialog({
             <Switch id="is-veg" checked={isVeg} onCheckedChange={setIsVeg} />
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5">
-            <div>
-              <Label htmlFor="send-kot" className="cursor-pointer">
-                Send to kitchen (KOT)
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Turn off for items given straight from the counter, like cold drinks or water bottles.
-              </p>
-            </div>
-            <Switch id="send-kot" checked={sendToKitchen} onCheckedChange={setSendToKitchen} />
-          </div>
+          <TicketRouteField idPrefix="add" value={ticketRoute} onChange={setTicketRoute} />
 
           <DialogFooter>
             <Button type="submit" disabled={createItem.isPending || uploadImage.isPending}>
