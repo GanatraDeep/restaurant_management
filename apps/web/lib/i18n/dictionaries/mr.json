@@ -125,5 +125,9 @@
   "order.yourOrder": "तुमची ऑर्डर #{number}",
   "order.waitingConfirm": "रेस्टॉरंटच्या पुष्टीची वाट",
   "order.orderingAs": "{name} नावाने ऑर्डर",
-  "order.notYou": "तुम्ही नाही?"
+  "order.notYou": "तुम्ही नाही?",
+  "pos.photos": "फोटो",
+  "pos.showPhotos": "नावाऐवजी आयटम फोटो दाखवा (हे डिव्हाइस)",
+  "pos.showNames": "आयटमची नावे दाखवा (हे डिव्हाइस)",
+  "pos.takeawayCharge": "टेकअवे शुल्क"
 }

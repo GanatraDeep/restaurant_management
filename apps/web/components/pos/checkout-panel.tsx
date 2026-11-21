@@ -715,6 +715,7 @@ function BillSummary({
         )}
         {bill.tipAmount > 0 && <Row label="Tip" value={formatCurrency(bill.tipAmount)} />}
         {bill.deliveryFee > 0 && <Row label="Delivery fee" value={formatCurrency(bill.deliveryFee)} />}
+        {(bill.takeawayCharge ?? 0) > 0 && <Row label="Takeaway charge" value={formatCurrency(bill.takeawayCharge ?? 0)} />}
       </dl>
       <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
         <span className="text-sm font-medium text-foreground">Total due</span>

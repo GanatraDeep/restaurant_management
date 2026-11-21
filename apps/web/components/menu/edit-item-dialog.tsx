@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -48,6 +49,8 @@ export function EditItemDialog({
   onClose: () => void;
 }) {
   const [name, setName] = useState(item.name);
+  const [takeawayCharge, setTakeawayCharge] = useState(item.takeawayCharge != null ? String(Number(item.takeawayCharge)) : "");
+  const [description, setDescription] = useState(item.description ?? "");
   const [categoryId, setCategoryId] = useState(item.categoryId);
   const [stationId, setStationId] = useState(item.stationId ?? "");
   const [price, setPrice] = useState(item.price);
@@ -98,6 +101,7 @@ export function EditItemDialog({
         id: item.id,
         dto: {
           name,
+          description: description.trim(),
           categoryId,
           stationId: stationId || undefined,
           price: v.variants.length ? v.variants[0].price : Number(price),
@@ -106,6 +110,7 @@ export function EditItemDialog({
           taxRatePercent: Number(taxRatePercent),
           isVeg,
           sendToKitchen,
+          takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge),
           imageUrl,
         },
       },
@@ -183,6 +188,19 @@ export function EditItemDialog({
           </div>
 
           <div className="flex flex-col gap-2">
+            <Label htmlFor="item-edit-description">Description (optional)</Label>
+            <Textarea
+              id="item-edit-description"
+              rows={3}
+              maxLength={500}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Fresh mozzarella, basil and tomato on a thin crust"
+            />
+            <p className="text-xs text-muted-foreground">Shown under the item on the QR menu and online ordering.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
               <SelectTrigger>
@@ -252,6 +270,21 @@ export function EditItemDialog({
             </p>
           </div>
           )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="item-edit-takeaway">Takeaway charge (optional)</Label>
+            <Input
+              id="item-edit-takeaway"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={takeawayCharge}
+              onChange={(e) => setTakeawayCharge(e.target.value)}
+              placeholder="Empty = use the category's charge"
+            />
+            <p className="text-xs text-muted-foreground">Per unit on takeaway bills. Enter 0 for no charge on this item.</p>
+          </div>
 
           <VariantsEditor idPrefix="edit" value={variants} onChange={setVariants} />
 

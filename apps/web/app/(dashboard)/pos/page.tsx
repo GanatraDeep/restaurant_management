@@ -19,7 +19,8 @@ import { ProductGrid } from "@/components/pos/product-grid";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useBranch } from "@/hooks/use-branch";
-import type { MenuItem } from "@/hooks/use-menu";
+import { useCategories, useMenuItems, type MenuItem } from "@/hooks/use-menu";
+import { estimateTakeawayCharge } from "@/lib/takeaway-estimate";
 import {
   useAddOrderItems,
   useCreateOrder,
@@ -191,6 +192,24 @@ function PosPageInner() {
 
   const [submittingPrint, setSubmittingPrint] = useState(false);
   const { data: features } = useBranchFeatures(branchId);
+  // Takeaway (packing) charge for the cart: items already on the bill + the new round.
+  const { data: menuItems } = useMenuItems(branchId);
+  const { data: menuCategories } = useCategories(branchId);
+  const takeawayCharge = estimateTakeawayCharge({
+    orderType,
+    onDelivery: !!features?.takeawayChargeOnDelivery,
+    perOrder: features?.takeawayChargePerOrder ?? 0,
+    units: [
+      ...(existingOrder?.items ?? [])
+        .filter((i) => i.status !== "CANCELLED")
+        .map((i) => ({ menuItemId: (i as { menuItemId?: string }).menuItemId ?? "", quantity: i.quantity })),
+      ...lines.map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity })),
+    ],
+    items: new Map((menuItems ?? []).map((m) => [m.id, m])),
+    categoryCharge: new Map(
+      (menuCategories ?? []).map((c) => [c.id, c.takeawayCharge == null ? null : Number(c.takeawayCharge)]),
+    ),
+  });
   const tokenText = (o: { orderNumber: string }) => {
     const t = features?.tokenEnabled ? tokenOf(o.orderNumber) : null;
     return t ? ` · Token ${t}` : "";
@@ -474,6 +493,7 @@ function PosPageInner() {
             ) : (
               <CartPanel
                 lines={lines}
+                takeawayCharge={takeawayCharge}
                 orderType={orderType}
                 onOrderTypeChange={(t) => {
                   setHeldOrderId(null);

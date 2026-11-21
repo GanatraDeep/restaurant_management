@@ -28,13 +28,14 @@ export function EditCategoryDialog({
   onClose: () => void;
 }) {
   const [name, setName] = useState(category.name);
+  const [takeawayCharge, setTakeawayCharge] = useState(category.takeawayCharge != null ? String(Number(category.takeawayCharge)) : "");
   const [showOnWebsite, setShowOnWebsite] = useState(category.showOnWebsite);
   const updateCategory = useUpdateCategory(branchId);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateCategory.mutate(
-      { id: category.id, dto: { name, showOnWebsite } },
+      { id: category.id, dto: { name, showOnWebsite, takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge) } },
       {
         onSuccess: () => {
           toast.success(`"${name}" updated`);
@@ -63,6 +64,20 @@ export function EditCategoryDialog({
               required
               autoFocus
             />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="cat-edit-takeaway">Takeaway charge per item (optional)</Label>
+            <Input
+              id="cat-edit-takeaway"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={takeawayCharge}
+              onChange={(e) => setTakeawayCharge(e.target.value)}
+              placeholder="e.g. 10"
+            />
+            <p className="text-xs text-muted-foreground">Added per unit on takeaway bills for items in this category, unless the item has its own charge.</p>
           </div>
           <label className="mb-4 flex min-h-12 items-center justify-between gap-4 rounded-lg border border-border px-3 py-2">
             <span className="flex flex-col">

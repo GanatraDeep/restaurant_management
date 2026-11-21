@@ -13,6 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -41,6 +42,8 @@ export function AddItemDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [takeawayCharge, setTakeawayCharge] = useState("");
+  const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [stationId, setStationId] = useState<string>("");
   const [price, setPrice] = useState("");
@@ -103,6 +106,7 @@ export function AddItemDialog({
     createItem.mutate(
       {
         name,
+        description: description.trim() || undefined,
         categoryId,
         stationId: stationId || undefined,
         // With variants the first one's rate is the item's price.
@@ -120,6 +124,7 @@ export function AddItemDialog({
         isActive: true,
         isFavorite: false,
         sendToKitchen,
+        takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge),
         modifierGroupIds: [],
         imageUrl,
       },
@@ -211,6 +216,19 @@ export function AddItemDialog({
           </div>
 
           <div className="flex flex-col gap-2">
+            <Label htmlFor="item-description">Description (optional)</Label>
+            <Textarea
+              id="item-description"
+              rows={3}
+              maxLength={500}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Fresh mozzarella, basil and tomato on a thin crust"
+            />
+            <p className="text-xs text-muted-foreground">Shown under the item on the QR menu and online ordering.</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")}>
               <SelectTrigger>
@@ -280,6 +298,21 @@ export function AddItemDialog({
             </p>
           </div>
           )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="item-takeaway">Takeaway charge (optional)</Label>
+            <Input
+              id="item-takeaway"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              value={takeawayCharge}
+              onChange={(e) => setTakeawayCharge(e.target.value)}
+              placeholder="Empty = use the category's charge"
+            />
+            <p className="text-xs text-muted-foreground">Per unit on takeaway bills. Enter 0 for no charge on this item.</p>
+          </div>
 
           <VariantsEditor idPrefix="add" value={variants} onChange={setVariants} />
 

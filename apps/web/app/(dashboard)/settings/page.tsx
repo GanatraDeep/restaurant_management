@@ -11,6 +11,7 @@ import {
   type TaxRegime,
 } from "@nodedr-restaurant/types";
 import { KioskCard } from "@/components/settings/kiosk-card";
+import { TakeawayChargeCard } from "@/components/settings/takeaway-charge-card";
 import { PrintingCard } from "@/components/settings/printing-card";
 import { AppsCard } from "@/components/settings/apps-card";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
@@ -69,6 +70,8 @@ export default function SettingsPage() {
       {data && (
         <OnlineOrdersCard key={data.branch.id} branchId={branchId} branch={data.branch} hasUpi={!!data.restaurant.upiVpa} />
       )}
+
+      {data && <TakeawayChargeCard key={`takeaway-${data.branch.id}`} branchId={branchId} branch={data.branch} />}
 
       {data && <KioskCard key={`kiosk-${data.branch.id}`} branchId={branchId} branch={data.branch} />}
 

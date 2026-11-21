@@ -42,6 +42,7 @@ import {
   settlePayments,
   type Bill,
 } from './settlement';
+import { appliesTakeawayCharge, computeTakeawayCharge } from './takeaway-charge';
 import type { TaxMode } from '@nodedr-restaurant/types';
 import { VerifactuService } from '../verifactu/verifactu.service';
 import { itemVariants } from '../menu/menu-variants';
@@ -1401,6 +1402,7 @@ export class OrdersService {
         loyaltyDiscountAmount: Number(order.loyaltyDiscountAmount),
         tipAmount: Number(order.tipAmount),
         deliveryFee: Number(order.deliveryFee),
+        takeawayCharge: Number(order.takeawayCharge),
         totalDue: Number(order.totalAmount),
       };
       return {
@@ -1451,8 +1453,38 @@ export class OrdersService {
         pointsToRedeem * Number(branch.restaurant.loyaltyPointValue),
       tip: adj.tipAmount,
       deliveryFee: Number(order.deliveryFee),
+      // Zomato / Swiggy orders are priced and paid on the aggregator's side.
+      takeawayCharge: order.aggregator
+        ? 0
+        : await this.takeawayChargeFor(order.id, order.type, branch),
     });
     return { bill, locked, paid, auto, pointsToRedeem };
+  }
+
+  /** Takeaway charge for an open bill, from the current item/category/branch settings. */
+  private async takeawayChargeFor(
+    orderId: string,
+    orderType: string,
+    branch: { takeawayChargePerOrder: Prisma.Decimal | number; takeawayChargeOnDelivery: boolean },
+  ) {
+    if (!appliesTakeawayCharge(orderType, branch.takeawayChargeOnDelivery)) return 0;
+    const items = await this.prisma.orderItem.findMany({
+      where: { orderId, status: { not: 'CANCELLED' } },
+      select: {
+        quantity: true,
+        menuItem: { select: { takeawayCharge: true, category: { select: { takeawayCharge: true } } } },
+      },
+    });
+    return computeTakeawayCharge({
+      orderType,
+      perOrder: Number(branch.takeawayChargePerOrder),
+      onDelivery: branch.takeawayChargeOnDelivery,
+      lines: items.map((i) => ({
+        quantity: i.quantity,
+        itemCharge: i.menuItem.takeawayCharge === null ? null : Number(i.menuItem.takeawayCharge),
+        categoryCharge: i.menuItem.category.takeawayCharge === null ? null : Number(i.menuItem.category.takeawayCharge),
+      })),
+    });
   }
 
   // The figures a bill would settle at right now - what the Print Bill button
@@ -1487,6 +1519,7 @@ export class OrdersService {
         loyaltyDiscountAmount: Number(order.loyaltyDiscountAmount),
         tipAmount: Number(order.tipAmount),
         deliveryFee: Number(order.deliveryFee),
+        takeawayCharge: Number(order.takeawayCharge),
         totalDue: total,
         amountPaid: total,
         balanceDue: 0,
@@ -1545,6 +1578,8 @@ export class OrdersService {
         discountPercent: view.discountPercent,
         taxAmount: view.taxAmount,
         tipAmount: view.tipAmount,
+        deliveryFee: view.deliveryFee,
+        takeawayCharge: view.takeawayCharge,
         loyaltyPointsRedeemed: view.loyaltyPointsRedeemed,
         loyaltyDiscountAmount: view.loyaltyDiscountAmount,
         totalAmount: view.totalDue,
@@ -1751,6 +1786,7 @@ export class OrdersService {
               loyaltyPointsRedeemed: actualPointsRedeemed,
               loyaltyDiscountAmount,
               tipAmount: bill.tipAmount,
+              takeawayCharge: bill.takeawayCharge,
               totalAmount: bill.totalDue,
             };
 

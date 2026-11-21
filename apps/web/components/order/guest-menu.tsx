@@ -260,12 +260,17 @@ export function GuestMenu({
             }}
             className="pt-6"
           >
-            <h2 className="flex items-baseline justify-between text-lg font-semibold text-foreground">
+            <h2 className="flex items-center justify-between text-lg font-semibold text-foreground">
               <span className="flex items-center gap-1.5">
                 {c.id === "favourites" && <Star className="h-4 w-4 fill-warning text-warning" aria-hidden />}
                 {c.name}
               </span>
-              <span className="text-xs font-normal text-muted-foreground tabular-nums">{c.items.length}</span>
+              <span
+                className="min-w-7 rounded-full bg-secondary px-2.5 py-0.5 text-center text-xs font-semibold tabular-nums text-foreground"
+                aria-label={`${c.items.length} items`}
+              >
+                {c.items.length}
+              </span>
             </h2>
             <div className="divide-y divide-border">
               {c.items.map((item) => (

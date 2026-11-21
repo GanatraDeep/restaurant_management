@@ -7,6 +7,8 @@ export const menuCategorySchema = z.object({
   sortOrder: z.number().int().default(0),
   isActive: z.boolean().default(true),
   showOnWebsite: z.boolean().default(true),
+  // Takeaway (packing) charge per unit for items in this category; an item's own charge wins.
+  takeawayCharge: z.coerce.number().nonnegative().max(100000).nullable().optional(),
 });
 export type MenuCategoryDto = z.infer<typeof menuCategorySchema>;
 
@@ -74,6 +76,8 @@ export const menuItemSchema = z.object({
   isFavorite: z.boolean().default(false),
   // false = served from the counter (water, soft drinks): never on a KOT.
   sendToKitchen: z.boolean().default(true),
+  // Takeaway (packing) charge per unit; null = use the category's.
+  takeawayCharge: z.coerce.number().nonnegative().max(100000).nullable().optional(),
   modifierGroupIds: z.array(z.string()).default([]),
 });
 export type MenuItemDto = z.infer<typeof menuItemSchema>;

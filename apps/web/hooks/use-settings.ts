@@ -39,6 +39,8 @@ export interface BranchSettings {
   qrPayFirst: boolean;
   qrOtpRequired: boolean;
   qrCollectGuestInfo: boolean;
+  takeawayChargePerOrder: string;
+  takeawayChargeOnDelivery: boolean;
   tokenEnabled: boolean;
   kioskToken: string | null;
   kioskDineInEnabled: boolean;
@@ -82,7 +84,10 @@ export function useAppDownloads(enabled: boolean) {
 export function useBranchFeatures(branchId: string | null) {
   return useQuery({
     queryKey: ["settings", "features", branchId],
-    queryFn: () => api.get<{ tokenEnabled: boolean }>(`/settings/features?branchId=${branchId}`),
+    queryFn: () =>
+      api.get<{ tokenEnabled: boolean; takeawayChargePerOrder?: number; takeawayChargeOnDelivery?: boolean }>(
+        `/settings/features?branchId=${branchId}`,
+      ),
     enabled: !!branchId,
     staleTime: 60_000,
   });
