@@ -11,6 +11,7 @@ import {
   type TaxRegime,
 } from "@nodedr-restaurant/types";
 import { KioskCard } from "@/components/settings/kiosk-card";
+import { BranchesCard } from "@/components/settings/branches-card";
 import { TakeawayChargeCard } from "@/components/settings/takeaway-charge-card";
 import { PrintingCard } from "@/components/settings/printing-card";
 import { AppsCard } from "@/components/settings/apps-card";
@@ -39,10 +40,12 @@ import {
   type RestaurantSettings,
 } from "@/hooks/use-settings";
 import { ApiError } from "@/lib/api";
+import { useCurrentUser } from "@/hooks/use-auth";
 
 export default function SettingsPage() {
   const { branchId } = useBranch();
   const { data, isLoading } = useSettings(branchId);
+  const { data: me } = useCurrentUser();
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,6 +69,8 @@ export default function SettingsPage() {
           branchId={branchId}
         />
       )}
+
+      {data && me && ["OWNER", "ADMINISTRATOR"].includes(me.user.roleName) && <BranchesCard />}
 
       {data && (
         <OnlineOrdersCard key={data.branch.id} branchId={branchId} branch={data.branch} hasUpi={!!data.restaurant.upiVpa} />

@@ -4,7 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import type { SessionUser } from '@nodedr-restaurant/types';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../prisma/prisma.service';
-import { isSuperAdminUser } from '../common/super-admin';
+import { isRootAdminUser, isSuperAdminUser } from '../common/super-admin';
 
 interface JwtPayload {
   sub: string;
@@ -49,6 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       roleName: user.role.name,
       permissions: user.role.permissions.map((rp) => rp.permission.key),
       isSuperAdmin: isSuperAdminUser(user),
+      isRootAdmin: isRootAdminUser(user),
     };
   }
 }

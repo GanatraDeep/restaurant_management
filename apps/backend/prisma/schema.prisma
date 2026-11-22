@@ -66,6 +66,9 @@ model Restaurant {
   // many currency units of net spend earn 1 point (floor division).
   loyaltyPointValue      Decimal @default(1) @db.Decimal(6, 2)
   loyaltyEarnPerCurrency Int     @default(100)
+  /// Branches allowed beyond the platform's included count — bought (one-time)
+  /// or granted by a super admin.
+  extraBranches          Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1114,7 +1117,7 @@ model MenuItem {
   // a KOT or the Kitchen Display.
   sendToKitchen  Boolean  @default(true)
   /// For items not sent to the kitchen: print them on the counter slip (false = no ticket at all).
-  counterSlip   Boolean  @default(true)
+  counterSlip    Boolean  @default(true)
   /// Takeaway (packing) charge per unit; null = use the category\'s.
   takeawayCharge Decimal? @db.Decimal(10, 2)
 
@@ -1453,11 +1456,11 @@ model OrderItem {
   unitPriceSnapshot Decimal @db.Decimal(12, 2)
   taxRateSnapshot   Decimal @db.Decimal(5, 2)
 
-  quantity    Int           @default(1)
-  lineTotal   Decimal       @db.Decimal(12, 2)
-  kitchenNote String?
-  status      KotItemStatus @default(NEW)
-  createdAt   DateTime      @default(now())
+  quantity         Int           @default(1)
+  lineTotal        Decimal       @db.Decimal(12, 2)
+  kitchenNote      String?
+  status           KotItemStatus @default(NEW)
+  createdAt        DateTime      @default(now())
   /// Counter items (menu item not sent to the kitchen) print on a counter slip
   /// instead of a KOT; set when that slip is printed, so a round prints once.
   counterPrintedAt DateTime?
@@ -2450,6 +2453,8 @@ model SubscriptionPayment {
   restaurant        Restaurant                @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
   planId            String?
   plan              SubscriptionPlan?         @relation(fields: [planId], references: [id], onDelete: SetNull)
+  /// PLAN (a subscription period) or BRANCH (one extra branch, one-time).
+  purpose           String                    @default("PLAN")
   razorpayOrderId   String                    @unique
   razorpayPaymentId String?
   amountMinor       Int
@@ -2476,6 +2481,13 @@ model PlatformSettings {
   androidApkUrl       String?
   desktopAppUrl       String?
   desktopAppVersion   String?
+  /// Extra branches: ADMIN_ONLY (a super admin allows each), FREE (unlimited),
+  /// ONE_TIME (pay branchPriceMinor once per extra branch) or MONTHLY
+  /// (branchPriceMinor per extra branch per month, added to each renewal).
+  branchMode          String  @default("ADMIN_ONLY")
+  /// Branches every restaurant gets with its plan (usually 1).
+  includedBranches    Int     @default(1)
+  branchPriceMinor    Int     @default(0)
 
   updatedAt DateTime @updatedAt
 
@@ -2648,6 +2660,8 @@ model GuestOtp {
 // only the hash of the code is kept.
 model SignupOtp {
   id        String   @id @default(cuid())
+  /// "signup" (new owner's number) or "login" (WhatsApp OTP sign-in).
+  purpose   String   @default("signup")
   phone     String
   codeHash  String
   attempts  Int      @default(0)
@@ -2656,4 +2670,23 @@ model SignupOtp {
 
   @@index([phone, createdAt])
   @@map("signup_otps")
+}
+
+// Shared to-do list for the platform team (super admins), e.g. a demo
+// checklist so nothing is forgotten in front of a client.
+model AdminTodo {
+  id            String    @id @default(cuid())
+  list          String    @default("Demo checklist")
+  title         String
+  notes         String?
+  done          Boolean   @default(false)
+  doneByName    String?
+  doneAt        DateTime?
+  sortOrder     Int       @default(0)
+  createdByName String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([list, sortOrder])
+  @@map("admin_todos")
 }

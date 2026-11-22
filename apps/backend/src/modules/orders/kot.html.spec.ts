@@ -149,3 +149,17 @@ describe('58 mm paper', () => {
     expect(html).not.toMatch(/width:\s*80mm/);
   });
 });
+
+describe('one KOT slip per station', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { joinPages } = require('./kot-print.service') as typeof import('./kot-print.service');
+  it('joins station pages into one document with page breaks and one print script', () => {
+    const doc = (name: string) =>
+      `<!doctype html><html><head><title>x</title></head><body>\n  <script>window.addEventListener('message', () => {})</script>\n<p>${name}</p></body>\n</html>`;
+    const out = joinPages([doc('Tandoor'), doc('Chinese'), doc('Bar')]);
+    expect(out.match(/<body>/g)).toHaveLength(1);
+    expect(out.match(/<script>/g)).toHaveLength(1);
+    expect(out.match(/page-break-before:always/g)).toHaveLength(2);
+    expect(out).toMatch(/Tandoor[\s\S]*Chinese[\s\S]*Bar/);
+  });
+});

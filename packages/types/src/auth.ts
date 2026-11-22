@@ -50,6 +50,8 @@ export const sessionUserSchema = z.object({
   permissions: z.array(z.string()),
   // Platform operator (F Cartel super admin) — see /admin.
   isSuperAdmin: z.boolean().optional(),
+  // A super admin from the server's SUPER_ADMIN_EMAILS: can add / remove admins.
+  isRootAdmin: z.boolean().optional(),
 });
 export type SessionUser = z.infer<typeof sessionUserSchema>;
 
@@ -58,3 +60,14 @@ export const twoFactorDisableSchema = z.object({
   password: z.string().min(1),
   code: z.string().trim().min(6).max(20),
 });
+
+// WhatsApp OTP sign-in.
+export const loginOtpRequestSchema = z.object({
+  phone: z.string().trim().min(10, "Enter your mobile number").max(20),
+});
+export const loginOtpVerifySchema = loginOtpRequestSchema.extend({
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  totp: z.string().trim().max(20).optional(),
+  rememberMe: z.boolean().optional(),
+});
+export type LoginOtpVerifyDto = z.infer<typeof loginOtpVerifySchema>;

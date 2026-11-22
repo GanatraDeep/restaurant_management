@@ -140,7 +140,7 @@ export class KotPrintService {
     for (const k of kots) {
       this.realtime.emitToBranch(branchId, 'kot.reprinted', { id: k.id });
     }
-    return kotPage(kots, { slip });
+    return stationPages(kots, slip);
   }
 
   /**
@@ -471,6 +471,46 @@ function kotPage(
       ),
     },
   });
+}
+
+/**
+ * One KOT slip per kitchen station (Tandoor, Chinese, Bar…), each on its own
+ * page of the same print job, with the station's name on top — so the
+ * kitchen tears them apart and hands each to its station. Items without a
+ * station share one slip. A single station prints exactly as before.
+ */
+export function stationPages(kots: LoadedKot[], slip: boolean): string {
+  const groups = new Map<string, LoadedKot[]>();
+  for (const k of kots) {
+    const key = k.stationId ?? '';
+    groups.set(key, [...(groups.get(key) ?? []), k]);
+  }
+  if (groups.size <= 1) return kotPage(kots, { slip });
+  const pages = [...groups.values()].map((g, i) =>
+    kotPage(g, {
+      // The guest's token slip only once, after the first station's KOT.
+      slip: slip && i === 0,
+      ticket: {
+        number: '',
+        station: g[0].station?.name ?? 'Kitchen',
+        reprint: 0,
+        kotNo: null,
+      },
+    }),
+  );
+  return joinPages(pages);
+}
+
+/** Several self-contained KOT documents → one document, a page each. */
+export function joinPages(docs: string[]): string {
+  const bodyOf = (d: string) => d.slice(d.indexOf('<body>') + 6, d.lastIndexOf('</body>'));
+  const head = docs[0].slice(0, docs[0].indexOf('<body>') + 6);
+  const breaker = '<div style="break-before:page;page-break-before:always"></div>';
+  // Keep the page's print script once — a copy per page would print twice.
+  const bodies = docs.map((d, i) =>
+    i === 0 ? bodyOf(d) : bodyOf(d).replace(/<script>[\s\S]*?<\/script>/g, ''),
+  );
+  return `${head}${bodies.join(breaker)}</body>\n</html>`;
 }
 
 /** Served when nothing on the order goes to the kitchen: never printed. */

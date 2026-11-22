@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -17,7 +18,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwoFactorService } from './two-factor.service';
 import { SignupOtpService } from './signup-otp.service';
-import { isSuperAdminUser } from '../common/super-admin';
+import { isRootAdminUser, isSuperAdminUser } from '../common/super-admin';
 
 /** How long "Remember me" keeps someone signed in on that device. */
 export const REMEMBER_ME_DAYS = 30;
@@ -48,6 +49,7 @@ export class AuthService {
       roleName: user.role.name,
       permissions: user.role.permissions.map((rp) => rp.permission.key),
       isSuperAdmin: isSuperAdminUser(user),
+      isRootAdmin: isRootAdminUser(user),
     };
   }
 
@@ -171,6 +173,65 @@ export class AuthService {
     });
 
     return this.issueSession(owner);
+  }
+
+  // ─── WhatsApp OTP sign-in ────────────────────────────────────────────────
+
+  /** Whether this server can send WhatsApp codes (the login page shows the option only then). */
+  loginOtpAvailable(): boolean {
+    return this.signupOtp.required();
+  }
+
+  private normalisePhone(phone: string) {
+    const d = phone.replace(/\D/g, '');
+    return d.replace(/^(91|0)(?=\d{10}$)/, '');
+  }
+
+  /** Active accounts whose saved mobile is this number (any format saved). */
+  private async usersByPhone(phone: string) {
+    const norm = this.normalisePhone(phone);
+    if (norm.length < 10) return { norm, users: [] };
+    const candidates = await this.prisma.user.findMany({
+      where: { isActive: true, phone: { endsWith: norm.slice(-10) } },
+      include: { role: { include: { permissions: { include: { permission: true } } } } },
+    });
+    return { norm, users: candidates.filter((u) => this.normalisePhone(u.phone ?? '') === norm) };
+  }
+
+  async sendLoginOtp(phone: string) {
+    if (!this.loginOtpAvailable()) {
+      throw new ServiceUnavailableException('WhatsApp sign-in is not set up on this server — use your email and password');
+    }
+    const { norm, users } = await this.usersByPhone(phone);
+    if (users.length === 0) {
+      throw new BadRequestException(
+        'No account uses this mobile number. Sign in with your email, or ask your manager to add your number to your staff profile.',
+      );
+    }
+    return this.signupOtp.send(norm, users.length === 1 ? users[0].name : undefined, 'login');
+  }
+
+  async verifyLoginOtp(dto: { phone: string; code: string; totp?: string; rememberMe?: boolean }) {
+    // Never fall back to "no code needed" for sign-in.
+    if (!this.loginOtpAvailable()) {
+      throw new ServiceUnavailableException('WhatsApp sign-in is not set up on this server — use your email and password');
+    }
+    const { norm, users } = await this.usersByPhone(dto.phone);
+    if (users.length === 0) throw new UnauthorizedException('No account uses this mobile number');
+    if (users.length > 1) {
+      throw new BadRequestException(
+        'More than one account uses this number — sign in with your email and password instead',
+      );
+    }
+    const user = users[0];
+    // The WhatsApp code proves the phone; an authenticator code is still asked
+    // for when switched on — checked first, so asking for it doesn't use up
+    // the WhatsApp code.
+    if (user.twoFactorEnabled) {
+      await this.twoFactor.verifyLogin(user, dto.totp);
+    }
+    await this.signupOtp.consume(norm, dto.code, 'login');
+    return this.issueSession(user, dto.rememberMe);
   }
 
   sendSignupOtp(phone: string, ownerName?: string) {

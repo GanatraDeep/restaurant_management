@@ -42,6 +42,8 @@ export const adminUpdateSubscriptionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("activate"), planId: z.string().min(1), until: z.coerce.date() }),
   z.object({ action: z.literal("cancel") }),
   z.object({ action: z.literal("note"), notes: z.string().max(500) }),
+  // Branches this restaurant may run beyond the platform's included count.
+  z.object({ action: z.literal("extra_branches"), extraBranches: z.number().int().min(0).max(500) }),
 ]);
 export type AdminUpdateSubscriptionDto = z.infer<typeof adminUpdateSubscriptionSchema>;
 
@@ -61,6 +63,10 @@ export const platformSettingsSchema = z.object({
   androidApkUrl: downloadUrl,
   desktopAppUrl: downloadUrl,
   desktopAppVersion: z.string().trim().max(20).transform((v) => v || null).nullable().optional(),
+  // Extra branches: who pays what (see BRANCH_MODES).
+  branchMode: z.enum(["ADMIN_ONLY", "FREE", "ONE_TIME", "MONTHLY"]).optional(),
+  includedBranches: z.number().int().min(1).max(100).optional(),
+  branchPriceMinor: z.number().int().min(0).max(100_000_000).optional(),
 });
 export type PlatformSettingsDto = z.infer<typeof platformSettingsSchema>;
 
@@ -70,3 +76,41 @@ export const planRequestSchema = z.object({
   message: z.string().trim().max(500).optional(),
 });
 export type PlanRequestDto = z.infer<typeof planRequestSchema>;
+
+/** How a restaurant gets branches beyond the ones its plan includes. */
+export const BRANCH_MODES = {
+  ADMIN_ONLY: "A super admin allows each extra branch",
+  FREE: "Free — owners add as many as they want",
+  ONE_TIME: "One-time payment per extra branch",
+  MONTHLY: "Monthly charge per extra branch, added to the subscription",
+} as const;
+export type BranchMode = keyof typeof BRANCH_MODES;
+
+export const createBranchSchema = z.object({
+  name: z.string().trim().min(1, "Give the branch a name").max(60),
+  address: z.string().trim().max(200).optional(),
+  phone: z.string().trim().max(20).optional(),
+});
+export type CreateBranchDto = z.infer<typeof createBranchSchema>;
+
+// Platform team.
+export const addAdminSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  // Only needed when no account uses this email yet.
+  name: z.string().trim().max(60).optional(),
+  phone: z.string().trim().max(20).optional(),
+  password: z.string().min(8, "Password: at least 8 characters").max(100).optional(),
+});
+export type AddAdminDto = z.infer<typeof addAdminSchema>;
+
+export const adminTodoSchema = z.object({
+  list: z.string().trim().min(1).max(60).optional(),
+  title: z.string().trim().min(1, "Write the task").max(200),
+  notes: z.string().trim().max(1000).nullable().optional(),
+});
+export const adminTodoUpdateSchema = adminTodoSchema.partial().extend({
+  done: z.boolean().optional(),
+  sortOrder: z.number().int().min(0).max(100000).optional(),
+});
+export type AdminTodoDto = z.infer<typeof adminTodoSchema>;
+export type AdminTodoUpdateDto = z.infer<typeof adminTodoUpdateSchema>;

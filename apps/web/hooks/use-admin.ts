@@ -30,6 +30,9 @@ export interface AdminPlatformSettings {
   androidApkUrl: string | null;
   desktopAppUrl: string | null;
   desktopAppVersion: string | null;
+  branchMode: "ADMIN_ONLY" | "FREE" | "ONE_TIME" | "MONTHLY";
+  includedBranches: number;
+  branchPriceMinor: number;
   razorpayConfigured: boolean;
   razorpayKeyId: string | null;
   razorpayWebhookConfigured: boolean;
@@ -45,6 +48,8 @@ export interface AdminRestaurant {
   logoUrl: string | null;
   createdAt: string;
   branches: number;
+  /** Branches allowed beyond the platform's included count (bought or granted). */
+  extraBranches: number;
   owner: { name: string; email: string | null } | null;
   // Open "contact us to subscribe" request, if any.
   planRequest: { planId: string | null; planName: string | null; message: string | null; createdAt: string } | null;
@@ -184,6 +189,85 @@ export function useReleaseActions() {
     skip: useMutation({ mutationFn: (id: string) => api.post(`/admin/releases/${id}/skip`), onSettled: done }),
     add: useMutation({
       mutationFn: (dto: { tag: string; message?: string }) => api.post("/admin/releases", dto),
+      onSuccess: done,
+    }),
+  };
+}
+
+
+// ─── Platform team ─────────────────────────────────────────────────────────
+
+export interface PlatformAdmin {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  isActive: boolean;
+  restaurantName: string;
+  /** From SUPER_ADMIN_EMAILS on the server: can't be removed here. */
+  root: boolean;
+}
+
+export function usePlatformAdmins() {
+  return useQuery({ queryKey: ["admin", "admins"], queryFn: () => api.get<PlatformAdmin[]>("/admin/admins") });
+}
+
+export function usePlatformAdminActions() {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["admin", "admins"] });
+  return {
+    add: useMutation({
+      mutationFn: (dto: { email: string; name?: string; phone?: string; password?: string }) =>
+        api.post<{ ok: true; created: boolean }>("/admin/admins", dto),
+      onSuccess: done,
+    }),
+    remove: useMutation({ mutationFn: (id: string) => api.delete(`/admin/admins/${id}`), onSuccess: done }),
+  };
+}
+
+export interface AdminTodo {
+  id: string;
+  list: string;
+  title: string;
+  notes: string | null;
+  done: boolean;
+  doneByName: string | null;
+  doneAt: string | null;
+  sortOrder: number;
+  createdByName: string | null;
+}
+
+export function useAdminTodos() {
+  return useQuery({
+    queryKey: ["admin", "todos"],
+    queryFn: () => api.get<AdminTodo[]>("/admin/todos"),
+    // Shared between admins: pick up each other's ticks.
+    refetchInterval: 15_000,
+  });
+}
+
+export function useAdminTodoActions() {
+  const qc = useQueryClient();
+  const done = () => qc.invalidateQueries({ queryKey: ["admin", "todos"] });
+  return {
+    create: useMutation({
+      mutationFn: (dto: { list?: string; title: string; notes?: string | null }) => api.post<AdminTodo>("/admin/todos", dto),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: (v: { id: string; dto: Partial<Pick<AdminTodo, "title" | "notes" | "done" | "list" | "sortOrder">> }) =>
+        api.patch<AdminTodo>(`/admin/todos/${v.id}`, v.dto),
+      onMutate: async (v) => {
+        // Tick instantly; the refetch confirms.
+        await qc.cancelQueries({ queryKey: ["admin", "todos"] });
+        qc.setQueryData<AdminTodo[]>(["admin", "todos"], (old) => old?.map((t) => (t.id === v.id ? { ...t, ...v.dto } as AdminTodo : t)));
+      },
+      onSettled: done,
+    }),
+    remove: useMutation({ mutationFn: (id: string) => api.delete(`/admin/todos/${id}`), onSuccess: done }),
+    reset: useMutation({ mutationFn: (list: string) => api.post<{ reset: number }>("/admin/todos/reset", { list }), onSuccess: done }),
+    reorder: useMutation({
+      mutationFn: (v: { list: string; ids: string[] }) => api.post("/admin/todos/reorder", v),
       onSuccess: done,
     }),
   };

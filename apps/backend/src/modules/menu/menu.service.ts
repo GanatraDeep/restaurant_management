@@ -66,13 +66,49 @@ export class MenuService {
   // --- Kitchen stations -----------------------------------------------------
 
   listStations(branchId: string) {
-    return this.prisma.kitchenStation.findMany({ where: { branchId } });
+    return this.prisma.kitchenStation.findMany({
+      where: { branchId },
+      orderBy: { name: 'asc' },
+      include: { _count: { select: { items: true } } },
+    });
   }
 
-  createStation(branchId: string, name: string, printerName?: string) {
-    return this.prisma.kitchenStation.create({
-      data: { branchId, name, printerName },
+  private stationName(name: unknown) {
+    const n = typeof name === 'string' ? name.trim() : '';
+    if (!n || n.length > 40) {
+      throw new BadRequestException('Give the station a name (up to 40 letters)');
+    }
+    return n;
+  }
+
+  async createStation(branchId: string, name: string, printerName?: string) {
+    const n = this.stationName(name);
+    const dup = await this.prisma.kitchenStation.findFirst({
+      where: { branchId, name: { equals: n, mode: 'insensitive' } },
     });
+    if (dup) throw new BadRequestException(`There is already a "${dup.name}" station`);
+    return this.prisma.kitchenStation.create({
+      data: { branchId, name: n, printerName },
+    });
+  }
+
+  async updateStation(branchId: string, id: string, name: string) {
+    const n = this.stationName(name);
+    const { count } = await this.prisma.kitchenStation.updateMany({
+      where: { id, branchId },
+      data: { name: n },
+    });
+    if (!count) throw new NotFoundException('Station not found');
+    return { ok: true };
+  }
+
+  /** Its items fall back to "no station"; old tickets keep printing without one. */
+  async deleteStation(branchId: string, id: string) {
+    const { count } = await this.prisma.kitchenStation.deleteMany({
+      where: { id, branchId },
+    });
+    if (!count) throw new NotFoundException('Station not found');
+    return { ok: true };
   }
 
   // --- Menu items -----------------------------------------------------------

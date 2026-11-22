@@ -198,6 +198,29 @@ export class MenuController {
     );
   }
 
+  @Auth('menu.manage')
+  @Patch('stations/:id')
+  async updateStation(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Body() body: { name: string },
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.menuService.updateStation(branchId, id, body?.name);
+  }
+
+  @Auth('menu.manage')
+  @Delete('stations/:id')
+  async deleteStation(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.menuService.deleteStation(branchId, id);
+  }
+
   // --- Menu items -----------------------------------------------------------
 
   @Auth('menu.view')

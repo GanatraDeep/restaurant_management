@@ -18,6 +18,7 @@ import { NotificationsService } from '../../notifications/notifications.service'
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   accessEndsAt,
+  INTERVAL_MONTHS,
   addDays,
   effectiveStatus,
   hasAccess,
@@ -113,6 +114,8 @@ export class BillingService {
       currentPeriodEnd: sub?.currentPeriodEnd ?? null,
       accessEndsAt: ends ?? null,
       trialUsed: sub?.trialUsed ?? false,
+      // Extra branches charged on top of each monthly period (MONTHLY branch mode).
+      branchAddOnMonthlyMinor: await this.branchAddOnMinor(restaurantId, 'MONTHLY'),
       razorpayKeyId: razorpayConfig()?.keyId ?? null,
       planRequest: request
         ? {
@@ -210,37 +213,138 @@ export class BillingService {
     return plan;
   }
 
-  async startTrial(restaurantId: string, planId: string) {
+  /**
+   * Free trials are given by a super admin only (Admin → Restaurants →
+   * Grant trial). A restaurant can ask for one: that is a plan request the
+   * admins are notified about, never a trial that starts by itself.
+   */
+  async requestTrial(restaurantId: string, userId: string, planId: string) {
     const plan = await this.activePlan(planId);
-    if (plan.trialDays <= 0) {
-      throw new BadRequestException('This plan has no free trial');
-    }
     const existing = await this.prisma.restaurantSubscription.findUnique({
       where: { restaurantId },
     });
-    if (existing?.trialUsed) {
-      throw new BadRequestException(
-        'Your free trial has already been used. Choose a paid plan to continue.',
-      );
-    }
     if (existing && hasAccess(existing, new Date())) {
       throw new BadRequestException('You already have an active subscription');
     }
-    const data = {
+    return this.requestPlan(restaurantId, userId, {
       planId: plan.id,
-      status: 'TRIALING' as const,
-      trialEndsAt: addDays(new Date(), plan.trialDays),
-      currentPeriodEnd: null,
-      trialUsed: true,
-    };
-    await this.prisma.restaurantSubscription.upsert({
-      where: { restaurantId },
-      create: { restaurantId, ...data },
-      update: data,
+      message: plan.trialDays > 0 ? `Asked for the ${plan.trialDays}-day free trial` : 'Asked for a free trial',
     });
-    await this.resolveRequests(restaurantId);
-    this.invalidate(restaurantId);
-    return this.status(restaurantId);
+  }
+
+  // ─── Branches ────────────────────────────────────────────────────────────
+
+  private async branchSettings() {
+    const s = await this.prisma.platformSettings.findUnique({ where: { id: 'default' } });
+    return {
+      mode: (s?.branchMode ?? 'ADMIN_ONLY') as 'ADMIN_ONLY' | 'FREE' | 'ONE_TIME' | 'MONTHLY',
+      included: s?.includedBranches ?? 1,
+      priceMinor: s?.branchPriceMinor ?? 0,
+    };
+  }
+
+  /**
+   * What adding a branch takes for this restaurant, under the rule a super
+   * admin set (Admin → Settings): free, a one-time payment per extra branch,
+   * a monthly charge per extra branch (added to each renewal), or allowed by
+   * an admin one at a time. Branches an admin granted are always free.
+   */
+  async branchPolicy(restaurantId: string) {
+    const [settings, restaurant, used] = await Promise.all([
+      this.branchSettings(),
+      this.prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { extraBranches: true } }),
+      this.prisma.branch.count({ where: { restaurantId, isActive: true } }),
+    ]);
+    const paidUpTo = settings.included + restaurant.extraBranches;
+    const unlimited = settings.mode === 'FREE' || settings.mode === 'MONTHLY';
+    const canAdd = unlimited || used < paidUpTo;
+    // MONTHLY: branches beyond the included + granted ones are charged per month.
+    const monthlyExtra = settings.mode === 'MONTHLY' ? Math.max(0, used - paidUpTo) : 0;
+    return {
+      mode: settings.mode,
+      included: settings.included,
+      granted: restaurant.extraBranches,
+      used,
+      allowed: unlimited ? null : paidUpTo,
+      canAdd,
+      priceMinor: settings.priceMinor,
+      currency: 'INR',
+      onlinePayments: !!razorpayConfig(),
+      monthlyExtra,
+      // What adding one more branch costs right now.
+      nextBranchCost:
+        settings.mode === 'MONTHLY' && used >= paidUpTo
+          ? { kind: 'MONTHLY' as const, amountMinor: settings.priceMinor }
+          : settings.mode === 'ONE_TIME' && !canAdd
+            ? { kind: 'ONE_TIME' as const, amountMinor: settings.priceMinor }
+            : null,
+    };
+  }
+
+  /** Extra charge per billing period for branches beyond the paid-up count (MONTHLY mode). */
+  async branchAddOnMinor(restaurantId: string, interval: keyof typeof INTERVAL_MONTHS) {
+    const p = await this.branchPolicy(restaurantId);
+    return p.monthlyExtra * p.priceMinor * INTERVAL_MONTHS[interval];
+  }
+
+  /** One-time payment for one more branch (ONE_TIME mode). */
+  async buyBranch(restaurantId: string, prefill: { name: string; email: string | null }) {
+    const policy = await this.branchPolicy(restaurantId);
+    if (policy.mode !== 'ONE_TIME') throw new BadRequestException('Branches are not sold one by one on this plan');
+    if (policy.canAdd) throw new BadRequestException('You can already add a branch — no payment needed');
+    if (policy.priceMinor <= 0) throw new BadRequestException('Ask F Cartel to allow another branch');
+    const config = razorpayConfig();
+    if (!config) {
+      throw new ServiceUnavailableException("Online payments aren't set up yet — ask F Cartel to allow another branch.");
+    }
+    const restaurant = await this.prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { name: true } });
+    let order: RazorpayOrder;
+    try {
+      order = await createRazorpayOrder(config, {
+        amount: policy.priceMinor,
+        currency: 'INR',
+        receipt: `br_${restaurantId.slice(-10)}_${Date.now()}`,
+        notes: { restaurantId, purpose: 'BRANCH' },
+      });
+    } catch (err) {
+      this.logger.error(`Razorpay order failed: ${String(err)}`);
+      throw new ServiceUnavailableException('Could not start the payment. Please try again in a minute.');
+    }
+    await this.prisma.subscriptionPayment.create({
+      data: {
+        restaurantId,
+        purpose: 'BRANCH',
+        razorpayOrderId: order.id,
+        amountMinor: order.amount,
+        currency: order.currency,
+      },
+    });
+    return {
+      kind: 'payment' as const,
+      keyId: config.keyId,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      planName: 'One more branch',
+      restaurantName: restaurant.name,
+      prefill,
+    };
+  }
+
+  /** Ask the platform team to allow another branch (ADMIN_ONLY, or no online payments). */
+  async requestBranch(restaurantId: string, userId: string, note?: string) {
+    const [restaurant, user, policy] = await Promise.all([
+      this.prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { name: true } }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, phone: true } }),
+      this.branchPolicy(restaurantId),
+    ]);
+    const who = [user?.name, user?.email, user?.phone].filter(Boolean).join(' · ');
+    await notifySuperAdmins(this.prisma, this.notifications, {
+      type: 'billing.plan_requested',
+      title: `${restaurant.name} wants another branch`,
+      body: `Runs ${policy.used} of ${policy.allowed ?? '∞'} allowed${who ? ` — ${who}` : ''}${note ? ` — “${note}”` : ''}. Allow it in Admin → Restaurants → Branches.`,
+    });
+    return { ok: true };
   }
 
   /** Free plans activate straight away; paid ones return a Razorpay order to pay. */
@@ -282,7 +386,8 @@ export class BillingService {
     let order: RazorpayOrder;
     try {
       order = await createRazorpayOrder(config, {
-        amount: plan.priceMinor,
+        // Plus extra branches when they are charged per month.
+        amount: plan.priceMinor + (await this.branchAddOnMinor(restaurantId, plan.interval)),
         currency: plan.currency,
         // Razorpay caps receipt at 40 chars.
         receipt: `sub_${restaurantId.slice(-10)}_${Date.now()}`,
@@ -357,6 +462,14 @@ export class BillingService {
         where: { razorpayOrderId: orderId },
         include: { plan: true },
       });
+      if (payment.purpose === 'BRANCH') {
+        // One more branch, for good.
+        await tx.restaurant.update({
+          where: { id: payment.restaurantId },
+          data: { extraBranches: { increment: 1 } },
+        });
+        return payment.restaurantId;
+      }
       if (!payment.plan) return payment.restaurantId;
       const sub = await tx.restaurantSubscription.findUnique({
         where: { restaurantId: payment.restaurantId },
@@ -428,6 +541,9 @@ export class BillingService {
     return {
       requireSubscription: s?.requireSubscription ?? false,
       ...appDownloadsOf(s),
+      branchMode: s?.branchMode ?? 'ADMIN_ONLY',
+      includedBranches: s?.includedBranches ?? 1,
+      branchPriceMinor: s?.branchPriceMinor ?? 0,
       razorpayConfigured: !!config,
       razorpayKeyId: config?.keyId ?? null,
       razorpayWebhookConfigured: !!config?.webhookSecret,
@@ -540,6 +656,7 @@ export class BillingService {
         name: true,
         logoUrl: true,
         createdAt: true,
+        extraBranches: true,
         _count: { select: { branches: true } },
         users: {
           where: { role: { name: 'OWNER' } },
@@ -569,6 +686,7 @@ export class BillingService {
       logoUrl: r.logoUrl,
       createdAt: r.createdAt,
       branches: r._count.branches,
+      extraBranches: r.extraBranches,
       owner: r.users[0] ?? null,
       planRequest: r.planRequests[0]
         ? {
@@ -659,6 +777,13 @@ export class BillingService {
       case 'note':
         data = { notes: dto.notes };
         break;
+      case 'extra_branches':
+        // Lives on the restaurant, not the subscription row.
+        await this.prisma.restaurant.update({
+          where: { id: restaurantId },
+          data: { extraBranches: dto.extraBranches },
+        });
+        return (await this.restaurantRows({ id: restaurantId }))[0];
     }
     await this.prisma.restaurantSubscription.upsert({
       where: { restaurantId },

@@ -3,6 +3,7 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { BranchPolicyCard } from "@/components/admin/branch-policy-card";
 import { AppDownloadsCard } from "@/components/admin/app-downloads-card";
 import { WhatsAppCard } from "@/components/admin/whatsapp-card";
 import { Card } from "@/components/ui/card";
@@ -69,7 +70,7 @@ export default function AdminOverviewPage() {
                 <p className="text-sm font-medium text-foreground">Require a subscription</p>
                 <p className="text-sm text-muted-foreground">
                   When on, every restaurant needs an active free trial or paid plan to use F Cartel. New sign-ups see
-                  the plan picker straight away. Super admins are never blocked.
+                  the plan picker straight away and can only ask for a trial — you grant it from Restaurants. Super admins are never blocked.
                 </p>
               </div>
               <Switch
@@ -115,6 +116,8 @@ export default function AdminOverviewPage() {
           </>
         )}
       </Card>
+
+      {settings && <BranchPolicyCard key={`${settings.branchMode}-${settings.includedBranches}-${settings.branchPriceMinor}`} settings={settings} />}
 
       <AppDownloadsCard />
 
