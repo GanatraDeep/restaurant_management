@@ -71,3 +71,13 @@ export const loginOtpVerifySchema = loginOtpRequestSchema.extend({
   rememberMe: z.boolean().optional(),
 });
 export type LoginOtpVerifyDto = z.infer<typeof loginOtpVerifySchema>;
+
+// Forgot password: a 6-digit code to the account's WhatsApp (or email).
+export const forgotPasswordSchema = z.object({
+  login: z.string().trim().min(3, "Enter your email or mobile number").max(200),
+});
+export const resetPasswordSchema = forgotPasswordSchema.extend({
+  code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code"),
+  password: z.string().min(8, "Use at least 8 characters").max(200),
+});
+export type ResetPasswordDto = z.infer<typeof resetPasswordSchema>;

@@ -15,6 +15,9 @@ import {
   registerOtpSchema,
   loginOtpRequestSchema,
   loginOtpVerifySchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  type ResetPasswordDto,
   type LoginOtpVerifyDto,
   registerSchema,
   type RegisterOtpDto,
@@ -103,6 +106,20 @@ export class AuthController {
   @Get('login-options')
   loginOptions() {
     return { whatsappOtp: this.authService.loginOtpAvailable() };
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password/forgot')
+  @UsePipes(new ZodValidationPipe(forgotPasswordSchema))
+  forgotPassword(@Body() body: unknown) {
+    return this.authService.forgotPassword((body as { login: string }).login);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password/reset')
+  @UsePipes(new ZodValidationPipe(resetPasswordSchema))
+  resetPassword(@Body() body: unknown) {
+    return this.authService.resetPassword(body as ResetPasswordDto);
   }
 
   @Throttle({ default: { limit: 5, ttl: 60_000 } })

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Optional,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -18,6 +19,9 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwoFactorService } from './two-factor.service';
 import { SignupOtpService } from './signup-otp.service';
+import { WhatsAppService } from '../common/whatsapp/whatsapp.service';
+import { EmailService } from '../modules/email/email.service';
+import { WalletService } from '../modules/billing/wallet.service';
 import { isRootAdminUser, isSuperAdminUser } from '../common/super-admin';
 
 /** How long "Remember me" keeps someone signed in on that device. */
@@ -30,6 +34,9 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly twoFactor: TwoFactorService,
     private readonly signupOtp: SignupOtpService,
+    private readonly whatsapp: WhatsAppService,
+    private readonly email: EmailService,
+    @Optional() private readonly wallet?: WalletService,
   ) {}
 
   private toSessionUser(user: {
@@ -172,6 +179,10 @@ export class AuthService {
       return user;
     });
 
+    // Free WhatsApp bill messages to try, when the platform gives any.
+    await this.wallet
+      ?.grantTrialCredit(owner.restaurantId)
+      .catch(() => undefined);
     return this.issueSession(owner);
   }
 
@@ -253,6 +264,75 @@ export class AuthService {
     }
     await this.signupOtp.consume(norm, dto.code, 'login');
     return this.issueSession(user, dto.rememberMe);
+  }
+
+  // --- Forgot password -------------------------------------------------------
+
+  /** The one active account an email or mobile number points to, if any. */
+  private async userForLogin(login: string) {
+    const v = login.trim();
+    if (v.includes('@')) {
+      const users = await this.prisma.user.findMany({
+        where: { isActive: true, email: { equals: v, mode: 'insensitive' } },
+        take: 2,
+      });
+      return users.length === 1 ? users[0] : null;
+    }
+    const { users } = await this.usersByPhone(v);
+    return users.length === 1 ? users[0] : null;
+  }
+
+  /**
+   * Sends a 6-digit reset code to the account's WhatsApp number (or, without
+   * one, its email when the server can send email). Always answers the same
+   * way, so it can't be used to find out which accounts exist.
+   */
+  async forgotPassword(login: string) {
+    const user = await this.userForLogin(login);
+    if (!user) return { ok: true };
+    const viaWhatsApp = !!user.phone && !!this.whatsapp.settings();
+    const viaEmail = !viaWhatsApp && !!user.email && this.email.isConfigured();
+    if (!viaWhatsApp && !viaEmail) return { ok: true };
+    const { code, id } = await this.signupOtp.issue(`user:${user.id}`, 'reset');
+    const text = `Hello ${user.name},\n\nYour F Cartel password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't ask to reset your password, ignore this message.`;
+    let sent = false;
+    if (viaWhatsApp) {
+      // Same number format as the WhatsApp sign-in code.
+      sent = (
+        await this.whatsapp.sendText(this.normalisePhone(user.phone!), text)
+      ).ok;
+    } else {
+      sent = await this.email
+        .send({
+          to: user.email!,
+          subject: 'Your F Cartel password reset code',
+          text,
+        })
+        .then(() => true)
+        .catch(() => false);
+    }
+    if (!sent) {
+      await this.signupOtp.discard(id);
+      throw new ServiceUnavailableException(
+        'Could not send the code right now — try again in a minute',
+      );
+    }
+    return { ok: true };
+  }
+
+  /** Checks the reset code and sets the new password. */
+  async resetPassword(dto: { login: string; code: string; password: string }) {
+    const user = await this.userForLogin(dto.login);
+    if (!user)
+      throw new BadRequestException(
+        'That code is not right — ask for a new one',
+      );
+    await this.signupOtp.consume(`user:${user.id}`, dto.code, 'reset', true);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(dto.password, 12) },
+    });
+    return { ok: true };
   }
 
   sendSignupOtp(phone: string, ownerName?: string) {

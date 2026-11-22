@@ -14,7 +14,7 @@ const RESEND_AFTER_MS = 30 * 1000;
 const MAX_SENDS_PER_HOUR = 5;
 const MAX_ATTEMPTS = 5;
 
-export type OtpPurpose = 'signup' | 'login';
+export type OtpPurpose = 'signup' | 'login' | 'reset';
 
 const hashCode = (
   phone: string,
@@ -42,6 +42,41 @@ export class SignupOtpService {
 
   async send(phone: string, name?: string, purpose: OtpPurpose = 'signup') {
     if (!this.required()) return { required: false as const };
+    const { code, id } = await this.issue(phone, purpose);
+    const r = await this.whatsapp.sendText(
+      phone,
+      purpose === 'login'
+        ? `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel sign-in code is:\n\n${code}\n\nIt expires in 10 minutes. Never share it — F Cartel staff will never ask for it.`
+        : purpose === 'reset'
+          ? `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't ask to reset your password, ignore this message.`
+          : `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel verification code is:\n\n${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`,
+    );
+    if (!r.ok) {
+      // A failed send doesn't count against the resend wait.
+      await this.discard(id);
+      throw new ServiceUnavailableException(
+        'Could not send the WhatsApp code — check the number is on WhatsApp and try again',
+      );
+    }
+    return {
+      required: true as const,
+      resendAfterSeconds: RESEND_AFTER_MS / 1000,
+    };
+  }
+
+  /** Drops a code that could not be delivered. */
+  discard(id: string) {
+    return this.prisma.signupOtp
+      .delete({ where: { id } })
+      .catch(() => undefined);
+  }
+
+  /**
+   * A new code for `key` (a phone number, or e.g. "user:<id>"), with the
+   * resend wait and hourly cap. The caller delivers it.
+   */
+  async issue(key: string, purpose: OtpPurpose) {
+    const phone = key;
     const recent = await this.prisma.signupOtp.findMany({
       where: {
         phone,
@@ -75,25 +110,7 @@ export class SignupOtpService {
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
       },
     });
-    const r = await this.whatsapp.sendText(
-      phone,
-      purpose === 'login'
-        ? `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel sign-in code is:\n\n${code}\n\nIt expires in 10 minutes. Never share it — F Cartel staff will never ask for it.`
-        : `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel verification code is:\n\n${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`,
-    );
-    if (!r.ok) {
-      // A failed send doesn't count against the resend wait.
-      await this.prisma.signupOtp
-        .delete({ where: { id: otp.id } })
-        .catch(() => undefined);
-      throw new ServiceUnavailableException(
-        'Could not send the WhatsApp code — check the number is on WhatsApp and try again',
-      );
-    }
-    return {
-      required: true as const,
-      resendAfterSeconds: RESEND_AFTER_MS / 1000,
-    };
+    return { code, id: otp.id };
   }
 
   /** Throws unless `code` is the latest live code for `phone`; then uses it up. */
@@ -101,8 +118,10 @@ export class SignupOtpService {
     phone: string,
     code: string | undefined,
     purpose: OtpPurpose = 'signup',
+    /** Password reset: always needs the code, even without WhatsApp. */
+    strict = false,
   ) {
-    if (!this.required()) return;
+    if (!strict && !this.required()) return;
     if (!code) {
       throw new BadRequestException(
         'Enter the 6-digit code sent to your WhatsApp',
