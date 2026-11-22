@@ -1,4 +1,9 @@
 import {
+  buildMappingWorkbook,
+  parseMappingFile,
+  planMappingImport,
+} from './mapping-transfer';
+import {
   BadRequestException,
   ConflictException,
   HttpException,
@@ -213,6 +218,173 @@ export class AggregatorsService {
       update: { menuItemId: dto.menuItemId },
       include: { menuItem: { select: { id: true, name: true } } },
     });
+  }
+
+  /** Every menu item of the branch with its marketplace IDs, as an Excel sheet. */
+  async exportMappings(branchId: string, id: string) {
+    const c = await this.own(branchId, id);
+    const [items, maps] = await Promise.all([
+      this.prisma.menuItem.findMany({
+        where: { branchId },
+        orderBy: [
+          { category: { sortOrder: 'asc' } },
+          { sortOrder: 'asc' },
+          { name: 'asc' },
+        ],
+        select: {
+          id: true,
+          name: true,
+          sku: true,
+          price: true,
+          category: { select: { name: true } },
+        },
+      }),
+      this.prisma.aggregatorItemMapping.findMany({
+        where: { connectionId: id },
+        select: { menuItemId: true, externalItemId: true },
+      }),
+    ]);
+    const ext = new Map<string, string[]>();
+    for (const m of maps)
+      ext.set(m.menuItemId, [
+        ...(ext.get(m.menuItemId) ?? []),
+        m.externalItemId,
+      ]);
+    const provider =
+      c.provider === 'SWIGGY'
+        ? 'Swiggy'
+        : c.provider === 'ZOMATO'
+          ? 'Zomato'
+          : 'Marketplace';
+    const buffer = await buildMappingWorkbook(
+      provider,
+      items.map((i) => ({
+        id: i.id,
+        name: i.name,
+        category: i.category.name,
+        sku: i.sku,
+        price: Number(i.price),
+        externalItemId: ext.get(i.id)?.join(', ') ?? null,
+      })),
+    );
+    return { buffer, provider };
+  }
+
+  /**
+   * Applies a filled-in mapping sheet: each listed item gets exactly the IDs
+   * in its row (none = its mappings removed). Items not in the file are left
+   * as they are. Rows that can't be matched are reported, not guessed.
+   */
+  async importMappings(
+    branchId: string,
+    id: string,
+    file: { buffer: Buffer; originalname: string },
+  ) {
+    await this.own(branchId, id);
+    let rows: Awaited<ReturnType<typeof parseMappingFile>>;
+    try {
+      rows = await parseMappingFile(file.buffer, file.originalname);
+    } catch (err) {
+      throw new BadRequestException((err as Error).message);
+    }
+    if (!rows.length)
+      throw new BadRequestException(
+        'The sheet has no items below the heading row.',
+      );
+    const menu = await this.prisma.menuItem.findMany({
+      where: { branchId },
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        category: { select: { name: true } },
+      },
+    });
+    const plan = planMappingImport(
+      rows,
+      menu.map((m) => ({
+        id: m.id,
+        name: m.name,
+        sku: m.sku,
+        category: m.category.name,
+      })),
+    );
+    // An ID already mapped to an item this file doesn't touch would be stolen silently.
+    const touched = new Set([
+      ...plan.set.map((s) => s.menuItemId),
+      ...plan.clear.map((c) => c.menuItemId),
+    ]);
+    const wanted = plan.set.flatMap((s) =>
+      s.externalItemIds.map((e) => ({
+        e,
+        row: s.row,
+        menuItemId: s.menuItemId,
+      })),
+    );
+    const elsewhere = await this.prisma.aggregatorItemMapping.findMany({
+      where: {
+        connectionId: id,
+        externalItemId: { in: wanted.map((w) => w.e) },
+        menuItemId: { notIn: [...touched] },
+      },
+      include: { menuItem: { select: { name: true } } },
+    });
+    for (const m of elsewhere) {
+      const w = wanted.find((x) => x.e === m.externalItemId)!;
+      plan.errors.push({
+        row: w.row,
+        message: `Item ID "${m.externalItemId}" is already mapped to ${m.menuItem.name}`,
+      });
+    }
+    const blocked = new Set(elsewhere.map((m) => m.externalItemId));
+    const sets = plan.set.filter(
+      (s) => !s.externalItemIds.some((e) => blocked.has(e)),
+    );
+    let mapped = 0;
+    let cleared = 0;
+    await this.prisma.$transaction(
+      async (tx) => {
+        for (const s of sets) {
+          await tx.aggregatorItemMapping.deleteMany({
+            where: {
+              connectionId: id,
+              menuItemId: s.menuItemId,
+              externalItemId: { notIn: s.externalItemIds },
+            },
+          });
+          for (const e of s.externalItemIds) {
+            await tx.aggregatorItemMapping.upsert({
+              where: {
+                connectionId_externalItemId: {
+                  connectionId: id,
+                  externalItemId: e,
+                },
+              },
+              create: {
+                connectionId: id,
+                externalItemId: e,
+                menuItemId: s.menuItemId,
+              },
+              update: { menuItemId: s.menuItemId },
+            });
+            mapped++;
+          }
+        }
+        for (const c of plan.clear) {
+          const r = await tx.aggregatorItemMapping.deleteMany({
+            where: { connectionId: id, menuItemId: c.menuItemId },
+          });
+          cleared += r.count;
+        }
+      },
+      { timeout: 60_000 },
+    );
+    return {
+      mapped,
+      cleared,
+      items: sets.length,
+      errors: plan.errors.sort((a, b) => a.row - b.row).slice(0, 100),
+    };
   }
 
   async deleteMapping(branchId: string, id: string, mappingId: string) {
