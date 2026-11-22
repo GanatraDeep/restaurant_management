@@ -3,6 +3,7 @@
 import { Check, CreditCard, MessageCircle, Pencil, Phone, Printer, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { openReceiptPrint } from "@/lib/print";
+import { SendBillWhatsApp } from "@/components/orders/send-bill-whatsapp";
 import { useState } from "react";
 import { StatusNote, useNoteToast } from "@/components/ui/status-note";
 import { Badge } from "@/components/ui/badge";
@@ -208,6 +209,7 @@ export function OrderDetailDialog({
                 <Button variant="outline" className="h-11 flex-1" onClick={() => openReceiptPrint(order.id, branchId)}>
                   <Printer className="mr-1.5 h-4 w-4" /> Print bill
                 </Button>
+                <SendBillWhatsApp orderId={order.id} branchId={branchId} phone={phone} className="flex-1" />
                 {canPay && (
                   <Button
                     className="h-11 flex-1"
@@ -222,9 +224,12 @@ export function OrderDetailDialog({
               </div>
             )}
             {order.status === "PAID" && branchId && (
-              <Button variant="outline" className="h-10" onClick={() => openReceiptPrint(order.id, branchId)}>
-                <Printer className="mr-1.5 h-4 w-4" /> Print receipt
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" className="h-10 flex-1" onClick={() => openReceiptPrint(order.id, branchId)}>
+                  <Printer className="mr-1.5 h-4 w-4" /> Print receipt
+                </Button>
+                <SendBillWhatsApp orderId={order.id} branchId={branchId} phone={phone} className="h-10 flex-1" />
+              </div>
             )}
             {canCancel && (
               <div className="flex gap-2">

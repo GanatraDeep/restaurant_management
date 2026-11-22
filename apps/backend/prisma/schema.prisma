@@ -69,6 +69,11 @@ model Restaurant {
   /// Branches allowed beyond the platform's included count — bought (one-time)
   /// or granted by a super admin.
   extraBranches          Int     @default(0)
+  /// WhatsApp message wallet (paise): bills sent from F Cartel's own WhatsApp
+  /// number are charged per message from this balance.
+  waWalletMinor          Int     @default(0)
+  /// Send the bill on WhatsApp automatically when an order is paid.
+  waBillAuto             Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -80,6 +85,7 @@ model Restaurant {
   webhookEndpoints     WebhookEndpoint[]
   subscription         RestaurantSubscription?
   subscriptionPayments SubscriptionPayment[]
+  walletTransactions   WalletTransaction[]
   planRequests         PlanRequest[]
 
   @@map("restaurants")
@@ -2488,10 +2494,38 @@ model PlatformSettings {
   /// Branches every restaurant gets with its plan (usually 1).
   includedBranches    Int     @default(1)
   branchPriceMinor    Int     @default(0)
+  /// WhatsApp bill messages sent from the platform's number: price per
+  /// message (paise) and the smallest wallet top-up.
+  waMessagePriceMinor Int     @default(15)
+  waMinTopUpMinor     Int     @default(10000)
+  /// Credit a new restaurant gets to try bill messages (paise).
+  waTrialCreditMinor  Int     @default(0)
 
   updatedAt DateTime @updatedAt
 
   @@map("platform_settings")
+}
+
+/// Every change to a restaurant's WhatsApp wallet: top-ups, admin credits,
+/// and one row per message charged.
+model WalletTransaction {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  /// TOPUP, CREDIT (admin), DEBIT (admin), MESSAGE
+  kind         String
+  /// Signed, in paise: + adds to the wallet, - takes from it.
+  amountMinor  Int
+  balanceAfter Int
+  note         String?
+  orderId      String?
+  /// Masked number a message went to, e.g. 98******10.
+  sentTo       String?
+  userId       String?
+  createdAt    DateTime   @default(now())
+
+  @@index([restaurantId, createdAt])
+  @@map("wallet_transactions")
 }
 
 // ─── Zomato / Swiggy (food-delivery marketplaces) ───────────────────────────

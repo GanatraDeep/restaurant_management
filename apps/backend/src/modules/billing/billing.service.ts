@@ -505,6 +505,24 @@ export class BillingService {
         where: { razorpayOrderId: orderId },
         include: { plan: true },
       });
+      if (payment.purpose === 'WALLET') {
+        // WhatsApp message credit.
+        const r = await tx.restaurant.update({
+          where: { id: payment.restaurantId },
+          data: { waWalletMinor: { increment: payment.amountMinor } },
+          select: { waWalletMinor: true },
+        });
+        await tx.walletTransaction.create({
+          data: {
+            restaurantId: payment.restaurantId,
+            kind: 'TOPUP',
+            amountMinor: payment.amountMinor,
+            balanceAfter: r.waWalletMinor,
+            note: `Online top-up (${paymentId})`,
+          },
+        });
+        return payment.restaurantId;
+      }
       if (payment.purpose === 'BRANCH') {
         // One more branch, for good.
         await tx.restaurant.update({
@@ -587,6 +605,9 @@ export class BillingService {
       branchMode: s?.branchMode ?? 'ADMIN_ONLY',
       includedBranches: s?.includedBranches ?? 1,
       branchPriceMinor: s?.branchPriceMinor ?? 0,
+      waMessagePriceMinor: s?.waMessagePriceMinor ?? 15,
+      waMinTopUpMinor: s?.waMinTopUpMinor ?? 10000,
+      waTrialCreditMinor: s?.waTrialCreditMinor ?? 0,
       razorpayConfigured: !!config,
       razorpayKeyId: config?.keyId ?? null,
       razorpayWebhookConfigured: !!config?.webhookSecret,

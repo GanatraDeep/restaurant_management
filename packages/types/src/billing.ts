@@ -67,6 +67,10 @@ export const platformSettingsSchema = z.object({
   branchMode: z.enum(["ADMIN_ONLY", "FREE", "ONE_TIME", "MONTHLY"]).optional(),
   includedBranches: z.number().int().min(1).max(100).optional(),
   branchPriceMinor: z.number().int().min(0).max(100_000_000).optional(),
+  // WhatsApp bill messages from the platform number (paise).
+  waMessagePriceMinor: z.number().int().min(0).max(10_000).optional(),
+  waMinTopUpMinor: z.number().int().min(100).max(100_000_000).optional(),
+  waTrialCreditMinor: z.number().int().min(0).max(10_000_000).optional(),
 });
 export type PlatformSettingsDto = z.infer<typeof platformSettingsSchema>;
 
@@ -114,3 +118,21 @@ export const adminTodoUpdateSchema = adminTodoSchema.partial().extend({
 });
 export type AdminTodoDto = z.infer<typeof adminTodoSchema>;
 export type AdminTodoUpdateDto = z.infer<typeof adminTodoUpdateSchema>;
+
+// ─── WhatsApp message wallet ────────────────────────────────────────────────
+export const walletTopUpSchema = z.object({
+  amountMinor: z.number().int().min(100).max(100_000_000),
+});
+export const walletAdjustSchema = z.object({
+  /** + adds credit, - takes it away (paise). */
+  amountMinor: z.number().int().min(-100_000_000).max(100_000_000).refine((v) => v !== 0, "Enter an amount"),
+  note: z.string().trim().max(200).optional(),
+});
+export const sendBillSchema = z.object({
+  orderId: z.string().min(1),
+  /** Override the customer's number on the order. */
+  phone: z.string().trim().max(20).optional(),
+});
+export const walletSettingsSchema = z.object({
+  waBillAuto: z.boolean(),
+});

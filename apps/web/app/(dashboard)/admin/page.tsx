@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { BranchPolicyCard } from "@/components/admin/branch-policy-card";
+import { WhatsAppPricingCard } from "@/components/admin/whatsapp-pricing-card";
 import { AppDownloadsCard } from "@/components/admin/app-downloads-card";
 import { WhatsAppCard } from "@/components/admin/whatsapp-card";
 import { Card } from "@/components/ui/card";
@@ -118,6 +119,7 @@ export default function AdminOverviewPage() {
       </Card>
 
       {settings && <BranchPolicyCard key={`${settings.branchMode}-${settings.includedBranches}-${settings.branchPriceMinor}`} settings={settings} />}
+      {settings && <WhatsAppPricingCard key={`${settings.waMessagePriceMinor}-${settings.waMinTopUpMinor}-${settings.waTrialCreditMinor}`} settings={settings} />}
 
       <AppDownloadsCard />
 

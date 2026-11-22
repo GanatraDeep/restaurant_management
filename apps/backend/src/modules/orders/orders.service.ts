@@ -1,3 +1,4 @@
+import { WalletService } from '../billing/wallet.service';
 import {
   BadRequestException,
   ConflictException,
@@ -5,6 +6,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma, type AggregatorProvider } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -77,6 +79,8 @@ export class OrdersService {
     private readonly webhooks: WebhooksService,
     private readonly verifactu: VerifactuService,
     private readonly aggregatorStatus: AggregatorStatusService,
+    // Optional: absent in unit tests that build the service by hand.
+    @Optional() private readonly wallet?: WalletService,
   ) {}
 
   async listOpen(branchId: string, tableId?: string) {
@@ -1584,6 +1588,14 @@ export class OrdersService {
   // Receipt data plus the numbers to print for it. A paid order prints what
   // was stored; an open one prints the bill as previewed, marked provisional,
   // so the paper always matches what Complete Payment will charge.
+  /** Which branch an order belongs to (public invoice link). */
+  branchOfOrder(orderId: string) {
+    return this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { branchId: true },
+    });
+  }
+
   async getBillForPrint(
     branchId: string,
     orderId: string,
@@ -1968,6 +1980,8 @@ export class OrdersService {
       }).then((data) =>
         this.webhooks.emitForBranch(branchId, 'order.paid', data),
       );
+      // WhatsApp bill from F Cartel's number, if the restaurant turned it on.
+      void this.wallet?.autoSendOnPaid(branchId, updated.id);
     }
     return {
       ...updated,

@@ -33,6 +33,9 @@ export interface AdminPlatformSettings {
   branchMode: "ADMIN_ONLY" | "FREE" | "ONE_TIME" | "MONTHLY";
   includedBranches: number;
   branchPriceMinor: number;
+  waMessagePriceMinor: number;
+  waMinTopUpMinor: number;
+  waTrialCreditMinor: number;
   razorpayConfigured: boolean;
   razorpayKeyId: string | null;
   razorpayWebhookConfigured: boolean;

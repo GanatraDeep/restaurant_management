@@ -29,6 +29,7 @@ const TABS: SettingsTab[] = [
   { label: "Security", href: "/settings/security" },
   { label: "Webhooks", href: "/settings/webhooks", permission: "settings.manage" },
   { label: "Zomato & Swiggy", href: "/settings/aggregators", permission: "settings.manage" },
+  { label: "WhatsApp", href: "/settings/whatsapp", permission: "settings.manage" },
   { label: "Billing", href: "/settings/billing", permission: "settings.manage" },
   { label: "VERI*FACTU", href: "/settings/verifactu", permission: "settings.manage", country: "ES" },
 ];
