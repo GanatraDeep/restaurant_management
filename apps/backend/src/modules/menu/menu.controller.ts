@@ -204,10 +204,13 @@ export class MenuController {
     @CurrentUser() user: SessionUser,
     @Query('branchId') branchId: string,
     @Param('id') id: string,
-    @Body() body: { name: string },
+    @Body() body: { name?: string; printerName?: string | null },
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
-    return this.menuService.updateStation(branchId, id, body?.name);
+    return this.menuService.updateStation(branchId, id, {
+      name: body?.name,
+      printerName: body?.printerName,
+    });
   }
 
   @Auth('menu.manage')

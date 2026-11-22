@@ -17,6 +17,8 @@ export interface MenuCategory {
 export interface KitchenStation {
   id: string;
   name: string;
+  /** Desktop app: this station's KOTs print here. Empty = the KOT printer. */
+  printerName?: string | null;
   _count?: { items: number };
 }
 
@@ -91,6 +93,11 @@ export function useStationActions(branchId: string | null) {
     }),
     rename: useMutation({
       mutationFn: (v: { id: string; name: string }) => api.patch(`/menu/stations/${v.id}?branchId=${branchId}`, { name: v.name }),
+      onSuccess: done,
+    }),
+    setPrinter: useMutation({
+      mutationFn: (v: { id: string; printerName: string | null }) =>
+        api.patch(`/menu/stations/${v.id}?branchId=${branchId}`, { printerName: v.printerName }),
       onSuccess: done,
     }),
     remove: useMutation({

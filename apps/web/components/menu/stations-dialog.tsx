@@ -1,13 +1,14 @@
 "use client";
 
-import { Check, ChefHat, Pencil, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { Check, ChefHat, Pencil, Printer, Trash2, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useStationActions, useStations } from "@/hooks/use-menu";
 import { ApiError } from "@/lib/api";
+import { desktopPrinters, hasStationPrinters, type DesktopPrinter } from "@/lib/print";
 
 const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : "Something went wrong");
 
@@ -19,7 +20,25 @@ const errMsg = (e: unknown) => (e instanceof ApiError ? e.message : "Something w
 export function StationsDialog({ branchId }: { branchId: string | null }) {
   const [open, setOpen] = useState(false);
   const { data: stations } = useStations(branchId);
-  const { create, rename, remove } = useStationActions(branchId);
+  const { create, rename, remove, setPrinter } = useStationActions(branchId);
+  // In the desktop app: the printers on this computer, to pick from.
+  const [printers, setPrinters] = useState<DesktopPrinter[]>([]);
+  const [canRoute, setCanRoute] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    // Bridge only exists in the browser.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCanRoute(hasStationPrinters());
+    void desktopPrinters.list().then(setPrinters).catch(() => setPrinters([]));
+  }, [open]);
+  const savePrinter = (id: string, value: string) =>
+    setPrinter.mutate(
+      { id, printerName: value.trim() || null },
+      {
+        onSuccess: () => toast.success(value.trim() ? `KOTs will print on ${value.trim()}` : "Uses the KOT printer"),
+        onError: (e) => toast.error(errMsg(e)),
+      },
+    );
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
@@ -80,9 +99,18 @@ export function StationsDialog({ branchId }: { branchId: string | null }) {
                   </form>
                 ) : (
                   <>
-                    <span className="flex-1 text-sm">
-                      <span className="font-medium text-foreground">{s.name}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">{s._count?.items ?? 0} items</span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
+                      <span>
+                        <span className="font-medium text-foreground">{s.name}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{s._count?.items ?? 0} {(s._count?.items ?? 0) === 1 ? "item" : "items"}</span>
+                      </span>
+                      <StationPrinter
+                        key={`${s.id}:${s.printerName ?? ""}`}
+                        name={s.name}
+                        value={s.printerName ?? ""}
+                        printers={printers}
+                        onSave={(v) => savePrinter(s.id, v)}
+                      />
                     </span>
                     <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Rename ${s.name}`} onClick={() => setEditing({ id: s.id, name: s.name })}>
                       <Pencil className="h-4 w-4" />
@@ -104,8 +132,62 @@ export function StationsDialog({ branchId }: { branchId: string | null }) {
               </li>
             ))}
           </ul>
+          {(stations ?? []).length > 0 && (
+            <p className="rounded-lg bg-secondary/60 p-3 text-xs text-muted-foreground">
+              <Printer className="mr-1 inline h-3.5 w-3.5" />
+              Printer per station is saved for this branch and used by the F Cartel desktop app (1.3 or newer): each
+              station&rsquo;s KOT goes to its own printer. Leave it on &ldquo;KOT printer&rdquo; to use the printer set in
+              Settings → Printing. A printer this computer doesn&rsquo;t have also falls back to the KOT printer. In a
+              browser, all station slips print together.
+              {!canRoute && printers.length === 0 && " Open this screen in the desktop app to pick from its printer list."}
+            </p>
+          )}
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+const PRINTER_SELECT =
+  "h-8 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+/** The printer a station's KOTs go to: a list in the desktop app, else typed. */
+function StationPrinter({
+  name,
+  value,
+  printers,
+  onSave,
+}: {
+  name: string;
+  value: string;
+  printers: DesktopPrinter[];
+  onSave: (v: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  if (printers.length > 0) {
+    const known = !value || printers.some((p) => p.name === value);
+    return (
+      <select className={PRINTER_SELECT} aria-label={`Printer for ${name}`} value={value} onChange={(e) => onSave(e.target.value)}>
+        <option value="">KOT printer (default)</option>
+        {!known && <option value={value}>{value} (not on this computer)</option>}
+        {printers.map((p) => (
+          <option key={p.name} value={p.name}>
+            {p.displayName || p.name}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  return (
+    <Input
+      className="h-8 text-xs"
+      aria-label={`Printer for ${name}`}
+      placeholder="KOT printer (default) — or type the printer's name"
+      value={text}
+      maxLength={200}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => text.trim() !== value && onSave(text)}
+      onKeyDown={(e) => e.key === "Enter" && (e.currentTarget as HTMLInputElement).blur()}
+    />
   );
 }

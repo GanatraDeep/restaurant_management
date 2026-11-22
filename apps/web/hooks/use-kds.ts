@@ -14,7 +14,7 @@ export interface KotTicket {
   printedCount: number;
   lastPrintError: string | null;
   createdAt: string;
-  station: { id: string; name: string } | null;
+  station: { id: string; name: string; printerName?: string | null } | null;
   order: {
     orderNumber: string;
     type: string;

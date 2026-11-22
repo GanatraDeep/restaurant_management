@@ -64,7 +64,7 @@ export function useKotAutoPrint(branchId: string | null) {
   const { data } = useQuery({
     // Under "kds" so realtime ticket events refresh it straight away.
     queryKey: ["kds", "auto-print", branchId, since],
-    queryFn: () => api.get<{ id: string }[]>(`/kds/auto-print/pending?branchId=${branchId}&since=${encodeURIComponent(since!)}`),
+    queryFn: () => api.get<{ id: string; printerName?: string | null }[]>(`/kds/auto-print/pending?branchId=${branchId}&since=${encodeURIComponent(since!)}`),
     enabled: !!branchId && !!since && allowed,
     refetchInterval: 8000,
   });
@@ -103,7 +103,7 @@ export function useKotAutoPrint(branchId: string | null) {
         tried.current.add(t.id);
         try {
           const { claimed } = await api.post<{ claimed: boolean }>(`/kds/auto-print/${t.id}/claim?branchId=${branchId}`);
-          if (claimed) await openClaimedTicketPrint(t.id, branchId);
+          if (claimed) await openClaimedTicketPrint(t.id, branchId, t.printerName);
         } catch {
           // Leave it for a manual print; don't retry in a loop.
         }

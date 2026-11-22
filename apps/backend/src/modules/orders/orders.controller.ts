@@ -474,8 +474,24 @@ export class OrdersController {
     @Res() res: Response,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
-    const html = await this.kotPrint.counterSlipHtml(branchId, id, onlyNew === '1');
+    const html = await this.kotPrint.counterSlipHtml(
+      branchId,
+      id,
+      onlyNew === '1',
+    );
     res.type('html').send(fitPaper(html, paperOf(res.req.query.paper)));
+  }
+
+  @Auth('orders.create')
+  @Get(':id/kot-plan')
+  async kotPlan(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Query('new') onlyNew: string | undefined,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.kotPrint.orderKotPlan(branchId, id, onlyNew === '1');
   }
 
   @Auth('orders.create')
@@ -487,12 +503,15 @@ export class OrdersController {
     // new=1: only the round just sent (POS "Save & Print KOT").
     @Query('new') onlyNew: string | undefined,
     @Res() res: Response,
+    // station=<id> or "none": only that station's slip (its own printer).
+    @Query('station') station?: string,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     const html = await this.kotPrint.orderKotHtml(
       branchId,
       id,
       onlyNew === '1',
+      station || undefined,
     );
     res.type('html').send(
       // ?paper=58 from the device's printing setting.

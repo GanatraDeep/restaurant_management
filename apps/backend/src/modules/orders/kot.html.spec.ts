@@ -1,5 +1,6 @@
 import { startOfLocalDay } from './orders.service';
 import { buildKotHtml, kotDateTime } from './kot.html';
+import { joinPages, KotPrintService } from './kot-print.service';
 
 const order = {
   orderNumber: '20261102-0001',
@@ -151,8 +152,6 @@ describe('58 mm paper', () => {
 });
 
 describe('one KOT slip per station', () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { joinPages } = require('./kot-print.service') as typeof import('./kot-print.service');
   it('joins station pages into one document with page breaks and one print script', () => {
     const doc = (name: string) =>
       `<!doctype html><html><head><title>x</title></head><body>\n  <script>window.addEventListener('message', () => {})</script>\n<p>${name}</p></body>\n</html>`;
@@ -161,5 +160,49 @@ describe('one KOT slip per station', () => {
     expect(out.match(/<script>/g)).toHaveLength(1);
     expect(out.match(/page-break-before:always/g)).toHaveLength(2);
     expect(out).toMatch(/Tandoor[\s\S]*Chinese[\s\S]*Bar/);
+  });
+});
+
+describe('printer per station (kot plan)', () => {
+  const kot = (
+    id: string,
+    station: { id: string; name: string; printerName: string | null } | null,
+    printedCount = 0,
+  ) => ({
+    id,
+    status: 'ACCEPTED',
+    printedCount,
+    stationId: station?.id ?? null,
+    station,
+    items: [{ id: `${id}-i` }],
+  });
+  const make = (kots: unknown[]) =>
+    new KotPrintService(
+      { kot: { findMany: () => Promise.resolve(kots) } } as never,
+      {} as never,
+    );
+  const tandoor = { id: 'st_t', name: 'Tandoor', printerName: 'TVS Tandoor' };
+  const bar = { id: 'st_b', name: 'Bar', printerName: null };
+
+  it('lists each station once with its printer; no station = the KOT printer', async () => {
+    const plan = await make([
+      kot('k1', tandoor),
+      kot('k2', null),
+      kot('k3', tandoor),
+      kot('k4', bar),
+    ]).orderKotPlan('b', 'o', false);
+    expect(plan.stations).toEqual([
+      { station: 'st_t', name: 'Tandoor', printerName: 'TVS Tandoor' },
+      { station: 'none', name: 'Kitchen', printerName: null },
+      { station: 'st_b', name: 'Bar', printerName: null },
+    ]);
+  });
+
+  it('with new=1 only plans stations that have unprinted tickets', async () => {
+    const plan = await make([
+      kot('k1', tandoor, 1),
+      kot('k2', bar, 0),
+    ]).orderKotPlan('b', 'o', true);
+    expect(plan.stations.map((s) => s.station)).toEqual(['st_b']);
   });
 });
