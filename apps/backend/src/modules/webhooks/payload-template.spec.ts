@@ -10,7 +10,13 @@ const env = {
   event: 'campaign.message',
   createdAt: '2026-11-20T10:00:00.000Z',
   deliveryId: 'dlv_1',
-  data: { to: '+91 98765-43210', name: 'Riya', message: 'Hi "there"\nok', total: 450, payments: [{ method: 'UPI' }] },
+  data: {
+    to: '+91 98765-43210',
+    name: 'Riya',
+    message: 'Hi "there"\nok',
+    total: 450,
+    payments: [{ method: 'UPI' }],
+  },
 };
 
 describe('webhook body templates', () => {
@@ -29,7 +35,7 @@ describe('webhook body templates', () => {
         }),
         env,
       ),
-    );
+    ) as unknown;
     expect(out).toEqual({
       number: '919876543210',
       message: 'Hello Riya: Hi "there"\nok',
@@ -43,12 +49,24 @@ describe('webhook body templates', () => {
   });
 
   it('explains bad templates', () => {
-    expect(() => renderWebhookTemplate('{ "number": {{data.to}} }', env)).toThrow(/not valid JSON.*inside quotes/);
-    expect(() => renderWebhookTemplate('{ "a": "{{data.to | shout}}" }', env)).toThrow(/Unknown filter "shout"/);
+    expect(() =>
+      renderWebhookTemplate('{ "number": {{data.to}} }', env),
+    ).toThrow(/not valid JSON.*inside quotes/);
+    expect(() =>
+      renderWebhookTemplate('{ "a": "{{data.to | shout}}" }', env),
+    ).toThrow(/Unknown filter "shout"/);
   });
 
   it('phoneIN only prefixes 10-digit numbers', () => {
-    const r = (to: string) => JSON.parse(renderWebhookTemplate('{"n":"{{data.to | phoneIN}}"}', { ...env, data: { to } })).n;
+    const r = (to: string) =>
+      (
+        JSON.parse(
+          renderWebhookTemplate('{"n":"{{data.to | phoneIN}}"}', {
+            ...env,
+            data: { to },
+          }),
+        ) as { n: string }
+      ).n;
     expect(r('9876543210')).toBe('919876543210');
     expect(r('09876543210')).toBe('919876543210');
     expect(r('+44 7700 900123')).toBe('447700900123');
@@ -57,9 +75,30 @@ describe('webhook body templates', () => {
   it('every preset renders for its events and lists variables', () => {
     for (const p of WEBHOOK_TEMPLATE_PRESETS)
       for (const e of p.events)
-        expect(() => renderWebhookTemplate(p.template, { event: e, createdAt: '', data: WEBHOOK_SAMPLE_DATA[e] })).not.toThrow();
-    expect(webhookVariables(['campaign.message'])).toEqual(expect.arrayContaining(['data.to', 'data.message', 'data.restaurantName']));
-    expect(webhookVariables(['order.paid'])).toEqual(expect.arrayContaining(['data.payments', 'data.payments.0.method', 'data.customerName', 'data.customerPhone']));
-    expect(Object.keys(WEBHOOK_SAMPLE_DATA).sort()).toEqual([...WEBHOOK_EVENTS].sort());
+        expect(() =>
+          renderWebhookTemplate(p.template, {
+            event: e,
+            createdAt: '',
+            data: WEBHOOK_SAMPLE_DATA[e],
+          }),
+        ).not.toThrow();
+    expect(webhookVariables(['campaign.message'])).toEqual(
+      expect.arrayContaining([
+        'data.to',
+        'data.message',
+        'data.restaurantName',
+      ]),
+    );
+    expect(webhookVariables(['order.paid'])).toEqual(
+      expect.arrayContaining([
+        'data.payments',
+        'data.payments.0.method',
+        'data.customerName',
+        'data.customerPhone',
+      ]),
+    );
+    expect(Object.keys(WEBHOOK_SAMPLE_DATA).sort()).toEqual(
+      [...WEBHOOK_EVENTS].sort(),
+    );
   });
 });

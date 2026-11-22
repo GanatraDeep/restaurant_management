@@ -1,4 +1,14 @@
-import { BadRequestException, Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
   addAdminSchema,
@@ -16,7 +26,10 @@ import { PlatformAdminService } from './platform-admin.service';
 
 function parse<T>(schema: ZodType<T>, body: unknown): T {
   const r = schema.safeParse(body);
-  if (!r.success) throw new BadRequestException(r.error.issues[0]?.message ?? 'Invalid input');
+  if (!r.success)
+    throw new BadRequestException(
+      r.error.issues[0]?.message ?? 'Invalid input',
+    );
   return r.data;
 }
 
@@ -56,17 +69,29 @@ export class PlatformAdminController {
 
   @Post('todos/reset')
   reset(@Body() body: unknown) {
-    return this.svc.resetList(parse(z.object({ list: z.string().min(1).max(60) }), body).list);
+    return this.svc.resetList(
+      parse(z.object({ list: z.string().min(1).max(60) }), body).list,
+    );
   }
 
   @Post('todos/reorder')
   reorder(@Body() body: unknown) {
-    const b = parse(z.object({ list: z.string().min(1).max(60), ids: z.array(z.string()).max(500) }), body);
+    const b = parse(
+      z.object({
+        list: z.string().min(1).max(60),
+        ids: z.array(z.string()).max(500),
+      }),
+      body,
+    );
     return this.svc.reorder(b.list, b.ids);
   }
 
   @Patch('todos/:id')
-  updateTodo(@CurrentUser() u: SessionUser, @Param('id') id: string, @Body() body: unknown) {
+  updateTodo(
+    @CurrentUser() u: SessionUser,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
     return this.svc.updateTodo(u, id, parse(adminTodoUpdateSchema, body));
   }
 

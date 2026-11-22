@@ -47,7 +47,11 @@ export class SettingsService {
   async branchFeatures(branchId: string) {
     const b = await this.prisma.branch.findUnique({
       where: { id: branchId },
-      select: { tokenEnabled: true, takeawayChargePerOrder: true, takeawayChargeOnDelivery: true },
+      select: {
+        tokenEnabled: true,
+        takeawayChargePerOrder: true,
+        takeawayChargeOnDelivery: true,
+      },
     });
     return {
       tokenEnabled: b?.tokenEnabled ?? false,

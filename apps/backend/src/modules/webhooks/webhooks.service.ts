@@ -75,7 +75,11 @@ export class WebhooksService {
     try {
       const branch = await this.prisma.branch.findUnique({
         where: { id: branchId },
-        select: { restaurantId: true, name: true, restaurant: { select: { name: true } } },
+        select: {
+          restaurantId: true,
+          name: true,
+          restaurant: { select: { name: true } },
+        },
       });
       if (!branch) return;
       await this.emit(branch.restaurantId, event, {
@@ -201,16 +205,23 @@ export class WebhooksService {
   }
 
   /** A template must be JSON that renders for every chosen event's sample data. */
-  private validateTemplate(template: string | null | undefined, events: string[]) {
+  private validateTemplate(
+    template: string | null | undefined,
+    events: string[],
+  ) {
     const t = template?.trim();
     if (!t) return null;
     if (t.length > MAX_TEMPLATE)
-      throw new BadRequestException('The custom body is too long (max 10,000 characters)');
+      throw new BadRequestException(
+        'The custom body is too long (max 10,000 characters)',
+      );
     for (const event of events) {
       try {
         renderWebhookTemplate(t, this.sampleEnvelope(event));
       } catch (err) {
-        throw new BadRequestException(err instanceof Error ? err.message : 'Invalid body template');
+        throw new BadRequestException(
+          err instanceof Error ? err.message : 'Invalid body template',
+        );
       }
     }
     return t;
@@ -218,15 +229,22 @@ export class WebhooksService {
 
   private sampleEnvelope(event: string, phone?: string): WebhookEnvelope {
     const data: Record<string, unknown> = {
-      ...(WEBHOOK_SAMPLE_DATA[event as WebhookEvent] ?? { message: 'Hello from F Cartel' }),
+      ...(WEBHOOK_SAMPLE_DATA[event as WebhookEvent] ?? {
+        message: 'Hello from F Cartel',
+      }),
     };
-    if (phone) for (const f of WEBHOOK_PHONE_FIELDS) if (f in data) data[f] = phone;
+    if (phone)
+      for (const f of WEBHOOK_PHONE_FIELDS) if (f in data) data[f] = phone;
     return { event, createdAt: new Date().toISOString(), data };
   }
 
   /** Validates the new list; an empty value keeps the value already saved under that name. */
-  private mergeHeaders(next: WebhookHeader[], saved: WebhookHeader[]): WebhookHeader[] {
-    if (next.length > 10) throw new BadRequestException('At most 10 custom headers');
+  private mergeHeaders(
+    next: WebhookHeader[],
+    saved: WebhookHeader[],
+  ): WebhookHeader[] {
+    if (next.length > 10)
+      throw new BadRequestException('At most 10 custom headers');
     const seen = new Set<string>();
     const out: WebhookHeader[] = [];
     for (const h of next) {
@@ -235,16 +253,25 @@ export class WebhooksService {
       if (!HEADER_NAME.test(name))
         throw new BadRequestException(`"${name}" is not a valid header name`);
       const lower = name.toLowerCase();
-      if (WEBHOOK_RESERVED_HEADERS.includes(lower) || lower.startsWith('x-fcartel-'))
-        throw new BadRequestException(`The header "${name}" is set by F Cartel and can't be changed`);
-      if (seen.has(lower)) throw new BadRequestException(`"${name}" is listed twice`);
+      if (
+        WEBHOOK_RESERVED_HEADERS.includes(lower) ||
+        lower.startsWith('x-fcartel-')
+      )
+        throw new BadRequestException(
+          `The header "${name}" is set by F Cartel and can't be changed`,
+        );
+      if (seen.has(lower))
+        throw new BadRequestException(`"${name}" is listed twice`);
       seen.add(lower);
       const value = h.value
         ? h.value
         : (saved.find((s) => s.name.toLowerCase() === lower)?.value ?? '');
-      if (!value) throw new BadRequestException(`Enter a value for the "${name}" header`);
+      if (!value)
+        throw new BadRequestException(`Enter a value for the "${name}" header`);
       if (value.length > 2000 || /[\r\n]/.test(value))
-        throw new BadRequestException(`The "${name}" header value is not valid`);
+        throw new BadRequestException(
+          `The "${name}" header value is not valid`,
+        );
       out.push({ name, value });
     }
     return out;
@@ -252,7 +279,9 @@ export class WebhooksService {
 
   private headerData(headers: WebhookHeader[]) {
     return {
-      headers: headers.length ? sealSecret(JSON.stringify(headers), this.keyMaterial) : null,
+      headers: headers.length
+        ? sealSecret(JSON.stringify(headers), this.keyMaterial)
+        : null,
       headerNames: headers.map((h) => h.name),
     };
   }
@@ -260,7 +289,9 @@ export class WebhooksService {
   private openHeaders(sealed: string | null): WebhookHeader[] {
     if (!sealed) return [];
     try {
-      return JSON.parse(openSecret(sealed, this.keyMaterial)) as WebhookHeader[];
+      return JSON.parse(
+        openSecret(sealed, this.keyMaterial),
+      ) as WebhookHeader[];
     } catch {
       return [];
     }
@@ -269,7 +300,10 @@ export class WebhooksService {
   /** The exact body a delivery sends: the custom template, or the standard envelope. */
   buildBody(template: string | null, payload: unknown, deliveryId: string) {
     if (!template) return JSON.stringify(payload);
-    return renderWebhookTemplate(template, { ...(payload as WebhookEnvelope), deliveryId });
+    return renderWebhookTemplate(template, {
+      ...(payload as WebhookEnvelope),
+      deliveryId,
+    });
   }
 
   private validateEvents(events: string[]) {
@@ -341,10 +375,18 @@ export class WebhooksService {
    * Sends one event's sample data right now so the receiver can be checked.
    * `phone` replaces the sample's customer number, so a WhatsApp test reaches you.
    */
-  async sendTest(restaurantId: string, id: string, opts: { event?: string; phone?: string } = {}) {
+  async sendTest(
+    restaurantId: string,
+    id: string,
+    opts: { event?: string; phone?: string } = {},
+  ) {
     const e = await this.get(restaurantId, id);
-    const event = opts.event && e.events.includes(opts.event) ? opts.event : e.events[0];
-    const envelope = this.sampleEnvelope(event, opts.phone?.replace(/[^\d+]/g, '') || undefined);
+    const event =
+      opts.event && e.events.includes(opts.event) ? opts.event : e.events[0];
+    const envelope = this.sampleEnvelope(
+      event,
+      opts.phone?.replace(/[^\d+]/g, '') || undefined,
+    );
     const row = await this.prisma.webhookDelivery.create({
       data: {
         endpointId: e.id,
@@ -364,14 +406,26 @@ export class WebhooksService {
     });
     let body: string | null = null;
     try {
-      body = this.buildBody(e.payloadTemplate, { ...envelope, test: true }, row.id);
+      body = this.buildBody(
+        e.payloadTemplate,
+        { ...envelope, test: true },
+        row.id,
+      );
     } catch {
       body = null;
     }
     // A test is a one-off: don't keep retrying it in the background.
     if (result.status === 'PENDING')
-      await this.prisma.webhookDelivery.update({ where: { id: row.id }, data: { status: 'FAILED' } });
-    return { ...result, status: result.status === 'PENDING' ? 'FAILED' : result.status, event, body };
+      await this.prisma.webhookDelivery.update({
+        where: { id: row.id },
+        data: { status: 'FAILED' },
+      });
+    return {
+      ...result,
+      status: result.status === 'PENDING' ? 'FAILED' : result.status,
+      event,
+      body,
+    };
   }
 
   // --- Delivery worker -----------------------------------------------------
@@ -431,10 +485,16 @@ export class WebhooksService {
         d.endpoint.url,
         netOptionsFromEnv(),
       );
-      const signature = signPayload(secret, body, Math.floor(Date.now() / 1000));
+      const signature = signPayload(
+        secret,
+        body,
+        Math.floor(Date.now() / 1000),
+      );
       statusCode = await postToTarget(target, body, TIMEOUT_MS, {
         // The restaurant's own headers first, so ours can never be overridden.
-        ...Object.fromEntries(this.openHeaders(d.endpoint.headers).map((h) => [h.name, h.value])),
+        ...Object.fromEntries(
+          this.openHeaders(d.endpoint.headers).map((h) => [h.name, h.value]),
+        ),
         'X-FCartel-Event': d.event,
         'X-FCartel-Delivery': d.id,
         'X-FCartel-Signature': signature,

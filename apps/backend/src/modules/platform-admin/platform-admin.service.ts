@@ -37,7 +37,9 @@ export class PlatformAdminService {
       where: {
         OR: [
           { isSuperAdmin: true },
-          ...(env.length ? [{ email: { in: env, mode: 'insensitive' as const } }] : []),
+          ...(env.length
+            ? [{ email: { in: env, mode: 'insensitive' as const } }]
+            : []),
         ],
       },
       orderBy: { createdAt: 'asc' },
@@ -130,11 +132,16 @@ export class PlatformAdminService {
         'This admin comes from SUPER_ADMIN_EMAILS on the server — remove the email there',
       );
     }
-    const role = await this.prisma.role.findUnique({ where: { id: user.roleId } });
+    const role = await this.prisma.role.findUnique({
+      where: { id: user.roleId },
+    });
     await this.prisma.user.update({
       where: { id: userId },
       // A platform-only account has nothing else to open: switch it off too.
-      data: { isSuperAdmin: false, ...(role?.name === PLATFORM_ROLE ? { isActive: false } : {}) },
+      data: {
+        isSuperAdmin: false,
+        ...(role?.name === PLATFORM_ROLE ? { isActive: false } : {}),
+      },
     });
     return { ok: true };
   }
@@ -201,7 +208,12 @@ export class PlatformAdminService {
   /** Save a new order for a list (ids top to bottom). */
   async reorder(list: string, ids: string[]) {
     await this.prisma.$transaction(
-      ids.map((id, i) => this.prisma.adminTodo.updateMany({ where: { id, list }, data: { sortOrder: i } })),
+      ids.map((id, i) =>
+        this.prisma.adminTodo.updateMany({
+          where: { id, list },
+          data: { sortOrder: i },
+        }),
+      ),
     );
     return { ok: true };
   }

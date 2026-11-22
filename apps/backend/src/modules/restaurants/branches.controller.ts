@@ -55,23 +55,37 @@ export class BranchesController {
   async create(@CurrentUser() user: SessionUser, @Body() body: unknown) {
     this.assertOwner(user);
     const parsed = createBranchSchema.safeParse(body);
-    if (!parsed.success) throw new BadRequestException(parsed.error.issues[0]?.message);
+    if (!parsed.success)
+      throw new BadRequestException(parsed.error.issues[0]?.message);
     const dto = parsed.data;
     const policy = await this.billing.branchPolicy(user.restaurantId);
     if (!policy.canAdd) {
       throw new BadRequestException(
-        policy.mode === 'ONE_TIME' && policy.onlinePayments && policy.priceMinor > 0
+        policy.mode === 'ONE_TIME' &&
+          policy.onlinePayments &&
+          policy.priceMinor > 0
           ? 'Pay for the new branch first'
           : 'Your plan includes no more branches — ask F Cartel to allow another',
       );
     }
     const dup = await this.prisma.branch.findFirst({
-      where: { restaurantId: user.restaurantId, isActive: true, name: { equals: dto.name, mode: 'insensitive' } },
+      where: {
+        restaurantId: user.restaurantId,
+        isActive: true,
+        name: { equals: dto.name, mode: 'insensitive' },
+      },
     });
-    if (dup) throw new BadRequestException(`There is already a branch called "${dup.name}"`);
+    if (dup)
+      throw new BadRequestException(
+        `There is already a branch called "${dup.name}"`,
+      );
     // Everyone who runs the whole restaurant gets the new branch too.
     const managers = await this.prisma.user.findMany({
-      where: { restaurantId: user.restaurantId, isActive: true, role: { name: { in: ALL_BRANCH_ROLES } } },
+      where: {
+        restaurantId: user.restaurantId,
+        isActive: true,
+        role: { name: { in: ALL_BRANCH_ROLES } },
+      },
       select: { id: true },
     });
     const ids = new Set([user.id, ...managers.map((m) => m.id)]);
@@ -91,14 +105,24 @@ export class BranchesController {
   @Post('buy')
   async buy(@CurrentUser() user: SessionUser) {
     this.assertOwner(user);
-    const me = await this.prisma.user.findUnique({ where: { id: user.id }, select: { email: true } });
-    return this.billing.buyBranch(user.restaurantId, { name: user.name, email: me?.email ?? null });
+    const me = await this.prisma.user.findUnique({
+      where: { id: user.id },
+      select: { email: true },
+    });
+    return this.billing.buyBranch(user.restaurantId, {
+      name: user.name,
+      email: me?.email ?? null,
+    });
   }
 
   @Auth('settings.manage')
   @Post('request')
   request(@CurrentUser() user: SessionUser, @Body() body: { note?: string }) {
     this.assertOwner(user);
-    return this.billing.requestBranch(user.restaurantId, user.id, typeof body?.note === 'string' ? body.note.slice(0, 300) : undefined);
+    return this.billing.requestBranch(
+      user.restaurantId,
+      user.id,
+      typeof body?.note === 'string' ? body.note.slice(0, 300) : undefined,
+    );
   }
 }

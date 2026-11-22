@@ -115,7 +115,10 @@ export class BillingService {
       accessEndsAt: ends ?? null,
       trialUsed: sub?.trialUsed ?? false,
       // Extra branches charged on top of each monthly period (MONTHLY branch mode).
-      branchAddOnMonthlyMinor: await this.branchAddOnMinor(restaurantId, 'MONTHLY'),
+      branchAddOnMonthlyMinor: await this.branchAddOnMinor(
+        restaurantId,
+        'MONTHLY',
+      ),
       razorpayKeyId: razorpayConfig()?.keyId ?? null,
       planRequest: request
         ? {
@@ -228,16 +231,22 @@ export class BillingService {
     }
     return this.requestPlan(restaurantId, userId, {
       planId: plan.id,
-      message: plan.trialDays > 0 ? `Asked for the ${plan.trialDays}-day free trial` : 'Asked for a free trial',
+      message:
+        plan.trialDays > 0
+          ? `Asked for the ${plan.trialDays}-day free trial`
+          : 'Asked for a free trial',
     });
   }
 
   // ─── Branches ────────────────────────────────────────────────────────────
 
   private async branchSettings() {
-    const s = await this.prisma.platformSettings.findUnique({ where: { id: 'default' } });
+    const s = await this.prisma.platformSettings.findUnique({
+      where: { id: 'default' },
+    });
     return {
-      mode: (s?.branchMode ?? 'ADMIN_ONLY') as 'ADMIN_ONLY' | 'FREE' | 'ONE_TIME' | 'MONTHLY',
+      mode: (s?.branchMode ?? 'ADMIN_ONLY') as
+        'ADMIN_ONLY' | 'FREE' | 'ONE_TIME' | 'MONTHLY',
       included: s?.includedBranches ?? 1,
       priceMinor: s?.branchPriceMinor ?? 0,
     };
@@ -252,14 +261,18 @@ export class BillingService {
   async branchPolicy(restaurantId: string) {
     const [settings, restaurant, used] = await Promise.all([
       this.branchSettings(),
-      this.prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { extraBranches: true } }),
+      this.prisma.restaurant.findUniqueOrThrow({
+        where: { id: restaurantId },
+        select: { extraBranches: true },
+      }),
       this.prisma.branch.count({ where: { restaurantId, isActive: true } }),
     ]);
     const paidUpTo = settings.included + restaurant.extraBranches;
     const unlimited = settings.mode === 'FREE' || settings.mode === 'MONTHLY';
     const canAdd = unlimited || used < paidUpTo;
     // MONTHLY: branches beyond the included + granted ones are charged per month.
-    const monthlyExtra = settings.mode === 'MONTHLY' ? Math.max(0, used - paidUpTo) : 0;
+    const monthlyExtra =
+      settings.mode === 'MONTHLY' ? Math.max(0, used - paidUpTo) : 0;
     return {
       mode: settings.mode,
       included: settings.included,
@@ -282,22 +295,40 @@ export class BillingService {
   }
 
   /** Extra charge per billing period for branches beyond the paid-up count (MONTHLY mode). */
-  async branchAddOnMinor(restaurantId: string, interval: keyof typeof INTERVAL_MONTHS) {
+  async branchAddOnMinor(
+    restaurantId: string,
+    interval: keyof typeof INTERVAL_MONTHS,
+  ) {
     const p = await this.branchPolicy(restaurantId);
     return p.monthlyExtra * p.priceMinor * INTERVAL_MONTHS[interval];
   }
 
   /** One-time payment for one more branch (ONE_TIME mode). */
-  async buyBranch(restaurantId: string, prefill: { name: string; email: string | null }) {
+  async buyBranch(
+    restaurantId: string,
+    prefill: { name: string; email: string | null },
+  ) {
     const policy = await this.branchPolicy(restaurantId);
-    if (policy.mode !== 'ONE_TIME') throw new BadRequestException('Branches are not sold one by one on this plan');
-    if (policy.canAdd) throw new BadRequestException('You can already add a branch — no payment needed');
-    if (policy.priceMinor <= 0) throw new BadRequestException('Ask F Cartel to allow another branch');
+    if (policy.mode !== 'ONE_TIME')
+      throw new BadRequestException(
+        'Branches are not sold one by one on this plan',
+      );
+    if (policy.canAdd)
+      throw new BadRequestException(
+        'You can already add a branch — no payment needed',
+      );
+    if (policy.priceMinor <= 0)
+      throw new BadRequestException('Ask F Cartel to allow another branch');
     const config = razorpayConfig();
     if (!config) {
-      throw new ServiceUnavailableException("Online payments aren't set up yet — ask F Cartel to allow another branch.");
+      throw new ServiceUnavailableException(
+        "Online payments aren't set up yet — ask F Cartel to allow another branch.",
+      );
     }
-    const restaurant = await this.prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { name: true } });
+    const restaurant = await this.prisma.restaurant.findUniqueOrThrow({
+      where: { id: restaurantId },
+      select: { name: true },
+    });
     let order: RazorpayOrder;
     try {
       order = await createRazorpayOrder(config, {
@@ -308,7 +339,9 @@ export class BillingService {
       });
     } catch (err) {
       this.logger.error(`Razorpay order failed: ${String(err)}`);
-      throw new ServiceUnavailableException('Could not start the payment. Please try again in a minute.');
+      throw new ServiceUnavailableException(
+        'Could not start the payment. Please try again in a minute.',
+      );
     }
     await this.prisma.subscriptionPayment.create({
       data: {
@@ -334,11 +367,19 @@ export class BillingService {
   /** Ask the platform team to allow another branch (ADMIN_ONLY, or no online payments). */
   async requestBranch(restaurantId: string, userId: string, note?: string) {
     const [restaurant, user, policy] = await Promise.all([
-      this.prisma.restaurant.findUniqueOrThrow({ where: { id: restaurantId }, select: { name: true } }),
-      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, phone: true } }),
+      this.prisma.restaurant.findUniqueOrThrow({
+        where: { id: restaurantId },
+        select: { name: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, email: true, phone: true },
+      }),
       this.branchPolicy(restaurantId),
     ]);
-    const who = [user?.name, user?.email, user?.phone].filter(Boolean).join(' · ');
+    const who = [user?.name, user?.email, user?.phone]
+      .filter(Boolean)
+      .join(' · ');
     await notifySuperAdmins(this.prisma, this.notifications, {
       type: 'billing.plan_requested',
       title: `${restaurant.name} wants another branch`,
@@ -387,7 +428,9 @@ export class BillingService {
     try {
       order = await createRazorpayOrder(config, {
         // Plus extra branches when they are charged per month.
-        amount: plan.priceMinor + (await this.branchAddOnMinor(restaurantId, plan.interval)),
+        amount:
+          plan.priceMinor +
+          (await this.branchAddOnMinor(restaurantId, plan.interval)),
         currency: plan.currency,
         // Razorpay caps receipt at 40 chars.
         receipt: `sub_${restaurantId.slice(-10)}_${Date.now()}`,

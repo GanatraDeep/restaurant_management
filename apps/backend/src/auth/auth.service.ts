@@ -193,14 +193,23 @@ export class AuthService {
     if (norm.length < 10) return { norm, users: [] };
     const candidates = await this.prisma.user.findMany({
       where: { isActive: true, phone: { endsWith: norm.slice(-10) } },
-      include: { role: { include: { permissions: { include: { permission: true } } } } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
     });
-    return { norm, users: candidates.filter((u) => this.normalisePhone(u.phone ?? '') === norm) };
+    return {
+      norm,
+      users: candidates.filter(
+        (u) => this.normalisePhone(u.phone ?? '') === norm,
+      ),
+    };
   }
 
   async sendLoginOtp(phone: string) {
     if (!this.loginOtpAvailable()) {
-      throw new ServiceUnavailableException('WhatsApp sign-in is not set up on this server — use your email and password');
+      throw new ServiceUnavailableException(
+        'WhatsApp sign-in is not set up on this server — use your email and password',
+      );
     }
     const { norm, users } = await this.usersByPhone(phone);
     if (users.length === 0) {
@@ -208,16 +217,28 @@ export class AuthService {
         'No account uses this mobile number. Sign in with your email, or ask your manager to add your number to your staff profile.',
       );
     }
-    return this.signupOtp.send(norm, users.length === 1 ? users[0].name : undefined, 'login');
+    return this.signupOtp.send(
+      norm,
+      users.length === 1 ? users[0].name : undefined,
+      'login',
+    );
   }
 
-  async verifyLoginOtp(dto: { phone: string; code: string; totp?: string; rememberMe?: boolean }) {
+  async verifyLoginOtp(dto: {
+    phone: string;
+    code: string;
+    totp?: string;
+    rememberMe?: boolean;
+  }) {
     // Never fall back to "no code needed" for sign-in.
     if (!this.loginOtpAvailable()) {
-      throw new ServiceUnavailableException('WhatsApp sign-in is not set up on this server — use your email and password');
+      throw new ServiceUnavailableException(
+        'WhatsApp sign-in is not set up on this server — use your email and password',
+      );
     }
     const { norm, users } = await this.usersByPhone(dto.phone);
-    if (users.length === 0) throw new UnauthorizedException('No account uses this mobile number');
+    if (users.length === 0)
+      throw new UnauthorizedException('No account uses this mobile number');
     if (users.length > 1) {
       throw new BadRequestException(
         'More than one account uses this number — sign in with your email and password instead',

@@ -119,7 +119,9 @@ export class AuthController {
     @Body() body: unknown,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const { token, user, rememberMe } = await this.authService.verifyLoginOtp(body as LoginOtpVerifyDto);
+    const { token, user, rememberMe } = await this.authService.verifyLoginOtp(
+      body as LoginOtpVerifyDto,
+    );
     this.setSessionCookie(
       res,
       token,

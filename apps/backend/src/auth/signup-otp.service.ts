@@ -16,8 +16,11 @@ const MAX_ATTEMPTS = 5;
 
 export type OtpPurpose = 'signup' | 'login';
 
-const hashCode = (phone: string, code: string, purpose: OtpPurpose = 'signup') =>
-  createHash('sha256').update(`${purpose}:${phone}:${code}`).digest('hex');
+const hashCode = (
+  phone: string,
+  code: string,
+  purpose: OtpPurpose = 'signup',
+) => createHash('sha256').update(`${purpose}:${phone}:${code}`).digest('hex');
 
 /**
  * Verifies a new restaurant owner's WhatsApp number before the account is
@@ -40,7 +43,11 @@ export class SignupOtpService {
   async send(phone: string, name?: string, purpose: OtpPurpose = 'signup') {
     if (!this.required()) return { required: false as const };
     const recent = await this.prisma.signupOtp.findMany({
-      where: { phone, purpose, createdAt: { gt: new Date(Date.now() - 3_600_000) } },
+      where: {
+        phone,
+        purpose,
+        createdAt: { gt: new Date(Date.now() - 3_600_000) },
+      },
       orderBy: { createdAt: 'desc' },
       select: { createdAt: true },
     });
@@ -90,7 +97,11 @@ export class SignupOtpService {
   }
 
   /** Throws unless `code` is the latest live code for `phone`; then uses it up. */
-  async consume(phone: string, code: string | undefined, purpose: OtpPurpose = 'signup') {
+  async consume(
+    phone: string,
+    code: string | undefined,
+    purpose: OtpPurpose = 'signup',
+  ) {
     if (!this.required()) return;
     if (!code) {
       throw new BadRequestException(

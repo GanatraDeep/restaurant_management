@@ -42,7 +42,10 @@ import {
   settlePayments,
   type Bill,
 } from './settlement';
-import { appliesTakeawayCharge, computeTakeawayCharge } from './takeaway-charge';
+import {
+  appliesTakeawayCharge,
+  computeTakeawayCharge,
+} from './takeaway-charge';
 import type { TaxMode } from '@nodedr-restaurant/types';
 import { VerifactuService } from '../verifactu/verifactu.service';
 import { itemVariants } from '../menu/menu-variants';
@@ -1063,7 +1066,13 @@ export class OrdersService {
         tableNumber: o?.table?.number ?? null,
       };
     } catch {
-      return { ...data, customerId: null, customerName: null, customerPhone: null, tableNumber: null };
+      return {
+        ...data,
+        customerId: null,
+        customerName: null,
+        customerPhone: null,
+        tableNumber: null,
+      };
     }
   }
 
@@ -1465,14 +1474,23 @@ export class OrdersService {
   private async takeawayChargeFor(
     orderId: string,
     orderType: string,
-    branch: { takeawayChargePerOrder: Prisma.Decimal | number; takeawayChargeOnDelivery: boolean },
+    branch: {
+      takeawayChargePerOrder: Prisma.Decimal | number;
+      takeawayChargeOnDelivery: boolean;
+    },
   ) {
-    if (!appliesTakeawayCharge(orderType, branch.takeawayChargeOnDelivery)) return 0;
+    if (!appliesTakeawayCharge(orderType, branch.takeawayChargeOnDelivery))
+      return 0;
     const items = await this.prisma.orderItem.findMany({
       where: { orderId, status: { not: 'CANCELLED' } },
       select: {
         quantity: true,
-        menuItem: { select: { takeawayCharge: true, category: { select: { takeawayCharge: true } } } },
+        menuItem: {
+          select: {
+            takeawayCharge: true,
+            category: { select: { takeawayCharge: true } },
+          },
+        },
       },
     });
     return computeTakeawayCharge({
@@ -1481,8 +1499,14 @@ export class OrdersService {
       onDelivery: branch.takeawayChargeOnDelivery,
       lines: items.map((i) => ({
         quantity: i.quantity,
-        itemCharge: i.menuItem.takeawayCharge === null ? null : Number(i.menuItem.takeawayCharge),
-        categoryCharge: i.menuItem.category.takeawayCharge === null ? null : Number(i.menuItem.category.takeawayCharge),
+        itemCharge:
+          i.menuItem.takeawayCharge === null
+            ? null
+            : Number(i.menuItem.takeawayCharge),
+        categoryCharge:
+          i.menuItem.category.takeawayCharge === null
+            ? null
+            : Number(i.menuItem.category.takeawayCharge),
       })),
     });
   }
