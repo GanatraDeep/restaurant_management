@@ -23,7 +23,12 @@ const createSchema = z.object({
   description: z.string().trim().max(120).optional(),
   payloadTemplate: z.string().max(10_000).nullable().optional(),
   headers: z
-    .array(z.object({ name: z.string().trim().max(64), value: z.string().max(2000) }))
+    .array(
+      z.object({
+        name: z.string().trim().max(64),
+        value: z.string().max(2000),
+      }),
+    )
     .max(10)
     .optional(),
 });

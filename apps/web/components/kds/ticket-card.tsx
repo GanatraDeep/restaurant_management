@@ -242,7 +242,7 @@ export function TicketCard({
               title={ticket.printedCount > 0 ? "Reprint ticket (marked REPRINT)" : "Print ticket"}
               aria-label={ticket.printedCount > 0 ? "Reprint ticket" : "Print ticket"}
               disabled={!branchId}
-              onClick={() => branchId && openTicketPrint(ticket.id, branchId)}
+              onClick={() => branchId && openTicketPrint(ticket.id, branchId, ticket.station?.printerName)}
             >
               <Printer className="h-4 w-4" />
             </Button>

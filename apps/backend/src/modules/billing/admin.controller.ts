@@ -20,11 +20,15 @@ import {
   type PlatformSettingsDto,
   type SubscriptionPlanDto,
   type UpdateSubscriptionPlanDto,
+  walletAdjustSchema,
+  type SessionUser,
 } from '@nodedr-restaurant/types';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { WhatsAppService } from '../../common/whatsapp/whatsapp.service';
 import { BillingService } from './billing.service';
+import { WalletService } from './wallet.service';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { SkipSubscription } from './skip-subscription.decorator';
 import { SuperAdminGuard } from './super-admin.guard';
 
@@ -41,7 +45,38 @@ export class AdminController {
   constructor(
     private readonly billing: BillingService,
     private readonly whatsapp: WhatsAppService,
+    private readonly wallet: WalletService,
   ) {}
+
+  // A restaurant's WhatsApp message wallet: balance and history…
+  @Get('restaurants/:id/wallet')
+  restaurantWallet(@Param('id') id: string) {
+    return this.wallet.summary(id);
+  }
+
+  // …and adding (or taking back) credit by hand, e.g. demo credit.
+  @Post('restaurants/:id/wallet')
+  async adjustWallet(
+    @CurrentUser() user: SessionUser,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(walletAdjustSchema))
+    body: { amountMinor: number; note?: string },
+  ) {
+    await this.wallet.adjust(
+      id,
+      body.amountMinor,
+      body.amountMinor > 0 ? 'CREDIT' : 'DEBIT',
+      {
+        note:
+          body.note ||
+          (body.amountMinor > 0
+            ? 'Credit from F Cartel'
+            : 'Adjusted by F Cartel'),
+        userId: user.id,
+      },
+    );
+    return this.wallet.summary(id);
+  }
 
   // Whether guest OTPs can be sent, and a real test message with the
   // gateway's own reply — the quickest way to see why codes don't arrive.

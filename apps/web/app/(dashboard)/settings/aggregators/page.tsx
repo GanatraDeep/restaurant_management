@@ -1,9 +1,12 @@
 "use client";
 
 import { AGGREGATOR_LABEL, AGGREGATOR_PROVIDERS, type AggregatorProvider } from "@nodedr-restaurant/types";
-import { AlertTriangle, Copy, KeyRound, Link2, Plug, RotateCcw, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, Download, KeyRound, Link2, Plug, RotateCcw, Send, Trash2, Upload } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { downloadFile } from "@/lib/download";
 import { toast } from "sonner";
 import { AggregatorBadge } from "@/components/orders/channel-badges";
 import { SettingsTabs } from "@/components/settings/settings-tabs";
@@ -55,6 +58,42 @@ function Mappings({ branchId, connection }: { branchId: string | null; connectio
   const { upsertMapping, deleteMapping } = useAggregatorActions(branchId);
   const [externalItemId, setExternalItemId] = useState("");
   const [menuItemId, setMenuItemId] = useState("");
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"down" | "up" | null>(null);
+  const [result, setResult] = useState<{ mapped: number; cleared: number; items: number; errors: { row: number; message: string }[] } | null>(null);
+  const label = AGGREGATOR_LABEL[connection.provider];
+
+  const download = async () => {
+    setBusy("down");
+    try {
+      await downloadFile(`/aggregators/${connection.id}/mappings/export?branchId=${branchId}`, `${label.toLowerCase()}-item-mapping.xlsx`);
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const upload = async (file?: File) => {
+    if (!file) return;
+    setBusy("up");
+    setResult(null);
+    try {
+      const r = await api.upload<{ mapped: number; cleared: number; items: number; errors: { row: number; message: string }[] }>(
+        `/aggregators/${connection.id}/mappings/import?branchId=${branchId}`,
+        file,
+      );
+      setResult(r);
+      toast.success(`${r.items} item${r.items === 1 ? "" : "s"} mapped${r.errors.length ? ` · ${r.errors.length} row(s) need a look` : ""}`);
+      qc.invalidateQueries({ queryKey: ["aggregators"] });
+    } catch (e) {
+      toast.error(errMsg(e));
+    } finally {
+      setBusy(null);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   const add = () =>
     upsertMapping.mutate(
@@ -74,6 +113,37 @@ function Mappings({ branchId, connection }: { branchId: string | null; connectio
         Link each {AGGREGATOR_LABEL[connection.provider]} item id to your menu. Items whose name exactly matches one
         menu item work without a mapping.
       </p>
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+        <p className="text-sm font-medium text-foreground">Many items? Map them in Excel</p>
+        <p className="text-xs text-muted-foreground">
+          Download the sheet (every menu item, with the IDs already mapped), type each {label} item ID in the yellow
+          column, and upload it back. Several IDs for one dish: separate with commas. Clearing an ID removes it.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void download()} disabled={!!busy}>
+            <Download className="size-4" /> {busy === "down" ? "Preparing…" : "Download Excel"}
+          </Button>
+          <input ref={fileRef} type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => fileRef.current?.click()} disabled={!!busy}>
+            <Upload className="size-4" /> {busy === "up" ? "Uploading…" : "Upload Excel"}
+          </Button>
+        </div>
+        {result && (
+          <div className="text-xs">
+            <p className="text-foreground">
+              {result.items} items mapped ({result.mapped} IDs){result.cleared ? ` · ${result.cleared} mapping(s) removed` : ""}.
+            </p>
+            {result.errors.length > 0 && (
+              <ul className="mt-1 list-disc pl-4 text-destructive">
+                {result.errors.slice(0, 20).map((e) => (
+                  <li key={`${e.row}-${e.message}`}>Row {e.row}: {e.message}</li>
+                ))}
+                {result.errors.length > 20 && <li>…and {result.errors.length - 20} more</li>}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
       <div className="flex flex-col gap-2 sm:flex-row">
         <Input
           value={externalItemId}

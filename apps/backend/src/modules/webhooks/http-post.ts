@@ -35,8 +35,14 @@ export function postToTarget(
         // Node 20+ asks for every address at once ({ all: true }, used by
         // happy-eyeballs); answering that with a single address fails with
         // "Invalid IP address: undefined", so answer in the form asked for.
-        lookup: ((_host: string, opts: { all?: boolean }, cb: (...a: unknown[]) => void) =>
-          opts?.all ? cb(null, [{ address, family }]) : cb(null, address, family)) as never,
+        lookup: ((
+          _host: string,
+          opts: { all?: boolean },
+          cb: (...a: unknown[]) => void,
+        ) =>
+          opts?.all
+            ? cb(null, [{ address, family }])
+            : cb(null, address, family)) as never,
       },
       (res) => {
         res.resume(); // we never read the response body

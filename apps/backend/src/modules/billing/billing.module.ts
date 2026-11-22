@@ -6,14 +6,28 @@ import { BillingService } from './billing.service';
 import { PublicPlansController } from './public-plans.controller';
 import { SubscriptionGuard } from './subscription.guard';
 import { SuperAdminGuard } from './super-admin.guard';
+import { WalletController } from './wallet.controller';
+import { WalletService } from './wallet.service';
+import { BranchAccessService } from '../../common/services/branch-access.service';
 
 // Global so SubscriptionGuard (instantiated in every feature module through
 // @Auth) can inject BillingService.
 @Global()
 @Module({
   imports: [NotificationsModule],
-  controllers: [BillingController, AdminController, PublicPlansController],
-  providers: [BillingService, SuperAdminGuard, SubscriptionGuard],
-  exports: [BillingService, SubscriptionGuard],
+  controllers: [
+    BillingController,
+    AdminController,
+    PublicPlansController,
+    WalletController,
+  ],
+  providers: [
+    BillingService,
+    WalletService,
+    BranchAccessService,
+    SuperAdminGuard,
+    SubscriptionGuard,
+  ],
+  exports: [BillingService, WalletService, SubscriptionGuard],
 })
 export class BillingModule {}

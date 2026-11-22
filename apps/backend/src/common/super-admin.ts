@@ -18,3 +18,8 @@ export function isSuperAdminUser(user: {
   if (user.isSuperAdmin) return true;
   return !!user.email && superAdminEmails().has(user.email.toLowerCase());
 }
+
+/** Listed in SUPER_ADMIN_EMAILS: the root super admin, who manages the other admins. */
+export function isRootAdminUser(user: { email?: string | null }): boolean {
+  return !!user.email && superAdminEmails().has(user.email.toLowerCase());
+}

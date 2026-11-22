@@ -1,3 +1,4 @@
+import { WalletService } from '../billing/wallet.service';
 import {
   BadRequestException,
   ConflictException,
@@ -5,6 +6,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma, type AggregatorProvider } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -42,7 +44,10 @@ import {
   settlePayments,
   type Bill,
 } from './settlement';
-import { appliesTakeawayCharge, computeTakeawayCharge } from './takeaway-charge';
+import {
+  appliesTakeawayCharge,
+  computeTakeawayCharge,
+} from './takeaway-charge';
 import type { TaxMode } from '@nodedr-restaurant/types';
 import { VerifactuService } from '../verifactu/verifactu.service';
 import { itemVariants } from '../menu/menu-variants';
@@ -74,6 +79,8 @@ export class OrdersService {
     private readonly webhooks: WebhooksService,
     private readonly verifactu: VerifactuService,
     private readonly aggregatorStatus: AggregatorStatusService,
+    // Optional: absent in unit tests that build the service by hand.
+    @Optional() private readonly wallet?: WalletService,
   ) {}
 
   async listOpen(branchId: string, tableId?: string) {
@@ -1063,7 +1070,13 @@ export class OrdersService {
         tableNumber: o?.table?.number ?? null,
       };
     } catch {
-      return { ...data, customerId: null, customerName: null, customerPhone: null, tableNumber: null };
+      return {
+        ...data,
+        customerId: null,
+        customerName: null,
+        customerPhone: null,
+        tableNumber: null,
+      };
     }
   }
 
@@ -1465,14 +1478,23 @@ export class OrdersService {
   private async takeawayChargeFor(
     orderId: string,
     orderType: string,
-    branch: { takeawayChargePerOrder: Prisma.Decimal | number; takeawayChargeOnDelivery: boolean },
+    branch: {
+      takeawayChargePerOrder: Prisma.Decimal | number;
+      takeawayChargeOnDelivery: boolean;
+    },
   ) {
-    if (!appliesTakeawayCharge(orderType, branch.takeawayChargeOnDelivery)) return 0;
+    if (!appliesTakeawayCharge(orderType, branch.takeawayChargeOnDelivery))
+      return 0;
     const items = await this.prisma.orderItem.findMany({
       where: { orderId, status: { not: 'CANCELLED' } },
       select: {
         quantity: true,
-        menuItem: { select: { takeawayCharge: true, category: { select: { takeawayCharge: true } } } },
+        menuItem: {
+          select: {
+            takeawayCharge: true,
+            category: { select: { takeawayCharge: true } },
+          },
+        },
       },
     });
     return computeTakeawayCharge({
@@ -1481,8 +1503,14 @@ export class OrdersService {
       onDelivery: branch.takeawayChargeOnDelivery,
       lines: items.map((i) => ({
         quantity: i.quantity,
-        itemCharge: i.menuItem.takeawayCharge === null ? null : Number(i.menuItem.takeawayCharge),
-        categoryCharge: i.menuItem.category.takeawayCharge === null ? null : Number(i.menuItem.category.takeawayCharge),
+        itemCharge:
+          i.menuItem.takeawayCharge === null
+            ? null
+            : Number(i.menuItem.takeawayCharge),
+        categoryCharge:
+          i.menuItem.category.takeawayCharge === null
+            ? null
+            : Number(i.menuItem.category.takeawayCharge),
       })),
     });
   }
@@ -1560,6 +1588,14 @@ export class OrdersService {
   // Receipt data plus the numbers to print for it. A paid order prints what
   // was stored; an open one prints the bill as previewed, marked provisional,
   // so the paper always matches what Complete Payment will charge.
+  /** Which branch an order belongs to (public invoice link). */
+  branchOfOrder(orderId: string) {
+    return this.prisma.order.findUnique({
+      where: { id: orderId },
+      select: { branchId: true },
+    });
+  }
+
   async getBillForPrint(
     branchId: string,
     orderId: string,
@@ -1944,6 +1980,8 @@ export class OrdersService {
       }).then((data) =>
         this.webhooks.emitForBranch(branchId, 'order.paid', data),
       );
+      // WhatsApp bill from F Cartel's number, if the restaurant turned it on.
+      void this.wallet?.autoSendOnPaid(branchId, updated.id);
     }
     return {
       ...updated,

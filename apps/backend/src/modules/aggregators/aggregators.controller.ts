@@ -12,6 +12,9 @@ import {
   Put,
   Query,
   Req,
+  Res,
+  UploadedFile,
+  UseInterceptors,
   type RawBodyRequest,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -25,7 +28,9 @@ import {
   type SessionUser,
   type UpdateAggregatorConnectionDto,
 } from '@nodedr-restaurant/types';
-import type { Request } from 'express';
+import type { Request, Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { Auth } from '../../common/decorators/auth.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -127,6 +132,52 @@ export class AggregatorsController {
       await this.branch(user, branchId),
       id,
       body,
+    );
+  }
+
+  @Auth('settings.manage')
+  @Get(':id/mappings/export')
+  async exportMappings(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, provider } = await this.aggregators.exportMappings(
+      await this.branch(user, branchId),
+      id,
+    );
+    const name = `${provider.toLowerCase()}-item-mapping.xlsx`;
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+    res.send(buffer);
+  }
+
+  @Auth('settings.manage')
+  @Post(':id/mappings/import')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+    }),
+  )
+  async importMappings(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file)
+      throw new BadRequestException('Choose the Excel file (max 5 MB)');
+    if (!/\.(xlsx|csv)$/i.test(file.originalname))
+      throw new BadRequestException('Upload an .xlsx or .csv file');
+    return this.aggregators.importMappings(
+      await this.branch(user, branchId),
+      id,
+      file,
     );
   }
 

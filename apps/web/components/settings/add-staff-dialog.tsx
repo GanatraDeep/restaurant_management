@@ -103,7 +103,7 @@ export function AddStaffDialog() {
               <Input id="s-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="s-phone">Phone</Label>
+              <Label htmlFor="s-phone">WhatsApp number (for OTP sign-in)</Label>
               <Input id="s-phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
             </div>
           </div>

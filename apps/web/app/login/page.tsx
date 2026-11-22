@@ -15,6 +15,10 @@ import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useCurrentUser, useLogin } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { WhatsAppLogin } from "@/components/auth/whatsapp-login";
+import { api } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { BRAND } from "@/lib/brand";
 
@@ -39,6 +43,13 @@ export default function LoginPage() {
   // Shown inline under the form (a toast vanishes before it can be read).
   const [error, setError] = useState<string | null>(null);
   const prefersReducedMotion = useReducedMotion();
+  // WhatsApp OTP sign-in, when this server can send WhatsApp codes.
+  const { data: options } = useQuery({
+    queryKey: ["auth", "login-options"],
+    queryFn: () => api.get<{ whatsappOtp: boolean }>("/auth/login-options"),
+    staleTime: 300_000,
+  });
+  const [method, setMethod] = useState<"email" | "whatsapp">("email");
   const {
     register,
     handleSubmit,
@@ -114,6 +125,34 @@ export default function LoginPage() {
           <p className="text-sm text-muted-foreground">Sign in to manage your restaurant</p>
         </div>
 
+        {options?.whatsappOtp && (
+          <div role="tablist" aria-label="Sign in with" className="mb-6 grid grid-cols-2 rounded-lg bg-secondary p-1">
+            {(
+              [
+                ["email", "Email & password"],
+                ["whatsapp", "WhatsApp OTP"],
+              ] as const
+            ).map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={method === m}
+                onClick={() => setMethod(m)}
+                className={cn(
+                  "rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  method === m ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {method === "whatsapp" && options?.whatsappOtp ? (
+          <WhatsAppLogin onSignedIn={() => router.push("/dashboard")} />
+        ) : (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
           <div className="flex flex-col gap-2">
             <Label htmlFor="email">Email</Label>
@@ -137,7 +176,12 @@ export default function LoginPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Link href="/forgot-password" className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <PasswordInput
               id="password"
               
@@ -204,6 +248,7 @@ export default function LoginPage() {
             {login.isPending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
+        )}
 
         <p className="mt-8 text-center text-xs text-muted-foreground">
           New restaurant?{" "}

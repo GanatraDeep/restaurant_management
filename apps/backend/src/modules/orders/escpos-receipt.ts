@@ -216,8 +216,10 @@ export function buildReceiptEscPosJob({
     );
   }
   if (order.tipAmount > 0) w.row('Tip', money(order.tipAmount));
-  if ((order.deliveryFee ?? 0) > 0) w.row('Delivery fee', money(order.deliveryFee ?? 0));
-  if ((order.takeawayCharge ?? 0) > 0) w.row('Takeaway charge', money(order.takeawayCharge ?? 0));
+  if ((order.deliveryFee ?? 0) > 0)
+    w.row('Delivery fee', money(order.deliveryFee ?? 0));
+  if ((order.takeawayCharge ?? 0) > 0)
+    w.row('Takeaway charge', money(order.takeawayCharge ?? 0));
   w.rule();
   w.row(order.isProvisional ? 'TOTAL DUE' : 'TOTAL', money(order.totalAmount), {
     bold: true,

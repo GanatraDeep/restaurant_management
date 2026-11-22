@@ -60,8 +60,9 @@ export class BillingController {
   @Auth('settings.manage')
   @Post('trial')
   @UsePipes(new ZodValidationPipe(choosePlanSchema))
-  startTrial(@CurrentUser() user: SessionUser, @Body() body: ChoosePlanDto) {
-    return this.billing.startTrial(user.restaurantId, body.planId);
+  requestTrial(@CurrentUser() user: SessionUser, @Body() body: ChoosePlanDto) {
+    // Only asks — a super admin grants trials.
+    return this.billing.requestTrial(user.restaurantId, user.id, body.planId);
   }
 
   // "Contact us to subscribe" while online payment isn't available.

@@ -38,9 +38,9 @@ export function PlanPicker({
 
   const startTrial = (plan: SubscriptionPlan) =>
     trial.mutate(plan.id, {
-      onSuccess: (s) => {
-        toast.success(`Your ${plan.trialDays}-day free trial has started`);
-        onDone?.(s);
+      onSuccess: () => {
+        // Admins grant trials; this only lets them know.
+        toast.success("Request sent — we'll start your free trial and let you know");
       },
       onError: (e) => toast.error(errMsg(e)),
     });
@@ -107,6 +107,12 @@ export function PlanPicker({
               <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
                 {formatPlanPrice(plan.priceMinor, plan.currency, plan.interval)}
               </p>
+              {(status?.branchAddOnMonthlyMinor ?? 0) > 0 && plan.priceMinor > 0 && (
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  + ₹{(((status?.branchAddOnMonthlyMinor ?? 0) * ({ MONTHLY: 1, QUARTERLY: 3, YEARLY: 12 } as const)[plan.interval]) / 100).toLocaleString("en-IN")}{" "}
+                  for your extra branches
+                </p>
+              )}
               {plan.description && <p className="mt-1 text-sm text-muted-foreground">{plan.description}</p>}
               {plan.features.length > 0 && (
                 <ul className="mt-4 flex flex-col gap-2 text-sm text-foreground/90">
@@ -121,7 +127,7 @@ export function PlanPicker({
               <div className="mt-5 flex flex-1 flex-col justify-end gap-2">
                 {showTrial && (
                   <Button onClick={() => startTrial(plan)} disabled={!!busyPlan}>
-                    {busyPlan === plan.id && trial.isPending ? "Starting…" : "Start free trial"}
+                    {busyPlan === plan.id && trial.isPending ? "Sending…" : "Ask for a free trial"}
                   </Button>
                 )}
                 {plan.priceMinor > 0 && !onlinePayments ? (

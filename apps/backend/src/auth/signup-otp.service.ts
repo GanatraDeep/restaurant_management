@@ -14,8 +14,13 @@ const RESEND_AFTER_MS = 30 * 1000;
 const MAX_SENDS_PER_HOUR = 5;
 const MAX_ATTEMPTS = 5;
 
-const hashCode = (phone: string, code: string) =>
-  createHash('sha256').update(`signup:${phone}:${code}`).digest('hex');
+export type OtpPurpose = 'signup' | 'login' | 'reset';
+
+const hashCode = (
+  phone: string,
+  code: string,
+  purpose: OtpPurpose = 'signup',
+) => createHash('sha256').update(`${purpose}:${phone}:${code}`).digest('hex');
 
 /**
  * Verifies a new restaurant owner's WhatsApp number before the account is
@@ -35,10 +40,49 @@ export class SignupOtpService {
     return !!this.whatsapp.settings();
   }
 
-  async send(phone: string, name?: string) {
+  async send(phone: string, name?: string, purpose: OtpPurpose = 'signup') {
     if (!this.required()) return { required: false as const };
+    const { code, id } = await this.issue(phone, purpose);
+    const r = await this.whatsapp.sendText(
+      phone,
+      purpose === 'login'
+        ? `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel sign-in code is:\n\n${code}\n\nIt expires in 10 minutes. Never share it — F Cartel staff will never ask for it.`
+        : purpose === 'reset'
+          ? `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't ask to reset your password, ignore this message.`
+          : `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel verification code is:\n\n${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`,
+    );
+    if (!r.ok) {
+      // A failed send doesn't count against the resend wait.
+      await this.discard(id);
+      throw new ServiceUnavailableException(
+        'Could not send the WhatsApp code — check the number is on WhatsApp and try again',
+      );
+    }
+    return {
+      required: true as const,
+      resendAfterSeconds: RESEND_AFTER_MS / 1000,
+    };
+  }
+
+  /** Drops a code that could not be delivered. */
+  discard(id: string) {
+    return this.prisma.signupOtp
+      .delete({ where: { id } })
+      .catch(() => undefined);
+  }
+
+  /**
+   * A new code for `key` (a phone number, or e.g. "user:<id>"), with the
+   * resend wait and hourly cap. The caller delivers it.
+   */
+  async issue(key: string, purpose: OtpPurpose) {
+    const phone = key;
     const recent = await this.prisma.signupOtp.findMany({
-      where: { phone, createdAt: { gt: new Date(Date.now() - 3_600_000) } },
+      where: {
+        phone,
+        purpose,
+        createdAt: { gt: new Date(Date.now() - 3_600_000) },
+      },
       orderBy: { createdAt: 'desc' },
       select: { createdAt: true },
     });
@@ -61,39 +105,30 @@ export class SignupOtpService {
     const otp = await this.prisma.signupOtp.create({
       data: {
         phone,
-        codeHash: hashCode(phone, code),
+        purpose,
+        codeHash: hashCode(phone, code, purpose),
         expiresAt: new Date(Date.now() + OTP_TTL_MS),
       },
     });
-    const r = await this.whatsapp.sendText(
-      phone,
-      `Hello${name ? ` ${name}` : ''},\n\nYour F Cartel verification code is:\n\n${code}\n\nIt expires in 10 minutes. Do not share it with anyone.`,
-    );
-    if (!r.ok) {
-      // A failed send doesn't count against the resend wait.
-      await this.prisma.signupOtp
-        .delete({ where: { id: otp.id } })
-        .catch(() => undefined);
-      throw new ServiceUnavailableException(
-        'Could not send the WhatsApp code — check the number is on WhatsApp and try again',
-      );
-    }
-    return {
-      required: true as const,
-      resendAfterSeconds: RESEND_AFTER_MS / 1000,
-    };
+    return { code, id: otp.id };
   }
 
   /** Throws unless `code` is the latest live code for `phone`; then uses it up. */
-  async consume(phone: string, code: string | undefined) {
-    if (!this.required()) return;
+  async consume(
+    phone: string,
+    code: string | undefined,
+    purpose: OtpPurpose = 'signup',
+    /** Password reset: always needs the code, even without WhatsApp. */
+    strict = false,
+  ) {
+    if (!strict && !this.required()) return;
     if (!code) {
       throw new BadRequestException(
         'Enter the 6-digit code sent to your WhatsApp',
       );
     }
     const otp = await this.prisma.signupOtp.findFirst({
-      where: { phone },
+      where: { phone, purpose },
       orderBy: { createdAt: 'desc' },
     });
     if (!otp || otp.expiresAt < new Date()) {
@@ -107,7 +142,7 @@ export class SignupOtpService {
       );
     }
     const ok = timingSafeEqual(
-      Buffer.from(hashCode(phone, code)),
+      Buffer.from(hashCode(phone, code, purpose)),
       Buffer.from(otp.codeHash),
     );
     if (!ok) {
@@ -119,6 +154,6 @@ export class SignupOtpService {
         'That code is not right — check the WhatsApp message and try again',
       );
     }
-    await this.prisma.signupOtp.deleteMany({ where: { phone } });
+    await this.prisma.signupOtp.deleteMany({ where: { phone, purpose } });
   }
 }

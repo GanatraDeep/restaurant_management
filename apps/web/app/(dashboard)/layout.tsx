@@ -33,7 +33,13 @@ export default function DashboardGroupLayout({ children }: { children: React.Rea
   const { data, isLoading, isError } = useCurrentUser();
   const permissions = data?.user.permissions;
   const allowed = !permissions || canOpen(pathname ?? "", permissions, NAV_ITEMS);
-  const fallback = permissions ? firstAllowedHref(permissions, NAV_ITEMS) : undefined;
+  // A platform-team account (admin with no restaurant permissions) lands on the admin console.
+  const fallback =
+    data?.user.isSuperAdmin && permissions?.length === 0
+      ? "/admin"
+      : permissions
+        ? firstAllowedHref(permissions, NAV_ITEMS)
+        : undefined;
 
   useEffect(() => {
     if (!isLoading && isError) {

@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { QueryError } from "@/components/ui/query-error";
 import { PaymentMethodButtons } from "@/components/pos/payment-method-buttons";
 import { CustomerPicker } from "@/components/pos/customer-picker";
+import { SendBillWhatsApp } from "@/components/orders/send-bill-whatsapp";
 import type { Customer } from "@/hooks/use-customers";
 import { lookupGiftCard } from "@/hooks/use-gift-cards";
 import { CancelOrderDialog, useCanCancelOrders } from "@/components/orders/cancel-order-dialog";
@@ -288,6 +289,9 @@ export function CheckoutPanel({
             <Printer className="h-4 w-4" />
             Print receipt
           </Button>
+          {branchId && (
+            <SendBillWhatsApp orderId={completed.id} branchId={branchId} phone={customer?.phone} />
+          )}
           <Button className="h-11" onClick={onDone}>New order</Button>
         </div>
       </div>

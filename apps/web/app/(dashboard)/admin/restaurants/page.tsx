@@ -1,5 +1,6 @@
 "use client";
 
+import { RestaurantWalletSection } from "@/components/admin/restaurant-wallet-section";
 import type { AdminUpdateSubscriptionDto } from "@nodedr-restaurant/types";
 import { Search } from "lucide-react";
 import { useState } from "react";
@@ -43,6 +44,7 @@ function ManageDialog({ restaurant, onClose }: { restaurant: AdminRestaurant; on
     return d.toISOString().slice(0, 10);
   });
   const [notes, setNotes] = useState(sub?.notes ?? "");
+  const [extraBranches, setExtraBranches] = useState(String(restaurant.extraBranches ?? 0));
 
   const run = (dto: AdminUpdateSubscriptionDto, msg: string) =>
     mutate.mutate(
@@ -77,6 +79,30 @@ function ManageDialog({ restaurant, onClose }: { restaurant: AdminRestaurant; on
               </p>
             </div>
           )}
+          <section className="flex flex-col gap-2">
+            <Label htmlFor="extra-branches">Extra branches allowed</Label>
+            <div className="flex gap-2">
+              <Input
+                id="extra-branches"
+                inputMode="numeric"
+                value={extraBranches}
+                onChange={(e) => setExtraBranches(e.target.value.replace(/\D/g, ""))}
+                className="w-24"
+              />
+              <span className="self-center text-muted-foreground">beyond the included · runs {restaurant.branches} now</span>
+              <Button
+                className="ml-auto"
+                variant="outline"
+                disabled={mutate.isPending}
+                onClick={() => run({ action: "extra_branches", extraBranches: Number(extraBranches) || 0 }, "Branches updated")}
+              >
+                Save
+              </Button>
+            </div>
+          </section>
+
+          <RestaurantWalletSection restaurantId={restaurant.id} />
+
           <section className="flex flex-col gap-2">
             <Label htmlFor="grant-trial">Give a free trial</Label>
             <div className="flex gap-2">

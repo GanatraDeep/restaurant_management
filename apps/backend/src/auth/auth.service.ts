@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   Injectable,
+  Optional,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -17,7 +19,10 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { TwoFactorService } from './two-factor.service';
 import { SignupOtpService } from './signup-otp.service';
-import { isSuperAdminUser } from '../common/super-admin';
+import { WhatsAppService } from '../common/whatsapp/whatsapp.service';
+import { EmailService } from '../modules/email/email.service';
+import { WalletService } from '../modules/billing/wallet.service';
+import { isRootAdminUser, isSuperAdminUser } from '../common/super-admin';
 
 /** How long "Remember me" keeps someone signed in on that device. */
 export const REMEMBER_ME_DAYS = 30;
@@ -29,6 +34,9 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly twoFactor: TwoFactorService,
     private readonly signupOtp: SignupOtpService,
+    private readonly whatsapp: WhatsAppService,
+    private readonly email: EmailService,
+    @Optional() private readonly wallet?: WalletService,
   ) {}
 
   private toSessionUser(user: {
@@ -48,6 +56,7 @@ export class AuthService {
       roleName: user.role.name,
       permissions: user.role.permissions.map((rp) => rp.permission.key),
       isSuperAdmin: isSuperAdminUser(user),
+      isRootAdmin: isRootAdminUser(user),
     };
   }
 
@@ -170,7 +179,160 @@ export class AuthService {
       return user;
     });
 
+    // Free WhatsApp bill messages to try, when the platform gives any.
+    await this.wallet
+      ?.grantTrialCredit(owner.restaurantId)
+      .catch(() => undefined);
     return this.issueSession(owner);
+  }
+
+  // ─── WhatsApp OTP sign-in ────────────────────────────────────────────────
+
+  /** Whether this server can send WhatsApp codes (the login page shows the option only then). */
+  loginOtpAvailable(): boolean {
+    return this.signupOtp.required();
+  }
+
+  private normalisePhone(phone: string) {
+    const d = phone.replace(/\D/g, '');
+    return d.replace(/^(91|0)(?=\d{10}$)/, '');
+  }
+
+  /** Active accounts whose saved mobile is this number (any format saved). */
+  private async usersByPhone(phone: string) {
+    const norm = this.normalisePhone(phone);
+    if (norm.length < 10) return { norm, users: [] };
+    const candidates = await this.prisma.user.findMany({
+      where: { isActive: true, phone: { endsWith: norm.slice(-10) } },
+      include: {
+        role: { include: { permissions: { include: { permission: true } } } },
+      },
+    });
+    return {
+      norm,
+      users: candidates.filter(
+        (u) => this.normalisePhone(u.phone ?? '') === norm,
+      ),
+    };
+  }
+
+  async sendLoginOtp(phone: string) {
+    if (!this.loginOtpAvailable()) {
+      throw new ServiceUnavailableException(
+        'WhatsApp sign-in is not set up on this server — use your email and password',
+      );
+    }
+    const { norm, users } = await this.usersByPhone(phone);
+    if (users.length === 0) {
+      throw new BadRequestException(
+        'No account uses this mobile number. Sign in with your email, or ask your manager to add your number to your staff profile.',
+      );
+    }
+    return this.signupOtp.send(
+      norm,
+      users.length === 1 ? users[0].name : undefined,
+      'login',
+    );
+  }
+
+  async verifyLoginOtp(dto: {
+    phone: string;
+    code: string;
+    totp?: string;
+    rememberMe?: boolean;
+  }) {
+    // Never fall back to "no code needed" for sign-in.
+    if (!this.loginOtpAvailable()) {
+      throw new ServiceUnavailableException(
+        'WhatsApp sign-in is not set up on this server — use your email and password',
+      );
+    }
+    const { norm, users } = await this.usersByPhone(dto.phone);
+    if (users.length === 0)
+      throw new UnauthorizedException('No account uses this mobile number');
+    if (users.length > 1) {
+      throw new BadRequestException(
+        'More than one account uses this number — sign in with your email and password instead',
+      );
+    }
+    const user = users[0];
+    // The WhatsApp code proves the phone; an authenticator code is still asked
+    // for when switched on — checked first, so asking for it doesn't use up
+    // the WhatsApp code.
+    if (user.twoFactorEnabled) {
+      await this.twoFactor.verifyLogin(user, dto.totp);
+    }
+    await this.signupOtp.consume(norm, dto.code, 'login');
+    return this.issueSession(user, dto.rememberMe);
+  }
+
+  // --- Forgot password -------------------------------------------------------
+
+  /** The one active account an email or mobile number points to, if any. */
+  private async userForLogin(login: string) {
+    const v = login.trim();
+    if (v.includes('@')) {
+      const users = await this.prisma.user.findMany({
+        where: { isActive: true, email: { equals: v, mode: 'insensitive' } },
+        take: 2,
+      });
+      return users.length === 1 ? users[0] : null;
+    }
+    const { users } = await this.usersByPhone(v);
+    return users.length === 1 ? users[0] : null;
+  }
+
+  /**
+   * Sends a 6-digit reset code to the account's WhatsApp number (or, without
+   * one, its email when the server can send email). Always answers the same
+   * way, so it can't be used to find out which accounts exist.
+   */
+  async forgotPassword(login: string) {
+    const user = await this.userForLogin(login);
+    if (!user) return { ok: true };
+    const viaWhatsApp = !!user.phone && !!this.whatsapp.settings();
+    const viaEmail = !viaWhatsApp && !!user.email && this.email.isConfigured();
+    if (!viaWhatsApp && !viaEmail) return { ok: true };
+    const { code, id } = await this.signupOtp.issue(`user:${user.id}`, 'reset');
+    const text = `Hello ${user.name},\n\nYour F Cartel password reset code is:\n\n${code}\n\nIt expires in 10 minutes. If you didn't ask to reset your password, ignore this message.`;
+    let sent = false;
+    if (viaWhatsApp) {
+      // Same number format as the WhatsApp sign-in code.
+      sent = (
+        await this.whatsapp.sendText(this.normalisePhone(user.phone!), text)
+      ).ok;
+    } else {
+      sent = await this.email
+        .send({
+          to: user.email!,
+          subject: 'Your F Cartel password reset code',
+          text,
+        })
+        .then(() => true)
+        .catch(() => false);
+    }
+    if (!sent) {
+      await this.signupOtp.discard(id);
+      throw new ServiceUnavailableException(
+        'Could not send the code right now — try again in a minute',
+      );
+    }
+    return { ok: true };
+  }
+
+  /** Checks the reset code and sets the new password. */
+  async resetPassword(dto: { login: string; code: string; password: string }) {
+    const user = await this.userForLogin(dto.login);
+    if (!user)
+      throw new BadRequestException(
+        'That code is not right — ask for a new one',
+      );
+    await this.signupOtp.consume(`user:${user.id}`, dto.code, 'reset', true);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(dto.password, 12) },
+    });
+    return { ok: true };
   }
 
   sendSignupOtp(phone: string, ownerName?: string) {

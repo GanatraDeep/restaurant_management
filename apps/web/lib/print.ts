@@ -1,3 +1,5 @@
+import { api } from "@/lib/api";
+
 // Ported from nodedr-pos's frontend/lib/print.ts: loads the backend's
 // self-printing receipt HTML into a hidden same-page iframe rather than a
 // new tab, so there's no blank/finished tab left for the cashier to notice
@@ -63,7 +65,7 @@ interface DesktopPrintBridge {
   /** 1.0: prints the current window only (the app patches its window.print). */
   print?: () => Promise<unknown>;
   /** 1.1+: prints one of our pages silently; 1.2 also routes by kind. */
-  printUrl?: (url: string, opts?: { kind?: PrintKind }) => Promise<unknown>;
+  printUrl?: (url: string, opts?: { kind?: PrintKind; printer?: string }) => Promise<unknown>;
   /** 1.2+: printer choice from Settings -> Printing. */
   getPrinters?: () => Promise<DesktopPrinter[]>;
   getPrinterSettings?: () => Promise<DesktopPrinterSettings | null>;
@@ -91,6 +93,25 @@ export function desktopApp(): { version: string; perKindPrinters: boolean; outda
     perKindPrinters,
     outdated: !perKindPrinters,
   };
+}
+
+/** "1.3.0" >= "1.3"? Missing parts count as 0. */
+function atLeast(version: string | undefined, want: string): boolean {
+  const a = (version ?? "0").split(".").map((n) => parseInt(n, 10) || 0);
+  const b = want.split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) > (b[i] ?? 0);
+  }
+  return true;
+}
+
+/**
+ * Desktop app 1.3+ can print a page on a printer named per print — each
+ * kitchen station's KOT goes to that station's printer.
+ */
+export function hasStationPrinters(): boolean {
+  const b = desktopBridge();
+  return typeof b?.printUrl === "function" && atLeast(b.version, "1.3");
 }
 
 export const desktopPrinters = {
@@ -162,14 +183,17 @@ export function setPaperWidth(w: 58 | 80) {
   }
 }
 
-function printPage(src: string, kind: PrintKind): Promise<void> {
+function printPage(src: string, kind: PrintKind, printer?: string | null): Promise<void> {
   const paper = getPaperWidth() === 58 ? "&paper=58" : "";
   const url = `${src}${src.includes("?") ? "&" : "?"}t=${Date.now()}${paper}`;
   const bridge = desktopBridge();
   if (typeof bridge?.printUrl === "function") {
-    // 1.2 sends KOTs to the kitchen printer and bills to the counter one.
+    // 1.2 sends KOTs to the kitchen printer and bills to the counter one;
+    // 1.3 also takes a printer by name (a station's own printer) and falls
+    // back to the kind's printer when this computer doesn't have it.
+    const opts = printer && hasStationPrinters() ? { kind, printer } : { kind };
     return bridge
-      .printUrl(new URL(url, window.location.origin).href, { kind })
+      .printUrl(new URL(url, window.location.origin).href, opts)
       .then(() => undefined)
       .catch(() => undefined);
   }
@@ -209,8 +233,29 @@ export function openReceiptPrint(orderId: string, branchId: string, adj: BillQue
  * Kitchen ticket for the whole order (every station's items). `onlyNew`
  * prints just the round that was sent and not yet printed (POS "Save & Print KOT").
  */
-export function openKotPrint(orderId: string, branchId: string, opts: { onlyNew?: boolean } = {}) {
-  return printPage(`/api/v1/orders/${orderId}/kot?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`, "kot");
+export async function openKotPrint(orderId: string, branchId: string, opts: { onlyNew?: boolean } = {}) {
+  const base = `/api/v1/orders/${orderId}/kot?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`;
+  // Desktop app 1.3+ with a station that has its own printer: one print per
+  // station, each to its printer (stations without one use the KOT printer).
+  if (hasStationPrinters()) {
+    try {
+      const { stations } = await api.get<{ stations: { station: string; printerName: string | null }[] }>(
+        `/orders/${orderId}/kot-plan?branchId=${branchId}${opts.onlyNew ? "&new=1" : ""}`,
+      );
+      if (stations.length > 1 && stations.some((s) => s.printerName)) {
+        for (const s of stations) {
+          await printPage(`${base}&station=${encodeURIComponent(s.station)}`, "kot", s.printerName);
+        }
+        return;
+      }
+      if (stations.length === 1 && stations[0].printerName) {
+        return printPage(base, "kot", stations[0].printerName);
+      }
+    } catch {
+      /* fall back to one page on the KOT printer */
+    }
+  }
+  return printPage(base, "kot");
 }
 
 /**
@@ -237,13 +282,13 @@ export async function openOrderTicketsPrint(
 }
 
 /** Auto-print: a ticket this device already claimed (prints as the first copy). */
-export function openClaimedTicketPrint(ticketId: string, branchId: string) {
-  return printPage(`/api/v1/kds/auto-print/${ticketId}/kot?branchId=${branchId}`, "kot");
+export function openClaimedTicketPrint(ticketId: string, branchId: string, printer?: string | null) {
+  return printPage(`/api/v1/kds/auto-print/${ticketId}/kot?branchId=${branchId}`, "kot", printer);
 }
 
 /** One station's ticket from the Kitchen Display; later copies say REPRINT. */
-export function openTicketPrint(ticketId: string, branchId: string) {
-  printPage(`/api/v1/kds/tickets/${ticketId}/kot?branchId=${branchId}`, "kot");
+export function openTicketPrint(ticketId: string, branchId: string, printer?: string | null) {
+  printPage(`/api/v1/kds/tickets/${ticketId}/kot?branchId=${branchId}`, "kot", printer);
 }
 
 /** Sample kitchen ticket, to check the printer from Settings. */

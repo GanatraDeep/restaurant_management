@@ -9,6 +9,7 @@ import { ComboComponentsDialog } from "@/components/menu/combo-components-dialog
 import { EditCategoryDialog } from "@/components/menu/edit-category-dialog";
 import { EditItemDialog } from "@/components/menu/edit-item-dialog";
 import { MenuTransferMenu } from "@/components/menu/menu-transfer";
+import { StationsDialog } from "@/components/menu/stations-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResponsiveTabs } from "@/components/ui/nav-picker";
@@ -126,7 +127,10 @@ export default function MenuPage() {
           <h1 className="text-[32px] font-semibold tracking-tight text-foreground">Menu</h1>
           <p className="text-sm text-muted-foreground">{canManage ? "Categories, items, and pricing" : "Categories, items, and pricing (view only)"}</p>
         </div>
-        {branchId && <MenuTransferMenu branchId={branchId} canManage={canManage} />}
+        <div className="flex flex-wrap gap-2">
+          {branchId && canManage && <StationsDialog branchId={branchId} />}
+          {branchId && <MenuTransferMenu branchId={branchId} canManage={canManage} />}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[260px_1fr]">

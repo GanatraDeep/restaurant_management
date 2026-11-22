@@ -13,6 +13,12 @@ import {
   loginSchema,
   pinLoginSchema,
   registerOtpSchema,
+  loginOtpRequestSchema,
+  loginOtpVerifySchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  type ResetPasswordDto,
+  type LoginOtpVerifyDto,
   registerSchema,
   type RegisterOtpDto,
   twoFactorCodeSchema,
@@ -87,6 +93,51 @@ export class AuthController {
   ) {
     const { token, user, rememberMe } = await this.authService.login(
       body as never,
+    );
+    this.setSessionCookie(
+      res,
+      token,
+      rememberMe ? REMEMBER_ME_DAYS * 24 * 60 * 60 * 1000 : undefined,
+    );
+    return { user };
+  }
+
+  /** What the login page can offer on this server. */
+  @Get('login-options')
+  loginOptions() {
+    return { whatsappOtp: this.authService.loginOtpAvailable() };
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password/forgot')
+  @UsePipes(new ZodValidationPipe(forgotPasswordSchema))
+  forgotPassword(@Body() body: unknown) {
+    return this.authService.forgotPassword((body as { login: string }).login);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('password/reset')
+  @UsePipes(new ZodValidationPipe(resetPasswordSchema))
+  resetPassword(@Body() body: unknown) {
+    return this.authService.resetPassword(body as ResetPasswordDto);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('login/otp')
+  @UsePipes(new ZodValidationPipe(loginOtpRequestSchema))
+  loginOtp(@Body() body: unknown) {
+    return this.authService.sendLoginOtp((body as { phone: string }).phone);
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('login/otp/verify')
+  @UsePipes(new ZodValidationPipe(loginOtpVerifySchema))
+  async loginOtpVerify(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { token, user, rememberMe } = await this.authService.verifyLoginOtp(
+      body as LoginOtpVerifyDto,
     );
     this.setSessionCookie(
       res,

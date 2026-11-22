@@ -4,6 +4,7 @@ import {
   Body,
   Controller,
   ForbiddenException,
+  NotFoundException,
   Get,
   Param,
   Patch,
@@ -14,6 +15,8 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { validInvoiceSignature } from '../../common/invoice-link';
 import type { Response } from 'express';
 import {
   addOrderItemsSchema,
@@ -423,8 +426,27 @@ export class OrdersController {
     if (overrides.isProvisional) {
       await this.ordersService.recordBillPrinted(branchId, id, user.id);
     }
-    const html = buildReceiptHtml({
-      paper: paperOf(res.req.query.paper),
+    const html = await this.receiptPage(
+      order,
+      overrides,
+      paperOf(res.req.query.paper),
+    );
+    res.type('html').send(
+      // ?paper=58 from the device's printing setting.
+      fitPaper(html, paperOf(res.req.query.paper)),
+    );
+  }
+
+  /** The bill / receipt page for an order already loaded by getBillForPrint. */
+  private async receiptPage(
+    order: Awaited<ReturnType<OrdersService['getBillForPrint']>>['order'],
+    overrides: Awaited<
+      ReturnType<OrdersService['getBillForPrint']>
+    >['overrides'],
+    paper: ReturnType<typeof paperOf>,
+  ) {
+    return buildReceiptHtml({
+      paper,
       token: order.branch.tokenEnabled ? tokenOf(order.orderNumber) : null,
       restaurantName: order.branch.restaurant.name,
       currency: order.branch.restaurant.currency,
@@ -456,10 +478,40 @@ export class OrdersController {
           : await this.verifactu.qrForOrder(order.id),
       },
     });
-    res.type('html').send(
-      // ?paper=58 from the device's printing setting.
-      fitPaper(html, paperOf(res.req.query.paper)),
+  }
+
+  // Public link to an order's bill (sent to the guest on WhatsApp). Needs the
+  // signature from the link, no sign-in; read-only, never marks anything.
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Get('public/invoice/:id')
+  async publicInvoice(
+    @Param('id') id: string,
+    @Query('s') sig: string | undefined,
+    @Res() res: Response,
+  ) {
+    if (!validInvoiceSignature(id, sig))
+      throw new NotFoundException('Bill not found');
+    const found = await this.ordersService.branchOfOrder(id);
+    if (!found) throw new NotFoundException('Bill not found');
+    const { order, overrides } = await this.ordersService.getBillForPrint(
+      found.branchId,
+      id,
+      {},
     );
+    const html = await this.receiptPage(
+      order,
+      overrides,
+      paperOf(res.req.query.paper),
+    );
+    // Opened on a phone: show it, don't pop the print dialog.
+    res
+      .type('html')
+      .send(
+        fitPaper(html, paperOf(res.req.query.paper)).replace(
+          /<script>[\s\S]*?<\/script>/g,
+          '',
+        ),
+      );
   }
 
   // Counter slip: items not sent to the kitchen (water, soft drinks), for the
@@ -474,8 +526,24 @@ export class OrdersController {
     @Res() res: Response,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
-    const html = await this.kotPrint.counterSlipHtml(branchId, id, onlyNew === '1');
+    const html = await this.kotPrint.counterSlipHtml(
+      branchId,
+      id,
+      onlyNew === '1',
+    );
     res.type('html').send(fitPaper(html, paperOf(res.req.query.paper)));
+  }
+
+  @Auth('orders.create')
+  @Get(':id/kot-plan')
+  async kotPlan(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Query('new') onlyNew: string | undefined,
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.kotPrint.orderKotPlan(branchId, id, onlyNew === '1');
   }
 
   @Auth('orders.create')
@@ -487,12 +555,15 @@ export class OrdersController {
     // new=1: only the round just sent (POS "Save & Print KOT").
     @Query('new') onlyNew: string | undefined,
     @Res() res: Response,
+    // station=<id> or "none": only that station's slip (its own printer).
+    @Query('station') station?: string,
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     const html = await this.kotPrint.orderKotHtml(
       branchId,
       id,
       onlyNew === '1',
+      station || undefined,
     );
     res.type('html').send(
       // ?paper=58 from the device's printing setting.

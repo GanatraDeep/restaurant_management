@@ -17,6 +17,9 @@ export interface MenuCategory {
 export interface KitchenStation {
   id: string;
   name: string;
+  /** Desktop app: this station's KOTs print here. Empty = the KOT printer. */
+  printerName?: string | null;
+  _count?: { items: number };
 }
 
 export interface Modifier {
@@ -74,6 +77,34 @@ export function useStations(branchId: string | null) {
     queryFn: () => api.get<KitchenStation[]>(`/menu/stations?branchId=${branchId}`),
     enabled: !!branchId,
   });
+}
+
+export function useStationActions(branchId: string | null) {
+  const queryClient = useQueryClient();
+  const done = () => {
+    queryClient.invalidateQueries({ queryKey: ["menu", "stations", branchId] });
+    queryClient.invalidateQueries({ queryKey: ["menu", "items", branchId] });
+    queryClient.invalidateQueries({ queryKey: ["kds"] });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (name: string) => api.post<KitchenStation>(`/menu/stations?branchId=${branchId}`, { name }),
+      onSuccess: done,
+    }),
+    rename: useMutation({
+      mutationFn: (v: { id: string; name: string }) => api.patch(`/menu/stations/${v.id}?branchId=${branchId}`, { name: v.name }),
+      onSuccess: done,
+    }),
+    setPrinter: useMutation({
+      mutationFn: (v: { id: string; printerName: string | null }) =>
+        api.patch(`/menu/stations/${v.id}?branchId=${branchId}`, { printerName: v.printerName }),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api.delete(`/menu/stations/${id}?branchId=${branchId}`),
+      onSuccess: done,
+    }),
+  };
 }
 
 export function useMenuItems(branchId: string | null, categoryId?: string) {

@@ -38,7 +38,7 @@ export function effectiveStatus(
   return hasAccess(sub, now) ? sub.status : 'EXPIRED';
 }
 
-const INTERVAL_MONTHS: Record<BillingInterval, number> = {
+export const INTERVAL_MONTHS: Record<BillingInterval, number> = {
   MONTHLY: 1,
   QUARTERLY: 3,
   YEARLY: 12,

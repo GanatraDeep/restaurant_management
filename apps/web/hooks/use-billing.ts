@@ -18,6 +18,8 @@ export interface SubscriptionPlan {
 }
 
 export interface BillingStatus {
+  /** Extra branches charged per month on top of the plan (MONTHLY branch rule). */
+  branchAddOnMonthlyMinor?: number;
   required: boolean;
   hasAccess: boolean;
   status: SubscriptionStatus | "NONE";
@@ -43,7 +45,7 @@ export interface SubscriptionPaymentRow {
   plan: { name: string } | null;
 }
 
-type CheckoutResult =
+export type CheckoutResult =
   | { kind: "activated"; status: BillingStatus }
   | {
       kind: "payment";
@@ -151,6 +153,34 @@ function loadRazorpayCheckout(): Promise<void> {
  * server, opens Razorpay Checkout, then has the server verify the signature.
  * Resolves with the new status, or `null` if the payer closed Checkout.
  */
+/** Opens Razorpay Checkout for a server-created order and verifies the payment. Null = closed. */
+export async function payWithRazorpay(
+  result: Extract<CheckoutResult, { kind: "payment" }>,
+  description: string,
+): Promise<BillingStatus | null> {
+  await loadRazorpayCheckout();
+  const Razorpay = window.Razorpay;
+  if (!Razorpay) throw new Error("Razorpay is unavailable right now");
+  const response = await new Promise<RazorpayHandlerResponse | null>((resolve, reject) => {
+    const rzp = new Razorpay({
+      key: result.keyId,
+      order_id: result.orderId,
+      amount: result.amount,
+      currency: result.currency,
+      name: "F Cartel",
+      description,
+      prefill: { name: result.prefill.name, email: result.prefill.email ?? undefined },
+      theme: { color: "#d13644" },
+      handler: (resp: RazorpayHandlerResponse) => resolve(resp),
+      modal: { ondismiss: () => resolve(null) },
+    });
+    rzp.on("payment.failed", (resp) => reject(new Error(resp.error?.description ?? "Payment failed")));
+    rzp.open();
+  });
+  if (!response) return null;
+  return api.post<BillingStatus>("/billing/verify", response);
+}
+
 export function useCheckout() {
   const changed = useOnBillingChanged();
   return useMutation({
@@ -158,33 +188,55 @@ export function useCheckout() {
       const result = await api.post<CheckoutResult>("/billing/checkout", { planId });
       if (result.kind === "activated") return result.status;
 
-      await loadRazorpayCheckout();
-      const Razorpay = window.Razorpay;
-      if (!Razorpay) throw new Error("Razorpay is unavailable right now");
-
-      const response = await new Promise<RazorpayHandlerResponse | null>((resolve, reject) => {
-        const rzp = new Razorpay({
-          key: result.keyId,
-          order_id: result.orderId,
-          amount: result.amount,
-          currency: result.currency,
-          name: "F Cartel",
-          description: `${result.planName} plan — ${result.restaurantName}`,
-          prefill: { name: result.prefill.name, email: result.prefill.email ?? undefined },
-          theme: { color: "#d13644" },
-          handler: (resp: RazorpayHandlerResponse) => resolve(resp),
-          modal: { ondismiss: () => resolve(null) },
-        });
-        rzp.on("payment.failed", (resp) =>
-          reject(new Error(resp.error?.description ?? "Payment failed")),
-        );
-        rzp.open();
-      });
-      if (!response) return null;
-      return api.post<BillingStatus>("/billing/verify", response);
+      return payWithRazorpay(result, `${result.planName} plan — ${result.restaurantName}`);
     },
     onSuccess: (status) => {
       if (status) changed(status);
     },
   });
+}
+
+
+// ─── Branches ──────────────────────────────────────────────────────────────
+
+export interface BranchPolicy {
+  mode: "ADMIN_ONLY" | "FREE" | "ONE_TIME" | "MONTHLY";
+  included: number;
+  granted: number;
+  used: number;
+  /** null = no limit. */
+  allowed: number | null;
+  canAdd: boolean;
+  priceMinor: number;
+  currency: string;
+  onlinePayments: boolean;
+  monthlyExtra: number;
+  nextBranchCost: { kind: "ONE_TIME" | "MONTHLY"; amountMinor: number } | null;
+}
+
+export function useBranchPolicy(enabled = true) {
+  return useQuery({ queryKey: ["billing", "branch-policy"], queryFn: () => api.get<BranchPolicy>("/branches/policy"), enabled });
+}
+
+export function useBranchActions() {
+  const qc = useQueryClient();
+  const done = () => {
+    qc.invalidateQueries({ queryKey: ["billing"] });
+    qc.invalidateQueries({ queryKey: ["branches"] });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (dto: { name: string; address?: string; phone?: string }) => api.post<{ id: string; name: string }>("/branches", dto),
+      onSuccess: done,
+    }),
+    buy: useMutation({
+      mutationFn: async () => {
+        const result = await api.post<CheckoutResult>("/branches/buy");
+        if (result.kind !== "payment") return null;
+        return payWithRazorpay(result, `One more branch — ${result.restaurantName}`);
+      },
+      onSuccess: done,
+    }),
+    request: useMutation({ mutationFn: (note?: string) => api.post("/branches/request", { note }), onSuccess: done }),
+  };
 }
