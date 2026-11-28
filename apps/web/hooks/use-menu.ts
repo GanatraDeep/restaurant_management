@@ -27,6 +27,9 @@ export interface Modifier {
   name: string;
   priceAdjustment: string;
   isDefault: boolean;
+  /** false = sold out (hidden from menus). */
+  isActive?: boolean;
+  sortOrder?: number;
 }
 
 export interface ModifierGroup {
@@ -36,6 +39,53 @@ export interface ModifierGroup {
   maxSelect: number;
   isRequired: boolean;
   modifiers: Modifier[];
+  /** Items that offer this group (Menu → Add-ons list only). */
+  menuItems?: { menuItemId: string }[];
+}
+
+export interface ModifierGroupInput {
+  name: string;
+  minSelect: number;
+  maxSelect: number;
+  isRequired: boolean;
+  modifiers: { id?: string; name: string; priceAdjustment: number; isDefault: boolean; isActive: boolean }[];
+}
+
+/** Add-on groups (Choose sauce, Extra toppings…) of the branch. */
+export function useModifierGroups(branchId: string | null) {
+  return useQuery({
+    queryKey: ["menu", "modifier-groups", branchId],
+    queryFn: () => api.get<ModifierGroup[]>(`/menu/modifier-groups?branchId=${branchId}`),
+    enabled: !!branchId,
+  });
+}
+
+export function useModifierGroupActions(branchId: string | null) {
+  const queryClient = useQueryClient();
+  const done = () => {
+    queryClient.invalidateQueries({ queryKey: ["menu"] });
+    queryClient.invalidateQueries({ queryKey: ["public-menu"] });
+  };
+  return {
+    create: useMutation({
+      mutationFn: (dto: ModifierGroupInput) => api.post<ModifierGroup>(`/menu/modifier-groups?branchId=${branchId}`, dto),
+      onSuccess: done,
+    }),
+    update: useMutation({
+      mutationFn: (v: { id: string; dto: ModifierGroupInput }) =>
+        api.patch<ModifierGroup>(`/menu/modifier-groups/${v.id}?branchId=${branchId}`, v.dto),
+      onSuccess: done,
+    }),
+    setItems: useMutation({
+      mutationFn: (v: { id: string; menuItemIds: string[] }) =>
+        api.put(`/menu/modifier-groups/${v.id}/items?branchId=${branchId}`, { menuItemIds: v.menuItemIds }),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: (id: string) => api.delete(`/menu/modifier-groups/${id}?branchId=${branchId}`),
+      onSuccess: done,
+    }),
+  };
 }
 
 export interface MenuItem {

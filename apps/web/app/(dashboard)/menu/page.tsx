@@ -10,6 +10,7 @@ import { EditCategoryDialog } from "@/components/menu/edit-category-dialog";
 import { EditItemDialog } from "@/components/menu/edit-item-dialog";
 import { MenuTransferMenu } from "@/components/menu/menu-transfer";
 import { StationsDialog } from "@/components/menu/stations-dialog";
+import { AddOnsDialog } from "@/components/menu/add-ons-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ResponsiveTabs } from "@/components/ui/nav-picker";
@@ -128,6 +129,7 @@ export default function MenuPage() {
           <p className="text-sm text-muted-foreground">{canManage ? "Categories, items, and pricing" : "Categories, items, and pricing (view only)"}</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {branchId && canManage && <AddOnsDialog branchId={branchId} />}
           {branchId && canManage && <StationsDialog branchId={branchId} />}
           {branchId && <MenuTransferMenu branchId={branchId} canManage={canManage} />}
         </div>

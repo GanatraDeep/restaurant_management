@@ -140,7 +140,18 @@ export class MenuService {
         category: true,
         station: true,
         modifierGroups: {
-          include: { modifierGroup: { include: { modifiers: true } } },
+          where: { modifierGroup: { isActive: true } },
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            modifierGroup: {
+              include: {
+                modifiers: {
+                  where: { isActive: true },
+                  orderBy: { sortOrder: 'asc' },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -151,7 +162,18 @@ export class MenuService {
       where: { id, branchId },
       include: {
         modifierGroups: {
-          include: { modifierGroup: { include: { modifiers: true } } },
+          where: { modifierGroup: { isActive: true } },
+          orderBy: { sortOrder: 'asc' },
+          include: {
+            modifierGroup: {
+              include: {
+                modifiers: {
+                  where: { isActive: true },
+                  orderBy: { sortOrder: 'asc' },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -231,11 +253,11 @@ export class MenuService {
   ) {
     if (modifierGroupIds.length === 0) return;
     const count = await this.prisma.modifierGroup.count({
-      where: { id: { in: modifierGroupIds }, branchId },
+      where: { id: { in: modifierGroupIds }, branchId, isActive: true },
     });
     if (count !== new Set(modifierGroupIds).size) {
       throw new BadRequestException(
-        'One or more modifier groups are invalid for this branch',
+        'One or more add-on groups are invalid for this branch',
       );
     }
   }
@@ -248,21 +270,50 @@ export class MenuService {
 
   // --- Modifier groups --------------------------------------------------------
 
+  /** Add-on groups of the branch with every option (sold-out ones too) and how many items use each. */
   listModifierGroups(branchId: string) {
     return this.prisma.modifierGroup.findMany({
-      where: { branchId },
-      include: { modifiers: true },
+      where: { branchId, isActive: true },
+      orderBy: { name: 'asc' },
+      include: {
+        // Retired options (sortOrder -1) only stay for old bills.
+        modifiers: {
+          where: { sortOrder: { gte: 0 } },
+          orderBy: { sortOrder: 'asc' },
+        },
+        menuItems: { select: { menuItemId: true } },
+      },
     });
   }
 
   createModifierGroup(branchId: string, dto: ModifierGroupDto) {
     const { modifiers, ...rest } = dto;
     return this.prisma.modifierGroup.create({
-      data: { ...rest, branchId, modifiers: { create: modifiers } },
+      data: {
+        ...rest,
+        branchId,
+        modifiers: {
+          // A new group's options are all new: any id sent is ignored.
+          create: modifiers.map((m, i) => ({
+            name: m.name,
+            priceAdjustment: m.priceAdjustment,
+            taxRatePercent: m.taxRatePercent,
+            kitchenNote: m.kitchenNote,
+            isDefault: m.isDefault,
+            isActive: m.isActive,
+            sortOrder: i,
+          })),
+        },
+      },
       include: { modifiers: true },
     });
   }
 
+  /**
+   * Options are matched by id: existing ones are updated in place (orders
+   * keep pointing at them), new ones created, and missing ones removed — or,
+   * when an order already used one, hidden instead so the bill history stays.
+   */
   async updateModifierGroup(
     branchId: string,
     id: string,
@@ -273,10 +324,52 @@ export class MenuService {
     const { modifiers, ...rest } = dto;
     return this.prisma.$transaction(async (tx) => {
       if (modifiers) {
-        await tx.modifier.deleteMany({ where: { groupId: id } });
-        await tx.modifier.createMany({
-          data: modifiers.map((m) => ({ ...m, groupId: id })),
+        const existing = await tx.modifier.findMany({
+          where: { groupId: id },
+          select: { id: true, sortOrder: true },
         });
+        const known = new Set(existing.map((m) => m.id));
+        const keep = new Set(
+          modifiers
+            .map((m) => m.id)
+            .filter((x): x is string => !!x && known.has(x)),
+        );
+        const removed = existing
+          .filter((m) => !keep.has(m.id) && m.sortOrder !== -1)
+          .map((m) => m.id);
+        if (removed.length) {
+          const used = new Set(
+            (
+              await tx.orderItemModifier.findMany({
+                where: { modifierId: { in: removed } },
+                select: { modifierId: true },
+                distinct: ['modifierId'],
+              })
+            ).map((u) => u.modifierId),
+          );
+          const unused = removed.filter((m) => !used.has(m));
+          if (unused.length)
+            await tx.modifier.deleteMany({ where: { id: { in: unused } } });
+          if (used.size) {
+            // Retired: hidden everywhere, kept for old bills (sortOrder -1 marks it).
+            await tx.modifier.updateMany({
+              where: { id: { in: [...used] } },
+              data: { isActive: false, isDefault: false, sortOrder: -1 },
+            });
+          }
+        }
+        for (const [i, { id: mid, ...m }] of modifiers.entries()) {
+          if (mid && keep.has(mid)) {
+            await tx.modifier.update({
+              where: { id: mid },
+              data: { ...m, sortOrder: i },
+            });
+          } else {
+            await tx.modifier.create({
+              data: { ...m, sortOrder: i, groupId: id },
+            });
+          }
+        }
       }
       return tx.modifierGroup.update({
         where: { id },
@@ -286,17 +379,78 @@ export class MenuService {
     });
   }
 
+  /** Which items offer this add-on group: links added / removed to match the list. */
+  async setModifierGroupItems(
+    branchId: string,
+    id: string,
+    menuItemIds: string[],
+  ) {
+    await this.assertModifierGroupInBranch(branchId, id);
+    const ids = [...new Set(menuItemIds)];
+    if (ids.length) {
+      const count = await this.prisma.menuItem.count({
+        where: { id: { in: ids }, branchId },
+      });
+      if (count !== ids.length)
+        throw new BadRequestException('One or more items are not on this menu');
+    }
+    await this.prisma.$transaction(async (tx) => {
+      await tx.menuItemModifierGroup.deleteMany({
+        where: { modifierGroupId: id, menuItemId: { notIn: ids } },
+      });
+      const have = new Set(
+        (
+          await tx.menuItemModifierGroup.findMany({
+            where: { modifierGroupId: id },
+            select: { menuItemId: true },
+          })
+        ).map((l) => l.menuItemId),
+      );
+      // New links go after the item's other groups.
+      for (const menuItemId of ids.filter((x) => !have.has(x))) {
+        const last = await tx.menuItemModifierGroup.aggregate({
+          where: { menuItemId },
+          _max: { sortOrder: true },
+        });
+        await tx.menuItemModifierGroup.create({
+          data: {
+            menuItemId,
+            modifierGroupId: id,
+            sortOrder: (last._max.sortOrder ?? -1) + 1,
+          },
+        });
+      }
+    });
+    return { ok: true, items: ids.length };
+  }
+
+  /** Taken off every item; kept (hidden) when orders already used its options. */
   async deleteModifierGroup(branchId: string, id: string) {
     await this.assertModifierGroupInBranch(branchId, id);
-    await this.prisma.modifierGroup.delete({ where: { id } });
+    const used = await this.prisma.orderItemModifier.count({
+      where: { modifier: { groupId: id } },
+    });
+    if (used) {
+      await this.prisma.$transaction([
+        this.prisma.menuItemModifierGroup.deleteMany({
+          where: { modifierGroupId: id },
+        }),
+        this.prisma.modifierGroup.update({
+          where: { id },
+          data: { isActive: false },
+        }),
+      ]);
+    } else {
+      await this.prisma.modifierGroup.delete({ where: { id } });
+    }
     return { ok: true };
   }
 
   private async assertModifierGroupInBranch(branchId: string, id: string) {
     const group = await this.prisma.modifierGroup.findFirst({
-      where: { id, branchId },
+      where: { id, branchId, isActive: true },
     });
-    if (!group) throw new NotFoundException('Modifier group not found');
+    if (!group) throw new NotFoundException('Add-on group not found');
   }
 
   // --- Combo meals -----------------------------------------------------------

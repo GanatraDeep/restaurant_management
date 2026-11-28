@@ -25,14 +25,14 @@ import {
   type TaxRegime,
 } from '@nodedr-restaurant/types';
 
-const CURRENCY_SYMBOLS: Record<string, string> = {
+export const CURRENCY_SYMBOLS: Record<string, string> = {
   INR: '₹',
   USD: '$',
   EUR: '€',
   GBP: '£',
 };
 
-function esc(value: string | number | null | undefined): string {
+export function esc(value: string | number | null | undefined): string {
   return String(value ?? '').replace(
     /[&<>"']/g,
     (c) =>
@@ -42,7 +42,7 @@ function esc(value: string | number | null | undefined): string {
   );
 }
 
-interface ReceiptOrder {
+export interface ReceiptOrder {
   /** Spain VERI*FACTU invoice QR, printed on a paid receipt. */
   verifactu?: ReceiptVerifactu | null;
   orderNumber: string;
@@ -83,6 +83,89 @@ interface ReceiptOrder {
     tendered?: number | null;
     changeGiven?: number | null;
   }[];
+}
+
+/**
+ * The bill's summary lines (sub total, discount, tax breakup, charges), in
+ * order — shared by the thermal receipt and the web invoice so both always
+ * show the same figures.
+ */
+export function receiptTotalRows(
+  branch: { taxRegime: TaxRegime; taxMode: TaxMode },
+  order: Pick<
+    ReceiptOrder,
+    | 'subtotal'
+    | 'discountAmount'
+    | 'discountPercent'
+    | 'taxAmount'
+    | 'loyaltyDiscountAmount'
+    | 'loyaltyPointsRedeemed'
+    | 'tipAmount'
+    | 'deliveryFee'
+    | 'takeawayCharge'
+  >,
+  money: (n: number) => string,
+  taxLabel: string,
+): [string, string][] {
+  const totalRows: [string, string][] = [];
+  if (branch.taxMode === 'EXCLUSIVE') {
+    // US-style: show the pre-tax subtotal, then add tax as its own line —
+    // order.subtotal/taxAmount are unchanged, this only reslices the
+    // display (see pricing.ts: the stored subtotal already has tax baked
+    // in, exactly like every other regime, so the pre-tax figure the
+    // customer expects to see is subtotal - taxAmount).
+    totalRows.push(['Sub Total', money(order.subtotal - order.taxAmount)]);
+    if (order.discountAmount > 0) {
+      totalRows.push([
+        order.discountPercent && order.discountPercent > 0
+          ? `Discount (${Number(order.discountPercent)}%)`
+          : 'Discount',
+        `- ${money(order.discountAmount)}`,
+      ]);
+    }
+    if (order.taxAmount > 0) {
+      totalRows.push([taxLabel, money(order.taxAmount)]);
+    }
+  } else {
+    totalRows.push(['Sub Total', money(order.subtotal)]);
+    if (order.discountAmount > 0) {
+      totalRows.push([
+        order.discountPercent && order.discountPercent > 0
+          ? `Discount (${Number(order.discountPercent)}%)`
+          : 'Discount',
+        `- ${money(order.discountAmount)}`,
+      ]);
+    }
+    if (order.taxAmount > 0) {
+      // Prices are tax-inclusive (see ARCHITECTURE.md) — this is a breakup
+      // of tax already inside the total above, not an additional charge.
+      if (TAX_REGIME_PRESETS[branch.taxRegime].splitCgstSgst) {
+        const half =
+          Math.round((order.taxAmount / 2 + Number.EPSILON) * 100) / 100;
+        totalRows.push(['CGST (incl.)', money(half)]);
+        totalRows.push(['SGST (incl.)', money(order.taxAmount - half)]);
+      } else {
+        totalRows.push([`${taxLabel} (incl.)`, money(order.taxAmount)]);
+      }
+    }
+  }
+  if (order.loyaltyDiscountAmount > 0) {
+    totalRows.push([
+      `Loyalty (${order.loyaltyPointsRedeemed} pts)`,
+      `- ${money(order.loyaltyDiscountAmount)}`,
+    ]);
+  }
+  if (order.tipAmount > 0) {
+    totalRows.push(['Tip', money(order.tipAmount)]);
+  }
+  if ((order.deliveryFee ?? 0) > 0) {
+    totalRows.push(['Delivery fee', money(order.deliveryFee ?? 0)]);
+  }
+  if ((order.takeawayCharge ?? 0) > 0) {
+    totalRows.push(['Takeaway charge', money(order.takeawayCharge ?? 0)]);
+  }
+
+  return totalRows;
 }
 
 export function buildReceiptHtml({
@@ -171,63 +254,7 @@ export function buildReceiptHtml({
     })
     .join('');
 
-  const totalRows: [string, string][] = [];
-  if (branch.taxMode === 'EXCLUSIVE') {
-    // US-style: show the pre-tax subtotal, then add tax as its own line —
-    // order.subtotal/taxAmount are unchanged, this only reslices the
-    // display (see pricing.ts: the stored subtotal already has tax baked
-    // in, exactly like every other regime, so the pre-tax figure the
-    // customer expects to see is subtotal - taxAmount).
-    totalRows.push(['Sub Total', money(order.subtotal - order.taxAmount)]);
-    if (order.discountAmount > 0) {
-      totalRows.push([
-        order.discountPercent && order.discountPercent > 0
-          ? `Discount (${Number(order.discountPercent)}%)`
-          : 'Discount',
-        `- ${money(order.discountAmount)}`,
-      ]);
-    }
-    if (order.taxAmount > 0) {
-      totalRows.push([taxLabel, money(order.taxAmount)]);
-    }
-  } else {
-    totalRows.push(['Sub Total', money(order.subtotal)]);
-    if (order.discountAmount > 0) {
-      totalRows.push([
-        order.discountPercent && order.discountPercent > 0
-          ? `Discount (${Number(order.discountPercent)}%)`
-          : 'Discount',
-        `- ${money(order.discountAmount)}`,
-      ]);
-    }
-    if (order.taxAmount > 0) {
-      // Prices are tax-inclusive (see ARCHITECTURE.md) — this is a breakup
-      // of tax already inside the total above, not an additional charge.
-      if (TAX_REGIME_PRESETS[branch.taxRegime].splitCgstSgst) {
-        const half =
-          Math.round((order.taxAmount / 2 + Number.EPSILON) * 100) / 100;
-        totalRows.push(['CGST (incl.)', money(half)]);
-        totalRows.push(['SGST (incl.)', money(order.taxAmount - half)]);
-      } else {
-        totalRows.push([`${taxLabel} (incl.)`, money(order.taxAmount)]);
-      }
-    }
-  }
-  if (order.loyaltyDiscountAmount > 0) {
-    totalRows.push([
-      `Loyalty (${order.loyaltyPointsRedeemed} pts)`,
-      `- ${money(order.loyaltyDiscountAmount)}`,
-    ]);
-  }
-  if (order.tipAmount > 0) {
-    totalRows.push(['Tip', money(order.tipAmount)]);
-  }
-  if ((order.deliveryFee ?? 0) > 0) {
-    totalRows.push(['Delivery fee', money(order.deliveryFee ?? 0)]);
-  }
-  if ((order.takeawayCharge ?? 0) > 0) {
-    totalRows.push(['Takeaway charge', money(order.takeawayCharge ?? 0)]);
-  }
+  const totalRows = receiptTotalRows(branch, order, money, taxLabel);
 
   const paymentRows = order.payments.flatMap((p) => {
     const rows = [
@@ -356,7 +383,7 @@ export function buildReceiptHtml({
  * The bill's Scan & Pay QR. Drawn row by row from the QR matrix (row =
  * y, column = x) with a white quiet zone, so every UPI app reads it.
  */
-function upiQrSvg(data: string): string {
+export function upiQrSvg(data: string): string {
   const qr = QRCode.create(data, { errorCorrectionLevel: 'M' });
   const n = qr.modules.size;
   const q = 2; // quiet zone, in modules

@@ -6,6 +6,7 @@ import {
   Get,
   Param,
   Patch,
+  Put,
   Post,
   Query,
   Res,
@@ -21,6 +22,8 @@ import {
   menuCategorySchema,
   menuItemSchema,
   modifierGroupSchema,
+  updateModifierGroupSchema,
+  modifierGroupItemsSchema,
   setComboComponentsSchema,
   type SessionUser,
 } from '@nodedr-restaurant/types';
@@ -324,6 +327,7 @@ export class MenuController {
 
   @Auth('menu.manage')
   @Patch('modifier-groups/:id')
+  @UsePipes(new ZodValidationPipe(updateModifierGroupSchema))
   async updateModifierGroup(
     @CurrentUser() user: SessionUser,
     @Query('branchId') branchId: string,
@@ -332,6 +336,23 @@ export class MenuController {
   ) {
     await this.branchAccess.assertAccess(user.restaurantId, branchId);
     return this.menuService.updateModifierGroup(branchId, id, body as never);
+  }
+
+  @Auth('menu.manage')
+  @Put('modifier-groups/:id/items')
+  async setModifierGroupItems(
+    @CurrentUser() user: SessionUser,
+    @Query('branchId') branchId: string,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(modifierGroupItemsSchema))
+    body: { menuItemIds: string[] },
+  ) {
+    await this.branchAccess.assertAccess(user.restaurantId, branchId);
+    return this.menuService.setModifierGroupItems(
+      branchId,
+      id,
+      body.menuItemIds,
+    );
   }
 
   @Auth('menu.manage')

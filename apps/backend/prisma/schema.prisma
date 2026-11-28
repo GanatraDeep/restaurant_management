@@ -1162,6 +1162,8 @@ model ModifierGroup {
   minSelect  Int     @default(0)
   maxSelect  Int     @default(1)
   isRequired Boolean @default(false)
+  /// false = deleted after it was used on orders (kept for order history).
+  isActive   Boolean @default(true)
 
   modifiers Modifier[]
   menuItems MenuItemModifierGroup[]
@@ -1181,6 +1183,9 @@ model Modifier {
   kitchenNote     String?
   isDefault       Boolean  @default(false)
   sortOrder       Int      @default(0)
+  /// false = sold out / hidden from menus; also set when an option that was
+  /// already ordered is removed (kept for order history).
+  isActive        Boolean  @default(true)
 
   orderItemModifiers OrderItemModifier[]
 
