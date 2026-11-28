@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { ItemAddOnsField } from "@/components/menu/add-ons-dialog";
 import { routeFields, TicketRouteField, type TicketRoute } from "@/components/menu/ticket-route";
 import { draftsToVariants, VariantsEditor, type VariantDraft } from "@/components/menu/variants-editor";
 import {
@@ -47,6 +48,7 @@ export function AddItemDialog({
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [stationId, setStationId] = useState<string>("");
+  const [addOns, setAddOns] = useState<string[]>([]);
   const [price, setPrice] = useState("");
   const [halfPrice, setHalfPrice] = useState("");
   const [variants, setVariants] = useState<VariantDraft[]>([]);
@@ -128,7 +130,7 @@ export function AddItemDialog({
         isFavorite: false,
         ...routeFields(ticketRoute),
         takeawayCharge: takeawayCharge.trim() === "" ? null : Number(takeawayCharge),
-        modifierGroupIds: [],
+        modifierGroupIds: addOns,
         imageUrl,
       },
       {
@@ -345,6 +347,8 @@ export function AddItemDialog({
           </div>
 
           <TicketRouteField idPrefix="add" value={ticketRoute} onChange={setTicketRoute} />
+
+          {branchId && <ItemAddOnsField branchId={branchId} value={addOns} onChange={setAddOns} />}
 
           <DialogFooter>
             <Button type="submit" disabled={createItem.isPending || uploadImage.isPending}>

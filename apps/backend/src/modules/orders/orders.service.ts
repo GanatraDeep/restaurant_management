@@ -2368,10 +2368,15 @@ export class OrdersService {
     const links = await this.prisma.menuItemModifierGroup.findMany({
       where: {
         menuItemId: { in: [...new Set(items.map((i) => i.menuItemId))] },
-        modifierGroup: { branchId },
+        modifierGroup: { branchId, isActive: true },
       },
       include: {
-        modifierGroup: { include: { modifiers: { select: { id: true } } } },
+        // Sold-out / removed options can't be ordered.
+        modifierGroup: {
+          include: {
+            modifiers: { where: { isActive: true }, select: { id: true } },
+          },
+        },
       },
     });
     for (const item of items) {
