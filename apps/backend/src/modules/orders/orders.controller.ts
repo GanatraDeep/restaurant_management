@@ -65,6 +65,8 @@ import {
 import { OrdersService } from './orders.service';
 import { buildKotHtml } from './kot.html';
 import { buildReceiptHtml } from './receipt.html';
+import { buildInvoicePageHtml } from './invoice-page.html';
+import { randomBytes } from 'node:crypto';
 import { VerifactuService } from '../verifactu/verifactu.service';
 
 type ReceiptData = Awaited<ReturnType<OrdersService['getReceiptData']>>;
@@ -498,20 +500,41 @@ export class OrdersController {
       id,
       {},
     );
-    const html = await this.receiptPage(
-      order,
-      overrides,
-      paperOf(res.req.query.paper),
+    const r = order.branch.restaurant;
+    const nonce = randomBytes(16).toString('base64');
+    const html = buildInvoicePageHtml({
+      nonce,
+      restaurantName: r.name,
+      logoUrl: r.logoUrl,
+      token: order.branch.tokenEnabled ? tokenOf(order.orderNumber) : null,
+      currency: r.currency,
+      branch: {
+        name: order.branch.name,
+        address: order.branch.address,
+        phone: order.branch.phone,
+        gstNumber: order.branch.gstNumber,
+        taxRegime: order.branch.taxRegime,
+        taxMode: order.branch.taxMode,
+        taxLabel: order.branch.taxLabel,
+        taxId: order.branch.taxId,
+      },
+      timeZone: r.timezone,
+      footer: r.receiptFooter,
+      upi: r.upiVpa
+        ? { vpa: r.upiVpa, payeeName: r.upiPayeeName || r.name }
+        : null,
+      order: {
+        ...toEscposOrder(order, overrides),
+        cashier: order.createdBy?.name ?? null,
+      },
+    });
+    // A page of its own: its one script runs by nonce; the logo may be on another host.
+    res.setHeader(
+      'Content-Security-Policy',
+      `default-src 'none'; img-src 'self' https: data:; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`,
     );
-    // Opened on a phone: show it, don't pop the print dialog.
-    res
-      .type('html')
-      .send(
-        fitPaper(html, paperOf(res.req.query.paper)).replace(
-          /<script>[\s\S]*?<\/script>/g,
-          '',
-        ),
-      );
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.type('html').send(html);
   }
 
   // Counter slip: items not sent to the kitchen (water, soft drinks), for the
